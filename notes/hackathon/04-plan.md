@@ -45,3 +45,9 @@ Reference: `code/hackathon/reference/pick-and-place/scripts/reference-solution.p
 
 ## Open questions for Viam staff
 - 
+
+## Stage results (2026-09-18, armfarm22, single green marker)
+- **Decision:** one marker (green) in the dock; the visitor draws with the same marker and recaps it to pass the turn. Red and blue removed.
+- **Stage 1:** 7 poses taught (3 corners, approach, look, seat, slot). `verify` reached all of them. Board writing surface measured from the corners: 172 × 237 mm, corners 2.7° off square. Manual mode drops out on its own sometimes; the teach prompts have an `m` key to re-enter it. The gripper's holding sensor reports True when empty, so grab detection stays off.
+- **Dock:** one clean cycle: pick, uncap, return with the marker dropping into its cap from 5 mm.
+- **Stage 2 dry run:** 60 mm square, 240 mm in 8.9 s, 52 planned moves, mean 0.47 s, p95 1.47 s, 27 mm/s. Short budget of 400 mm fits in ~15 s at `WAYPOINT_MM = 8`, so it stays at 8.
