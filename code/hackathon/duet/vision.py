@@ -162,6 +162,9 @@ def find_square(board: np.ndarray, near_mm: Point, search_mm: float = 30.0, ink_
     the corner marks (blobs touching the image border). None if nothing is there."""
     gray = cv2.GaussianBlur(cv2.cvtColor(board, cv2.COLOR_BGR2GRAY), (3, 3), 0)
     h, w = gray.shape
+    blank = int(12 * PX_PER_MM)                               # the corner marks reach ~10 mm in; blank them
+    for cx, cy in ((0, 0), (w, 0), (w, h), (0, h)):
+        cv2.rectangle(gray, (cx - blank, cy - blank), (cx + blank, cy + blank), 255, -1)
     x0 = max(int((near_mm[0] - search_mm) * PX_PER_MM), 0)
     y0 = max(int((near_mm[1] - search_mm) * PX_PER_MM), 0)
     x1 = min(int((near_mm[0] + search_mm) * PX_PER_MM), w)
