@@ -7,6 +7,7 @@ from viam.proto.common import Pose, PoseInFrame
 from duet import config as cfg
 from duet import controller as C
 from duet.calib import BoardToRobot
+from duet.strokes import resample
 
 
 class FakeMotion:
@@ -84,7 +85,7 @@ def make_controller(hand_check=None, gripper=None, arm=None):
     c.last_error = None
     c._abort = asyncio.Event()
     c._lock = asyncio.Lock()
-    c._waiting = False
+    c._waiting = 0
     return c
 
 
@@ -362,3 +363,42 @@ def test_pick_marker_checks_grab_only_when_configured(monkeypatch):
     c = asyncio.run(strict())
     assert c.arm.stopped == 1
     assert c.needs_lift is True
+
+
+def test_command_cannot_barge_in_the_lock_handoff_window():
+    async def scenario():
+        c = make_controller()
+        await c._lock.acquire()                # stand in for a running sequence
+        rec = asyncio.create_task(c.recover())
+        for _ in range(3):
+            await asyncio.sleep(0)             # rec is now parked on the lock
+        assert c._waiting == 1
+        c._lock.release()                      # waiter woken, has not resumed yet
+        assert c._lock.locked() is False       # the exact window the guard must cover
+        with pytest.raises(C.Busy):
+            await c.move_to(down(0, 0, 100))   # rejected, not queued behind the recovery
+        await rec
+        return c
+    c = asyncio.run(scenario())
+    assert c._waiting == 0
+
+
+def test_cancelling_a_sequence_halts_the_arm_and_propagates():
+    async def scenario():
+        c = make_controller()
+        c.motion.move_delay_s = 0.05
+        task = asyncio.create_task(c.draw([SQUARE], 10_000, 600))
+        await asyncio.sleep(0.02)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        return c
+    c = asyncio.run(scenario())
+    assert c.arm.stopped == 1
+    assert c._lock.locked() is False
+    assert "CancelledError" in c.last_error
+
+
+def test_short_stroke_fixture_matches_the_waypoint_spacing():
+    # test_stop_during_the_final_lift_keeps_needs_lift assumes SHORT resamples to exactly two points
+    assert len(resample(SHORT, cfg.WAYPOINT_MM)) == 2
