@@ -14,14 +14,15 @@ BOARD_W_MM = 172.0
 BOARD_H_MM = 237.0
 INSET_MM = 15.0        # drawable area starts this far inside the corners
 LIFT_MM = 20.0         # pen-up travel height above the board
-PEN_DOWN_OFFSET_MM = 7.0  # draw this far above the touched-off plane; 1 and 3 flattened the felt, tune with stroke_bench --pen
+PEN_DOWN_OFFSET_MM = 1.0  # above the touched-off plane; re-teach corners with the held marker, then tune with stroke_bench --pen
 WAYPOINT_MM = 8.0      # spacing of planned moves along a stroke; set from the stage 2 measurement
 
 SPEED_TRAVEL = 30.0    # deg/s, matches the machine's configured speed
 SPEED_DRAW = 15.0
 SPEED_DOCK = 10.0
 
-MARKER = "green"             # the one marker in the dock; the visitor draws with it too
+MARKER = "green"             # the dock slot name, used only when HELD_MODE is False
+HELD_MODE = True             # demo decision 2026-09-18: the robot keeps its marker; dock pick and return are skipped
 GRIPPER_OPEN_FOR_PICK = 500   # 0 closed .. 850 open; set to barrel width + 15 mm in stage 3
 UNCAP_LIFT_MM = 40.0          # straight-up pull that uncaps the marker
 DOCK_HOVER_MM = 60.0          # safe height above a slot

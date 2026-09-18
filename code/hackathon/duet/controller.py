@@ -67,7 +67,7 @@ class Controller:
         self.motion = MotionClient.from_robot(machine, viam_conn.MOTION)
         self.poses = poses
         self.board = board
-        self.held_mode = False                       # True: marker stays in the gripper, dock steps skipped
+        self.held_mode = cfg.HELD_MODE               # True: marker stays in the gripper, dock steps skipped
         # Set by the session in plan 3. Must answer within HAND_CHECK_TIMEOUT_S and must not call
         # back into this controller (it runs while the sequence lock is held).
         self.hand_check: Callable[[], Awaitable[bool]] | None = None
