@@ -14,9 +14,10 @@ BOARD_PX = (int(round(cfg.BOARD_W_MM * PX_PER_MM)), int(round(cfg.BOARD_H_MM * P
 Point = tuple[float, float]
 
 
-def dark_blobs(bgr: np.ndarray, thresh: int = 60, min_area: int = 200, max_area: int = 2500) -> list[tuple[float, float, int]]:
-    """Centroids and areas of compact dark blobs. The corner marks read about 35 on the gray scale and
-    the board about 130; above 75 the marks fuse with the shadow line along the frame, so stay low."""
+def dark_blobs(bgr: np.ndarray, thresh: int = 40, min_area: int = 150, max_area: int = 6000) -> list[tuple[float, float, int]]:
+    """Centroids and areas of compact dark blobs. The corner marks read 14 to 35 on the gray scale,
+    ink about 45, the frame's shadow line about 100 and the board 120 to 130, so 40 isolates the marks.
+    At a 450 mm camera height a mark is about 2000 px."""
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     _, mask = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY_INV)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
