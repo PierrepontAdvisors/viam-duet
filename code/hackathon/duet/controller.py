@@ -235,8 +235,9 @@ class Controller:
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def return_marker(self, slot: str) -> None:
-        """Enter through the approach pose, move above the slot, descend slowly, seat the tip in the
-        cap, press, release, and back out the same way."""
+        """Enter through the approach pose, move above the slot, descend slowly until the nib is just
+        inside the cap's mouth, open so the marker drops the last few millimeters into its cap
+        (never pressing the cap down), and back out the same way."""
         if self.held_mode:
             return
         async with self._sequence():
@@ -248,9 +249,7 @@ class Controller:
             await self.set_speed(cfg.SPEED_DOCK)
             await self._move(hover, linear=True)
             self._mark_low(cfg.UNCAP_LIFT_MM)
-            await self._move(shifted(seat, dz=cfg.UNCAP_LIFT_MM), linear=True)
-            await self._move(seat, linear=True)
-            await self._move(shifted(seat, dz=-cfg.PRESS_MM), linear=True)
+            await self._move(shifted(seat, dz=cfg.RELEASE_DROP_MM), linear=True)
             await self.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
             await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
             await self._move(hover, linear=True)

@@ -444,3 +444,16 @@ def test_missing_approach_pose_is_a_clear_error():
         return c
     c = asyncio.run(scenario())
     assert c.motion.calls == 0
+
+
+def test_return_lowers_to_just_above_the_seat_and_lets_go():
+    async def scenario():
+        c = make_controller()
+        c.poses["seat"] = {"red": {"x": 50, "y": 50, "z": 30, "o_x": 0, "o_y": 0, "o_z": -1, "theta": 0}}
+        await c.return_marker("red")
+        return c
+    c = asyncio.run(scenario())
+    path = [(d.pose.x, d.pose.y, d.pose.z) for d in c.motion.destinations]
+    assert path == [(0, 0, 120), (50, 50, 120), (50, 50, 30 + cfg.RELEASE_DROP_MM), (50, 50, 120), (0, 0, 120)]
+    assert {"set": float(cfg.GRIPPER_OPEN_FOR_PICK)} in c.gripper.commands
+    assert c.needs_lift is False
