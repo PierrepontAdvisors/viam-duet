@@ -52,6 +52,18 @@ async def ask(prompt: str) -> str:
     return answer
 
 
+async def ask_in_manual(c: Controller, prompt: str) -> None:
+    """Prompt while the arm should be limp. The driver sometimes drops out of manual mode on its
+    own, so `m` re-enters it; any other answer (except q) continues."""
+    while True:
+        answer = await ask(prompt + "\n  Enter to continue, m if the arm is not limp, q to abort... ")
+        if answer != "m":
+            return
+        await c.manual_mode(False)
+        await c.manual_mode(True)
+        print("re-entered manual mode; try moving the arm")
+
+
 async def prepare_gripper(c: Controller) -> bool:
     """The operator says what the gripper holds, because this unit's holding sensor is unreliable:
     k = keep what it holds, o = open the fingers, q = abort. Returns True when kept."""
@@ -73,13 +85,12 @@ async def teach(name: str, prompt: str, with_marker: bool, release_after: bool =
             await c.manual_mode(True)
             try:
                 if with_marker and not kept:
-                    await ask("MANUAL MODE, the arm is free to move by hand. Lower the open fingers around "
-                              "the marker's barrel, standing in its cap or held there by hand.\n"
-                              "Enter to grab, q to abort... ")
+                    await ask_in_manual(c, "MANUAL MODE, the arm should be limp. Lower the open fingers around "
+                                           "the marker's barrel, standing in its cap or held there by hand, then "
+                                           "Enter to grab.")
                     await c.gripper.grab()
                     await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
-                await ask(f"MANUAL MODE, the arm is free to move by hand. {prompt}\n"
-                          "Enter when it is placed, q to abort... ")
+                await ask_in_manual(c, f"MANUAL MODE, the arm should be limp. {prompt}")
                 pose = await c.tip_pose()
             finally:
                 await c.manual_mode(False)
