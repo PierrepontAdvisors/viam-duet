@@ -524,6 +524,7 @@ class Controller:
         self.last_error: str | None = None
         self._abort = asyncio.Event()
         self._lock = asyncio.Lock()
+        self._waiting = False                        # a recover() is waiting for the lock; nothing may slip in front
 
     # ---- primitives --------------------------------------------------------------------------
     async def _move(self, pose: Pose, linear: bool = False) -> None:
@@ -572,7 +573,8 @@ class Controller:
         self.needs_lift, self._lift_mm = True, lift_mm
 
     def _mark_clear(self) -> None:
-        self.needs_lift = False
+        if not self._abort.is_set():   # a stop() during the lift may have truncated it: keep the flag
+            self.needs_lift = False
 
     @asynccontextmanager
     async def _sequence(self, check_hand: bool = True, wait_s: float | None = None) -> AsyncIterator[None]:
@@ -580,22 +582,25 @@ class Controller:
         for it to unwind), refuses with Blocked if a hand is present, and on any failure records
         `last_error`, halts the arm, and re-raises."""
         if wait_s is None:
-            if self._lock.locked():
+            if self._lock.locked() or self._waiting:
                 raise Busy("a sequence is already running; wait for it or call stop()")
             await self._lock.acquire()
         else:
+            self._waiting = True
             try:
                 async with asyncio.timeout(wait_s):
                     await self._lock.acquire()
             except TimeoutError:
                 raise Busy(f"a sequence is still running after {wait_s:.0f} s") from None
+            finally:
+                self._waiting = False
         try:
             self._abort.clear()
             if check_hand and await self._hand_present():
                 raise Blocked("hand over the board or dock")
             try:
                 yield
-            except Exception as exc:
+            except BaseException as exc:   # includes task cancellation: the arm must still halt
                 self.last_error = f"{type(exc).__name__}: {exc}"
                 await self._halt()
                 raise
@@ -738,7 +743,7 @@ class Controller:
         """After a stop or a fault: wait for the aborted sequence to unwind, clear the arm's error
         state, and if the tool was left low lift it straight up before anything else moves. Runs
         without the hand gate, since the lift is a retreat from the surface and from any hand."""
-        async with self._sequence(check_hand=False, wait_s=cfg.MOVE_TIMEOUT_S + 1):
+        async with self._sequence(check_hand=False, wait_s=2 * cfg.MOVE_TIMEOUT_S):
             await self.clear_error()
             if self.needs_lift:
                 await self.set_speed(cfg.SPEED_DOCK)
@@ -854,7 +859,7 @@ async def teach(name: str, prompt: str, with_marker: bool, release_after: bool =
         print(f"saved {name}: x={pose.x:.1f} y={pose.y:.1f} z={pose.z:.1f}")
         if release_after:
             await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)   # leave the marker standing in its cap
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
             await c.set_speed(cfg.SPEED_DOCK)
             await c.move_to(shifted(pose, dz=cfg.DOCK_HOVER_MM))
             await c.set_speed(cfg.SPEED_TRAVEL)
