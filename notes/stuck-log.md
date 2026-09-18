@@ -44,3 +44,12 @@ Every problem, in order. Newest at the bottom. Fill in the fix even if it was tr
 **Fix:** None applied. Root cause not established.
 **Why it worked:** Unknown. The motion planner is sampling-based, so a hard move near the arm's reach limit can time out on one run and succeed on the next. If it recurs, capture the Python traceback and raise the planner timeout in `move_gripper` (the `extra={"timeout": 15.0}` value) before changing anything else.
 **Time lost:**
+
+## 2026-09-18 — gripper call fails with "xArm: Emergency Stop Button Pushed In"
+**Module:** hackathon, first connection to `armfarm22`
+**Symptom:** `explore.py` connected, listed resources, and read the arm, then `gripper.is_holding_something()` raised `GRPCError(UNKNOWN, 'xArm: Emergency Stop Button Pushed In;')`.
+**What I tried:**
+1. Nothing in code. The message comes straight from the xArm controller.
+**Fix:** Physical. The red E-stop on the control box is engaged. Release it (twist to pop it out) once the area around the arm is clear, then rerun. The gripper talks to the same controller as the arm, so it refuses everything while the stop is in.
+**Why it worked:** The controller blocks all commands, including gripper state, while the E-stop is latched. Reads of the arm's position still work.
+**Time lost:**

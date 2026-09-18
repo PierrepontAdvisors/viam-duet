@@ -2,7 +2,7 @@
 
 ## Team
 - Members:
-- Machine name:
+- Machine name: `armfarm22` (address in `code/hackathon/.env`)
 - Arm model (xArm6 / 850 / UR):
 - Camera (RealSense D435 / Orbbec Astra 2):
 
