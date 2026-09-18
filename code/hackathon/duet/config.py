@@ -10,8 +10,8 @@ CALIBRATION_PATH = DATA_DIR / "calibration.json"
 
 # Writing surface inside the raised frame, measured from the taught corners on 2026-09-18: the edge
 # touched off as top-left -> top-right is the short one. Board x runs along it, board y down the long edge.
-BOARD_W_MM = 172.0
-BOARD_H_MM = 237.0
+BOARD_W_MM = 176.0
+BOARD_H_MM = 240.0
 INSET_MM = 15.0        # drawable area starts this far inside the corners
 LIFT_MM = 20.0         # pen-up travel height above the board
 PEN_DOWN_OFFSET_MM = 1.0  # above the touched-off plane; re-teach corners with the held marker, then tune with stroke_bench --pen
