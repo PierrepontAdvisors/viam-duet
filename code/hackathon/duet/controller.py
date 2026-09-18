@@ -74,6 +74,7 @@ class Controller:
         self.events: asyncio.Queue = asyncio.Queue()
         self.move_times: list[float] = []            # seconds per planned move, for stroke_bench
         self.needs_lift = False                      # tool is at or near a surface; recover() lifts first
+        self._lift_mm = cfg.LIFT_MM                  # how far recover() must lift to clear that surface
         self.last_error: str | None = None
         self._abort = asyncio.Event()
         self._lock = asyncio.Lock()
@@ -105,29 +106,46 @@ class Controller:
         return result.pose
 
     async def _hand_present(self) -> bool:
+        """Fail safe: a slow or faulting hand check counts as a hand present."""
         if self.hand_check is None:
             return False
         try:
             async with asyncio.timeout(cfg.HAND_CHECK_TIMEOUT_S):
                 return await self.hand_check()
-        except TimeoutError:
-            self.last_error = "hand check timed out; treated as a hand present"
+        except Exception as exc:
+            self.last_error = f"hand check failed ({type(exc).__name__}: {exc}); treated as a hand present"
             return True
 
     async def _halt(self) -> None:
         try:
             await self.arm.stop()
         except Exception as exc:
-            self.last_error = f"arm.stop failed: {exc}"
+            self.last_error = f"{self.last_error or 'halt'}; arm.stop failed: {exc}"
+
+    def _mark_low(self, lift_mm: float) -> None:
+        self.needs_lift, self._lift_mm = True, lift_mm
+
+    def _mark_clear(self) -> None:
+        self.needs_lift = False
 
     @asynccontextmanager
-    async def _sequence(self) -> AsyncIterator[None]:
-        """One sequence at a time: reject if busy, refuse if a hand is present, halt on any failure."""
-        if self._lock.locked():
-            raise Busy("a sequence is already running; wait for it or call stop()")
-        async with self._lock:
+    async def _sequence(self, check_hand: bool = True, wait_s: float | None = None) -> AsyncIterator[None]:
+        """One sequence at a time. Rejects with Busy if another is running (or waits up to `wait_s`
+        for it to unwind), refuses with Blocked if a hand is present, and on any failure records
+        `last_error`, halts the arm, and re-raises."""
+        if wait_s is None:
+            if self._lock.locked():
+                raise Busy("a sequence is already running; wait for it or call stop()")
+            await self._lock.acquire()
+        else:
+            try:
+                async with asyncio.timeout(wait_s):
+                    await self._lock.acquire()
+            except TimeoutError:
+                raise Busy(f"a sequence is still running after {wait_s:.0f} s") from None
+        try:
             self._abort.clear()
-            if await self._hand_present():
+            if check_hand and await self._hand_present():
                 raise Blocked("hand over the board or dock")
             try:
                 yield
@@ -135,6 +153,8 @@ class Controller:
                 self.last_error = f"{type(exc).__name__}: {exc}"
                 await self._halt()
                 raise
+        finally:
+            self._lock.release()
 
     def _pose(self, *keys: str) -> Pose:
         node = self.poses
@@ -155,15 +175,21 @@ class Controller:
                        dz=ex[2] * d[0] + ey[2] * d[1])
 
     # ---- sequences ---------------------------------------------------------------------------
-    async def move_to(self, pose: Pose, linear: bool = False) -> None:
-        """Public single move, used by teach.verify."""
+    async def move_to(self, pose: Pose, linear: bool = False, low: bool = False) -> None:
+        """Public single move, used by teach.verify. `low=True` marks the target as at or near a
+        surface, so recover() lifts first if this move is interrupted."""
         async with self._sequence():
+            if low:
+                self._mark_low(cfg.UNCAP_LIFT_MM)
             await self._move(pose, linear)
+            if not low:
+                self._mark_clear()
 
     async def go_look(self) -> None:
         async with self._sequence():
             await self.set_speed(cfg.SPEED_TRAVEL)
             await self._move(self._pose("look"))
+            self._mark_clear()
 
     async def pick_marker(self, slot: str, displacement_mm: tuple[float, float] = (0.0, 0.0)) -> None:
         """Hover, descend, grab, pull straight up to uncap, rise. `displacement_mm` is where the camera
@@ -178,7 +204,7 @@ class Controller:
             await self.set_speed(cfg.SPEED_TRAVEL)
             await self._move(shifted(grip, dz=cfg.DOCK_HOVER_MM))
             await self.set_speed(cfg.SPEED_DOCK)
-            self.needs_lift = True
+            self._mark_low(cfg.UNCAP_LIFT_MM)
             await self._move(grip, linear=True)
             grabbed = await self.gripper.grab()
             await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
@@ -186,7 +212,7 @@ class Controller:
                 raise RuntimeError(f"gripper closed on nothing at slot {slot}")
             await self._move(shifted(grip, dz=cfg.UNCAP_LIFT_MM), linear=True)
             await self._move(shifted(grip, dz=cfg.DOCK_HOVER_MM), linear=True)
-            self.needs_lift = False
+            self._mark_clear()
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def return_marker(self, slot: str) -> None:
@@ -198,14 +224,14 @@ class Controller:
             await self.set_speed(cfg.SPEED_TRAVEL)
             await self._move(shifted(seat, dz=cfg.DOCK_HOVER_MM))
             await self.set_speed(cfg.SPEED_DOCK)
-            self.needs_lift = True
+            self._mark_low(cfg.UNCAP_LIFT_MM)
             await self._move(shifted(seat, dz=cfg.UNCAP_LIFT_MM), linear=True)
             await self._move(seat, linear=True)
             await self._move(shifted(seat, dz=-cfg.PRESS_MM), linear=True)
             await self.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
             await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
             await self._move(shifted(seat, dz=cfg.DOCK_HOVER_MM), linear=True)
-            self.needs_lift = False
+            self._mark_clear()
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float,
@@ -240,7 +266,7 @@ class Controller:
         await self.set_speed(cfg.SPEED_TRAVEL)
         await self._move(self.board.to_world(*pts[0], lift=lifted))
         await self.set_speed(cfg.SPEED_DRAW)
-        self.needs_lift = True
+        self._mark_low(cfg.LIFT_MM)
         await self._move(self.board.to_world(*pts[0], lift=z_offset_mm), linear=True)
         drawn = 0.0
         prev = pts[0]
@@ -249,7 +275,7 @@ class Controller:
             drawn += math.dist(prev, p)
             prev = p
         await self._move(self.board.to_world(*prev, lift=lifted), linear=True)
-        self.needs_lift = False
+        self._mark_clear()
         await self.set_speed(cfg.SPEED_TRAVEL)
         return drawn
 
@@ -263,14 +289,15 @@ class Controller:
         await self.arm.do_command({"clear_error": True})
 
     async def recover(self) -> None:
-        """After a stop or a fault: clear the arm's error state and, if the tool was left low,
-        lift it straight up by LIFT_MM before anything else moves. The session's Resume calls this."""
-        async with self._sequence():
+        """After a stop or a fault: wait for the aborted sequence to unwind, clear the arm's error
+        state, and if the tool was left low lift it straight up before anything else moves. Runs
+        without the hand gate, since the lift is a retreat from the surface and from any hand."""
+        async with self._sequence(check_hand=False, wait_s=cfg.MOVE_TIMEOUT_S + 1):
             await self.clear_error()
             if self.needs_lift:
                 await self.set_speed(cfg.SPEED_DOCK)
-                await self._move(shifted(await self.tip_pose(), dz=cfg.LIFT_MM), linear=True)
-                self.needs_lift = False
+                await self._move(shifted(await self.tip_pose(), dz=self._lift_mm), linear=True)
+                self._mark_clear()
             await self.set_speed(cfg.SPEED_TRAVEL)
         self.last_error = None
 
