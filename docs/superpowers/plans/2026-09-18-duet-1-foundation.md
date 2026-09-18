@@ -153,6 +153,11 @@ def test_cut_to_budget_keeps_whole_strokes_then_cuts_one():
 
 def test_cut_to_budget_with_nothing_left():
     assert cut_to_budget([[(0, 0), (1, 0)]], 0) == []
+
+
+def test_cut_to_budget_exact_at_interior_vertex():
+    out = cut_to_budget([[(0, 0), (10, 0), (10, 10)]], 10)
+    assert out == [[(0, 0), (10, 0)]]
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -204,6 +209,8 @@ def cut_to_budget(polylines: list[Polyline], budget_mm: float) -> list[Polyline]
             continue
         partial: Polyline = [pl[0]]
         for a, b in zip(pl, pl[1:]):
+            if remaining <= 0:
+                break
             d = math.dist(a, b)
             if d <= remaining:
                 partial.append(b)
@@ -222,7 +229,7 @@ def cut_to_budget(polylines: list[Polyline], budget_mm: float) -> list[Polyline]
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_strokes.py -q`
-Expected: `6 passed`
+Expected: `7 passed`
 
 - [ ] **Step 5: Commit**
 
