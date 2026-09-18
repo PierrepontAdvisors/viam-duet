@@ -1,0 +1,274 @@
+# Add a sensor
+
+Add and configure a sensor to read environmental data like temperature, humidity, or distance.
+> Source: https://docs.viam.com/hardware/common-components/add-a-sensor/
+
+
+Add a sensor to your machine's configuration so you can read environmental data from the Viam app and from code.
+
+## Concepts
+
+The sensor component provides a single method: `GetReadings`, which returns a
+map of key-value pairs. This simple interface works for any sensor that
+produces named measurements.
+
+Most physical sensors in Viam come from modules in the [Viam registry](https://app.viam.com/registry) (search for `sensor`) rather than
+built-in models. This is because the sensor ecosystem is enormous. Thousands
+of different devices with different communication protocols exist, and modules cover
+specific hardware while keeping the same `GetReadings` API.
+
+### Built-in models
+
+- [`fake`](/reference/components/sensor/fake/) — A model used for testing, with no physical hardware.
+
+Micro-RDK:
+
+- [`ultrasonic`](/reference/components/sensor/micro-rdk/ultrasonic/) — _(no description)_.
+
+### Registry modules
+
+Viam-maintained sensor modules:
+
+| Module                                                                               | Sensors supported                                               |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| [`viam:ultrasonic`](https://app.viam.com/module/viam/ultrasonic)                     | HC-SR04 and similar ultrasonic distance sensors                 |
+| [`viam:event-manager`](https://app.viam.com/module/viam/event-manager)               | Event management and notifications for Viam resources           |
+| [`viam:viam-telegraf-sensor`](https://app.viam.com/module/viam/viam-telegraf-sensor) | Machine metrics through Telegraf                                |
+| [`viam:lorawan`](https://app.viam.com/module/viam/lorawan)                           | LoRaWAN gateway and node sensors (Milesight, Dragino, and more) |
+
+For sensors not covered above, search for `sensor` in the [Viam registry](https://app.viam.com/registry).
+
+## Steps
+
+### 1. Add a sensor component
+
+1. Click the **+** button.
+2. Select **Blocks**.
+3. Search for the model that matches your sensor hardware. Search by
+   sensor name or chip (for example, **DHT22**, **BME280**, **SHT31**). For I2C
+   or serial sensors, you can also search by protocol or manufacturer.
+4. Name your sensor (for example, `temperature-sensor`) and click **Add to machine**.
+
+If no model exists for your sensor, you can
+[write your own module](/build-modules/write-a-driver-module/) to add support.
+
+### 2. Configure sensor attributes
+
+Attributes vary by sensor module. Common patterns:
+
+**I2C sensor (for example, BME280, SHT31):**
+
+```json
+{
+  "board": "my-board",
+  "i2c_bus": "1",
+  "i2c_address": 119
+}
+```
+
+**Serial sensor (for example, air quality monitors):**
+
+```json
+{
+  "serial_path": "/dev/ttyUSB0",
+  "baud_rate": 9600
+}
+```
+
+**GPIO sensor (for example, ultrasonic distance):**
+
+```json
+{
+  "board": "my-board",
+  "trigger_pin": "11",
+  "echo_pin": "13"
+}
+```
+
+Check the module's documentation in the registry for the exact attributes your
+sensor needs.
+
+### 3. Save and test
+
+Click **Save**, then expand the **Test** section.
+
+- The test panel shows the output of `GetReadings`, a table of named values.
+- Verify the readings make sense (for example, room temperature should be roughly
+  20-25°C).
+
+## Try it
+
+Read sensor data programmatically and print it.
+
+To get the credentials for the code below, go to your machine's page in the Viam app, click the **CONNECT** tab, and select **API keys**.
+Copy the **Key** and **ID**.
+Then click the **CONFIGURE** tab, and click **Details**, and copy the **Remote address**.
+When you run the code below, you'll see sensor readings printed once per second. Verify the values make sense for your environment.
+
+
+
+### Python
+
+Install the Viam Python SDK in a virtual environment by following [Install the Python SDK](/reference/sdks/python/python-venv/).
+
+Save this as `sensor_test.py`:
+
+```python
+import asyncio
+from viam.robot.client import RobotClient
+from viam.components.sensor import Sensor
+
+async def main():
+    opts = RobotClient.Options.with_api_key(
+        api_key="YOUR-API-KEY",
+        api_key_id="YOUR-API-KEY-ID"
+    )
+    robot = await RobotClient.at_address("YOUR-MACHINE-ADDRESS", opts)
+
+    sensor = Sensor.from_robot(robot, "temperature-sensor")
+
+    # Get readings 5 times, once per second
+    for i in range(5):
+        readings = await sensor.get_readings()
+        print(f"Reading {i + 1}: {readings}")
+        await asyncio.sleep(1)
+
+    await robot.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+Run it:
+
+```bash
+python sensor_test.py
+```
+You should see output like:
+
+```text
+Reading 1: {'temperature_celsius': 22.5, 'humidity_percent': 45.2}
+Reading 2: {'temperature_celsius': 22.5, 'humidity_percent': 45.3}
+...
+```
+The exact keys and values depend on your sensor.
+
+### Go
+
+```bash
+mkdir sensor-test && cd sensor-test
+go mod init sensor-test
+go get go.viam.com/rdk
+```
+Save this as `main.go`:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+
+    "go.viam.com/rdk/components/sensor"
+    "go.viam.com/rdk/logging"
+    "go.viam.com/rdk/robot/client"
+)
+
+func main() {
+    ctx := context.Background()
+    logger := logging.NewLogger("sensor-test")
+
+    robot, err := client.New(ctx, "YOUR-MACHINE-ADDRESS", logger,
+        client.WithDialOptions(client.WithEntityCredentials(
+            "YOUR-API-KEY-ID",
+            client.Credentials{
+                Type:    client.CredentialsTypeAPIKey,
+                Payload: "YOUR-API-KEY",
+            })),
+    )
+    if err != nil {
+        logger.Fatal(err)
+    }
+    defer robot.Close(ctx)
+
+    s, err := sensor.FromProvider(robot, "temperature-sensor")
+    if err != nil {
+        logger.Fatal(err)
+    }
+
+    // Get readings 5 times, once per second
+    for i := 0; i < 5; i++ {
+        readings, err := s.Readings(ctx, nil)
+        if err != nil {
+            logger.Fatal(err)
+        }
+        fmt.Printf("Reading %d: %v\n", i+1, readings)
+        time.Sleep(1 * time.Second)
+    }
+}
+```
+Run it:
+
+```bash
+go run main.go
+```
+
+
+
+## Troubleshooting
+
+**No readings appear**
+
+
+
+- Check physical connections: power, ground, and data lines.
+- For I2C sensors, verify the I2C address. Run `i2cdetect -y 1` on Linux to
+  scan the bus and confirm the device is visible.
+- For serial sensors, check the device path (`ls /dev/ttyUSB*` or
+  `ls /dev/ttyACM*`).
+
+
+
+
+**Readings are all zeros or nonsensical**
+
+
+
+- The I2C address may be wrong. Some sensors use different addresses depending
+  on a jumper or pin configuration.
+- The sensor may need a warmup period. Some environmental sensors take
+  several seconds to produce valid readings after power-on.
+
+
+
+
+**Module not found in registry**
+
+
+
+- Try broader search terms. Module names don't always match sensor model
+  numbers exactly.
+- If your sensor uses a common protocol (I2C, SPI, serial), there may be a
+  generic module that works. Check the registry for protocol-based modules.
+
+
+
+
+If your sensor is not working as expected, follow these steps:
+
+1. Check your machine logs on the **LOGS** tab to check for errors.
+1. Review this sensor model's documentation to ensure you have configured all required attributes.
+1. Check that any wires are securely attached to the correct pins, if appropriate.
+1. Click on the **TEST** panel on the **CONFIGURE** or **CONTROL** tab and test if you can use the sensor there. The sensor will show JSON readings and data URI encoded images.
+
+If none of these steps work, reach out to us on the [Community Discord](https://discord.gg/viam) and we will be happy to help.
+
+
+## Related
+
+- [Sensor API reference](/reference/apis/components/sensor/): full method documentation.
+- [Capture and Sync Data](/data/capture-sync/capture-and-sync-data/): automatically
+  capture sensor readings and sync them to the cloud.
+- [What is a module?](/build-modules/overview/): write a module that
+  takes action based on sensor readings.
+

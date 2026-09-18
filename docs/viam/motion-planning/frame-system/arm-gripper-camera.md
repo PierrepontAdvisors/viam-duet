@@ -1,0 +1,256 @@
+# Arm with gripper and wrist camera
+
+Configure frames for a table-mounted arm with an attached gripper and wrist-mounted camera.
+> Source: https://docs.viam.com/motion-planning/frame-system/arm-gripper-camera/
+
+
+A table-mounted arm, a gripper bolted to the end effector, and a camera
+clamped near the wrist is a common manipulation setup. The camera moves
+with the arm, so its view is always centered on wherever the arm is reaching.
+You declare three frame relationships (arm-to-world, gripper-to-arm, and
+camera-to-arm) so the frame system can compute where the gripper and camera
+sit as the arm moves. This guide walks through all three.
+
+## Frame hierarchy
+
+```text
+world
+├── my-arm
+│   ├── my-gripper (attached to arm)
+│   └── my-camera (mounted on arm)
+└── table-surface
+```
+
+The arm is a direct child of the world frame.
+The gripper and camera are both children of the arm, so they move with the arm automatically as it changes position.
+`table-surface` is workspace obstacle geometry, configured separately; see [Define obstacles](/motion-planning/obstacles/).
+
+## Steps
+
+### 1. Choose your world frame origin
+
+Pick either the arm's base or a corner of the table as your world frame
+origin, then mark that point physically. The trade-off: using the arm
+base means the arm's translation is `(0, 0, 0)` and every measurement
+starts from the arm. Using a table corner gives you a visible landmark
+but requires measuring arm-base-to-corner first.
+
+Every frame on the machine ultimately resolves to this point, so you
+will refer to it every time you add or adjust a frame.
+
+### 2. Add a frame to the arm
+
+In the **CONFIGURE** tab, click the arm component's card and find the **Frame** section (arms always show it). Click **Set defaults** to initialize the frame with parent `world`, zero translation, and identity orientation. Then edit the values. (For details on the Frame editor, see [Edit a frame in the Viam app](/motion-planning/frame-system/overview/#edit-a-frame-in-the-viam-app).)
+
+If the arm base is your world frame origin:
+
+```json
+{
+  "parent": "world",
+  "translation": { "x": 0, "y": 0, "z": 0 },
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+  }
+}
+```
+
+If the world frame origin is at a table corner and the arm base is 300 mm to the right and 250 mm forward from that corner:
+
+```json
+{
+  "parent": "world",
+  "translation": { "x": 300, "y": 250, "z": 0 },
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+  }
+}
+```
+
+Click **Save** in the top-right of the page (or press ⌘/Ctrl+S).
+
+### 3. Verify the axes point the way you expect
+
+Before adding more frames, confirm the arm's coordinate axes line up with your
+world frame. In the **CONTROL** tab, jog the end effector a small amount in
++z. If the arm moves up, z matches the Viam convention. Repeat for +x and +y.
+An axis that points the wrong way will make every subsequent frame offset
+wrong in the same direction, so fix it now by rotating the arm's `orientation`
+to flip the bad axis.
+
+For example, if the arm's +x points opposite to your intended +x, rotate 180 degrees around the z axis:
+
+```json
+{
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": 0, "z": 1, "th": 180 }
+  }
+}
+```
+
+### 4. Add a frame to the gripper
+
+In the sidebar, click your gripper component to open its card. Find the **Frame** section (grippers always show it) and click **Set defaults** to initialize the frame with parent `world`, zero translation, and identity orientation.
+
+#### Pick where the gripper frame origin sits
+
+The tool center point, between the tips of the gripper jaws, is usually
+the most convenient frame origin. The point you pick here is what
+`translation` measures _to_, and what gets moved to a target pose when
+you later call the motion service.
+
+#### Configure the frame
+
+In the JSON, set `parent` to your arm's component name, `translation` to
+the offset in mm from the arm's end effector to the gripper frame
+origin, and `orientation` to the gripper's rotation relative to the arm.
+
+For a parallel-jaw gripper that bolts directly to the arm's end effector
+with the frame origin at the tool center point between the jaw tips, the
+offset is the gripper's body length. 120 mm is typical:
+
+```json
+{
+  "parent": "my-arm",
+  "translation": { "x": 0, "y": 0, "z": 120 },
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+  }
+}
+```
+
+If the gripper is mounted through an adapter plate or flange, add the
+plate height to `translation.z`. For a 50 mm plate plus the 120 mm
+gripper above, use `z: 170`.
+
+A wrong `translation.z` produces silent failures: motion plans validate,
+then the physical gripper tip lands short or long of the target, or the
+planner fails to find a plan for poses the arm can clearly reach.
+
+Click **Save**.
+
+#### Check whether the gripper has a kinematics file
+
+Some gripper modules include a kinematics file that describes the position
+of the jaws as they open and close, along with collision geometry for the
+jaw linkages. If the gripper has one, the motion planner already has the
+gripper's collision geometry, so leave the gripper frame's `geometry`
+field empty.
+
+Call `GetKinematics` on the gripper (or check the module source). If
+the call returns kinematics data, verify the gripper renders as expected
+in the **3D SCENE** tab and you are done.
+
+If the gripper has no kinematics file, add a `geometry` field to the
+gripper's frame describing its physical volume so the planner can avoid
+collisions with the gripper body. See
+[Define obstacles](/motion-planning/obstacles/overview/#passive-objects-attached-to-a-component)
+for the pattern.
+
+### 5. Add a frame to the wrist camera
+
+In the sidebar, click your camera component to open its card. On the card, click **Frame**.
+
+The camera's parent is the arm, not the world frame.
+Measure the offset from the arm's end effector to the camera's optical center.
+For a camera mounted 30 mm to the side and 60 mm above the end effector:
+
+```json
+{
+  "parent": "my-arm",
+  "translation": { "x": 0, "y": 30, "z": 60 },
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+  }
+}
+```
+
+If the camera is tilted (for example, angled 30 degrees toward the gripper jaws), set `(x, y, z)` to the direction the lens points in the arm's end effector frame:
+
+```json
+{
+  "parent": "my-arm",
+  "translation": { "x": 0, "y": 30, "z": 60 },
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": -0.5, "z": 0.87, "th": 0 }
+  }
+}
+```
+
+`(0, -0.5, 0.87)` tips the lens 30 degrees away from the tool axis, back
+toward the gripper jaws. Viam normalizes the vector for you.
+
+Click **Save**.
+
+### 6. Visualize the frame system
+
+1. Navigate to the **3D SCENE** tab in the Viam app.
+2. The viewer renders all configured frames in 3D space. Each frame appears as a set of colored axes (red = x, green = y, blue = z).
+3. Verify that the gripper and camera frames are attached to the arm and move with it.
+4. Check that the positions and orientations match your physical setup.
+
+If a frame appears in the wrong position, return to the **CONFIGURE** tab and adjust the translation or orientation values.
+
+### 7. Verify with TransformPose
+
+Use the `TransformPose` API to confirm that the frame system computes correct transforms between frames.
+Express the camera's origin `(0, 0, 0)` in the camera frame and transform it to the world frame.
+The result should match the physical position of the camera.
+
+For details on the TransformPose API, see [Frame system: TransformPose](/motion-planning/frame-system/overview/#transformpose).
+
+## Troubleshooting
+
+**Gripper or camera frame does not move with the arm**
+
+
+
+Check that the `parent` field is set to your arm's component name (for example, `"my-arm"`), not `"world"`.
+If the parent is `"world"`, the frame stays fixed in space when the arm moves.
+
+
+
+
+**Camera image appears rotated or flipped**
+
+
+
+The camera's orientation in the frame system must match its physical mounting orientation.
+If the image appears rotated (for example, the camera is mounted upside down), adjust `th`, which spins the camera about the lens axis: `th: 180` corrects an upside-down mounting.
+If image motion runs along the wrong axis, re-check the pointing vector `(x, y, z)` against the direction the lens actually aims.
+
+
+
+
+**Gripper offset seems wrong after adding an adapter plate**
+
+
+
+Measure the adapter plate height from the arm's mounting flange to the gripper's mounting flange.
+Use this measurement as the z translation.
+If the adapter plate also offsets the gripper laterally, include x and y values as well.
+
+
+
+
+## What's next
+
+<div class="card-container">
+  <div class="row-no-margin">
+<div class="col hover-card "><a href="/motion-planning/move-an-arm/move-to-pose/"><div ><div>Move an arm to a pose</div><p>Use the motion service to move a robot arm to a target pose (position and orientation) in 3D space.</p></div>
+    </a></div>
+
+<div class="col hover-card "><a href="/motion-planning/obstacles/"><div ><div>Obstacles</div><p>Define collision geometry so the motion planner computes collision-free paths.</p></div>
+    </a></div>
+
+<div class="col hover-card "><a href="/motion-planning/reference/kinematics/"><div ><div>Kinematics</div><p>Set up the kinematic model that describes how your arm&#39;s joints and links create motion.</p></div>
+    </a></div>
+
+</div>
+</div>
+

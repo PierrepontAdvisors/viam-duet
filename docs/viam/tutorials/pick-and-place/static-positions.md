@@ -1,0 +1,388 @@
+# Phase 3: Static positions and obstacles
+
+Save the arm's key poses and configure obstacle components, proving the hardware and motion planning work before you add perception.
+> Source: https://docs.viam.com/tutorials/pick-and-place/static-positions/
+
+
+In this phase you will teach an arm to move through a set of named poses that together form a pick-and-place cycle, and you let Viam's motion service create collision-free paths between them. First you will save each pose by hand, jogging the arm into position and recording where it is. Then you create obstacles so the Motion Service knows what to avoid when creating the collision free motion.
+
+## Why static positions first
+
+When you add perception and motion planning at the same time, a failure could live in detection, the frame transform, the pose math, the motion planner, or gripper timing, and there is no straightforward way to tell which. Saving fixed poses lets you run the full hardware loop first. In the following phase, you drive this same proven sequence from a Python script. Once the arm reliably travels through every stage of the sequence, perception becomes the only new variable when you reach it.
+
+Pose-to-pose motion without perception is a real production workcell pattern: any time a part always lands in the same spot, a fixed sequence of saved poses is simpler and more reliable than running detection on every cycle.
+
+Each move in that sequence also validates one part of your setup, which the next section lays out pose by pose.
+
+## The key poses
+
+You save five named poses. Run in order, they form one pick-and-place cycle:
+
+<!-- ASSET P0 diagram-five-poses (DIAGRAM): the five poses in space (home/approach/grasp/travel/place) with the motion path. See plans/2026-07-02-pick-and-place-shot-list.md -->
+
+```text
+home      observe and rest, above the workspace
+  │
+  ▼
+approach  standoff directly above the block
+  │  gripper.open()
+  ▼
+grasp     down at the block
+  │  gripper.grab()
+  ▼
+travel    lift clear of obstacles
+  │
+  ▼
+place     above the bin
+  │  gripper.open()
+  ▼
+home      back to the start
+```
+
+Each pose has a specific role, and reaching it cleanly validates one part of your setup:
+
+| Pose          | Purpose                                                                                    | What reaching it validates                                        |
+| ------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| home-pose     | Observation position above the workspace; the wrist camera has a clear view of the blocks. | Observation position is safe and repeatable                       |
+| approach-pose | Standoff directly above the pick zone, roughly 80 to 100 mm above the highest block        | Arm can get above the workspace without collision                 |
+| grasp-pose    | At the block, gripper open and ready to close; fingertips are level with the block top     | Descent distance is correct and the gripper's finger timing works |
+| travel-pose   | Safe carrying height that clears obstacles while holding a block                           | Safe carrying height clears obstacles                             |
+| place-pose    | Above the bin where blocks are dropped                                                     | Bin position is correct                                           |
+
+The approach pose and the grasp pose share the same x and y coordinates. The only motion between them is straight down the z axis, so if the arm drifts sideways during the descent you have a frame or calibration issue to investigate.
+
+If your bin is a rectangle or box shape and it's visible in home pose, the vision service may try to pick it up. To be safe, place the bin outside the camera's view in home pose.
+
+## Save each pose with the arm position saver
+
+You configure pose saving by hand, the same way you configured the arm, gripper, and camera in Phases 1 and 2.
+
+On the **Configure** tab, click the **+** icon and select **Blocks**. Search for `arm-position-saver`, select the `vmodutils/arm-position-saver` result, and name it `home-pose`. This is the first model you use from the `erh:vmodutils` module, so `viam-server` downloads that module now; the same module also provides the `vmodutils/obstacle` model you configure later in this phase, so it downloads only once.
+
+The `arm-position-saver` is a **switch**: a resource whose numbered positions each trigger an action instead of reporting a value. You use two of its positions, one to save the arm's current joint positions ("update config") and one to replay them ("go to"). Throughout this phase, "the switch" refers to this pose-saver resource.
+
+Set one attribute:
+
+```json
+{
+  "arm": "arm-1"
+}
+```
+
+This attribute is also a dependency, the same way `gripper-1` depends on `arm-1`: the switch cannot save or recall a pose until the arm it points at is running.
+
+> **The arm will move:**
+> 
+> 
+> The steps in this phase move the physical arm, both when you jog it into position and when you set a switch to "go to" (position 2) to replay a saved pose. Keep the workspace clear and the e-stop within reach. Verify each pose individually before you run the full sequence at the end of the phase.
+> 
+
+With the `home-pose` switch added, save and verify it. Home is your observation pose, so jog the arm to a spot above the workspace where the wrist camera has a clear, unobstructed view of the blocks; Phase 5 detects from exactly this pose.
+
+You have three ways to jog the arm on its Control card, and you can mix them:
+
+- **Joint control (`MoveToJointPositions`)** sets each joint angle directly. Move one joint slider a small amount, press **Execute**, and that joint rotates. It is the most predictable way to make coarse changes and to lift the arm clear before repositioning. You can also use quick move mode (indicated by the lightning bolt icon) to move a joint five degrees at a time.
+- **End-effector control (`MoveToPosition`)** moves the tip of the arm to a Cartesian target instead of setting joints. Press **Current position** to load the arm's current pose into the fields, then change a coordinate and press **Execute**. The values are millimeters in the world frame at the arm base: raising or lowering **z** moves the gripper straight up or down, while **x** and **y** slide it horizontally across the workspace. Change one value by a small amount and watch the arm, or the 3D scene, to learn which way each axis points for your setup. Use this to nudge the gripper in a specific direction without solving for joint angles.
+- **Manual mode** lets you physically manipulate the arm to a desired position. To enter manual mode, go to the arm's **Control** card, then find the **Do command** section. `DoCommand` is a generic method that Viam components and services expose for functionality outside the standard API, letting you send arbitrary commands from the **Control** tab or your code without needing a dedicated method for every action.
+  In the **Input** panel, enter:
+
+  ```json
+  {
+    "enter_manual_mode": true
+  }
+  ```
+
+  Press **Execute**. The **Output** should read, `"status": "entered manual mode"` and you should be able to easily move the arm by hand.
+
+Run these four steps to save and verify the pose:
+
+1. On the arm test card, jog the arm into position using joint control, end-effector control, manual mode, or a mix of the three.
+2. Under **MoveToPosition**, click **Current position** and note the x, y, and z values to confirm the arm is where you expect it.
+3. On the switch test card, click **update config** to save the current joint positions.
+4. To validate, move the arm away to a different position. From the switch test card, click **go to** and confirm the arm returns to the saved pose.
+
+Setting the switch to **update config** writes the current joint positions straight into the switch's own configuration. Unlike the components you added in Phases 1 and 2, there is no separate **Save** step here: the pose is persisted as soon as you trigger
+**update config**, and you can see the saved joint values appear in the switch's config JSON:
+
+```json
+{
+  "arm": "arm-1",
+  "joints": [
+    0.0000025790882318688095, -0.7929777503013611, -0.8206289410591125,
+    -6.174358873067831e-7, 1.611369013786316, 2.2541650324114926e-8
+  ],
+  "motion": "",
+  "vision_services": [],
+  "constraints": {},
+  "extra": {}
+}
+```
+
+The `joints` array holds the six joint angles, in radians, captured the moment you triggered **update config**; `arm` is the dependency you set earlier, and the remaining fields stay at their defaults for this workshop. Triggering **update config** again overwrites `joints` with wherever the arm is now, which is why you jog to the pose you want before saving.
+
+<!-- ASSET P0 control-armsaver-switch (UI+): arm-position-saver switch card with position 1 = save and 2 = execute annotated -->
+
+
+
+
+
+
+    
+    
+    
+<picture>
+
+  
+  
+<source srcset="/tutorials/pick-and-place/control-armsaver-switch_hu_1c5591d849ac7fc.webp" type="image/webp" width="1200" height="443">
+<img src="/tutorials/pick-and-place/control-armsaver-switch.png" width="1200" height="443" alt="The arm-position-saver switch test card with its update config and go to positions." class="" id="" style="" loading="lazy">
+  
+
+</picture>
+
+
+
+
+Now that `home-pose` is saved, open its resource card on the **Configure** tab and use the **Duplicate** feature to create a copy. Rename the copy to `approach-pose`, and its `arm` attribute carries over automatically since it is already set to `"arm-1"`. Duplicate three more times for `grasp-pose`, `travel-pose`, and `place-pose`. This is faster than adding five switches from scratch and less error-prone, since you only type the `arm` attribute once.
+
+<!-- ASSET P1 configure-duplicate-feature (UI+): the resource Duplicate control highlighted -->
+
+
+
+
+
+
+    
+    
+    
+<picture>
+
+  
+  
+<source srcset="/tutorials/pick-and-place/configure-duplicate-feature_hu_1dcc7950dda92f6c.webp" type="image/webp" width="1200" height="755">
+<img src="/tutorials/pick-and-place/configure-duplicate-feature.png" width="1200" height="755" alt="A resource card menu with the Duplicate option." class="" id="" style="" loading="lazy">
+  
+
+</picture>
+
+
+
+
+Run the same four save-and-verify steps for each of the four new poses: jog the arm into position, confirm it with **Current position** under **MoveToPosition**, set the switch to "update config" to save, and set it to "go to" to confirm the arm returns. Where you jog to for each one is not arbitrary: use the **Purpose** column in [the table above](#the-key-poses) as your target for each of the five key poses, not just any reachable spot.
+
+> **Switch positions:**
+> 
+> 
+> On an `arm-position-saver` switch, position 1 (update config) saves the current joint positions and position 2 (go to) moves the arm to the saved pose. Position 0 is the idle resting state the switch returns to after a save or a move; it does not clear the saved pose. Always save with position 1 before you attempt position 2. Setting position 2 on an unsaved switch does nothing.
+> 
+
+<div class="checkpoint">
+  <p class="checkpoint-title"><i class="icon fas fa-check-circle"></i>Checkpoint</p>
+  <div class="checkpoint-body">Working one pose at a time, set each saved switch to position 2 and confirm the arm moves to the pose you saved. Check that <code>home-pose</code> still gives the wrist camera a clear view of the blocks. If a switch does nothing when you set it to position 2, you have not saved it yet; set position 1 first, then try position 2 again.</div>
+</div>
+
+
+## Teach the planner about obstacles
+
+The Viam motion planner is collision-aware, but it can only avoid geometry it knows about. Without any obstacle configuration, the planner avoids self-collisions only. Once you add obstacle geometry, the planner treats the table surface and the workspace boundary as hard obstacles it cannot plan through.
+
+In this workshop you configure two types of obstacles: the table surface and two safety walls at the workspace boundary.
+
+## Obstacles as components
+
+An obstacle can be configured as a `vmodutils/obstacle` component you add on the **Configure** tab, the same way you added the arm, gripper, and camera. This obstacle model uses the gripper API, so once configured, each obstacle has the same control UI as a gripper. This is purely as a resource container for geometry.
+
+The obstacle geometry is then automatically included in the world state the motion service uses to plan a safe path for the arm to a target position in 3D space. This is one of two ways to get obstacle geometry into that world state: configuring it here, as a component, means it persists on the machine and applies to every move, which is what a fixed table and fixed walls call for. The other way, passing a `WorldState` directly on a single `motion.move` call in code, suits geometry that only matters for one move and should not persist, and is out of scope for this workshop; see [Move an arm](/motion-planning/move-an-arm/overview/) if you need that pattern later.
+
+## Setup goal
+
+The 3D scene below is the goal for this section: the table surface and two safety walls rendered around the arm, so the motion planner treats them as hard boundaries it cannot plan through.
+
+<!-- ASSET P1 3dscene-obstacles (UI): 3D scene rendering the table + wall boxes around the arm -->
+
+
+
+
+
+
+    
+    
+    
+<picture>
+
+  
+  
+<source srcset="/tutorials/pick-and-place/3dscene-obstacles_hu_4c8cedad132af67a.webp" type="image/webp" width="1200" height="831">
+<img src="/tutorials/pick-and-place/3dscene-obstacles.png" width="1200" height="831" alt="The 3D scene showing the table and safety-wall obstacle boxes around the arm." class="" id="" style="" loading="lazy">
+  
+
+</picture>
+
+
+
+
+### Add the table obstacle
+
+Start with the table.
+
+Click the **+** icon and select **Blocks**, then search for `obstacle` and select the `vmodutils/obstacle` result. Name it `table`. In the attributes editor, paste the geometries blob:
+
+```json
+{
+  "geometries": [
+    {
+      "type": "box",
+      "x": 1200,
+      "y": 800,
+      "z": 30
+    }
+  ]
+}
+```
+
+This defines the table as a box with placeholder dimensions 1200 x 800 x 30 millimeters. Replace these with your own table's length, width, and thickness; [Position the obstacles](#position-the-obstacles) below covers when and how to swap in your own measurements.
+
+Next click **Frame** and set the frame that positions the table obstacle in the world.
+
+`parent` is `world`, and `translation` is where the box **center** sits relative to the world origin, which in this setup is the arm base:
+
+```json
+{
+  "parent": "world",
+  "translation": { "x": 0, "y": 0, "z": -15 },
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+  }
+}
+```
+
+The one detail that trips people up is that `translation.z` is the box's **center**, not its top or bottom surface. The world origin sits at table-top height (`z = 0`), so a 30 mm thick table needs `translation.z` of `-15`, half its thickness: the box extends from `-30` up to `0`, and its center is at `-15`. The safety walls you add next use the same rule in the other direction: a 600 mm tall wall gets `translation.z` of `300` so it rises from `0` to `600`. An obstacle only appears in the 3D scene and the planner's world state once it has this frame.
+
+`translation.x` and `translation.y` above assume the arm sits at the table's center, so treat `0, 0` as a placeholder too. Most workshop setups clamp the arm to one end of the table instead of rooting it at the center, so your real `x` and `y` will differ. [Position the obstacles](#position-the-obstacles) below covers how to dial those in.
+
+### Add the safety walls
+
+Add two more `vmodutils/obstacle` components the same way, one per boundary you want to wall off. Each has its box dimensions in `geometries` and a `world`-parented `frame` that places it.
+
+`safety-wall-front` attributes:
+
+```json
+{
+  "geometries": [{ "type": "box", "x": 20, "y": 1200, "z": 600 }]
+}
+```
+
+`safety-wall-front` frame:
+
+```json
+{
+  "parent": "world",
+  "translation": {
+    "x": 600,
+    "y": 0,
+    "z": 300
+  },
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+  }
+}
+```
+
+`safety-wall-back` attributes:
+
+```json
+{
+  "geometries": [{ "type": "box", "x": 20, "y": 1200, "z": 600 }]
+}
+```
+
+`safety-wall-back` frame:
+
+```json
+{
+  "parent": "world",
+  "translation": {
+    "x": -600,
+    "y": 0,
+    "z": 300
+  },
+  "orientation": {
+    "type": "ov_degrees",
+    "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+  }
+}
+```
+
+`600` and `-600` are placeholders sized for a 1200 mm long table with the arm at its center, so the front and back walls sit at the two ends. Both walls are 600 mm tall, so their frame `translation.z` is 300, half the height; that value depends only on the wall height you measure, not on where the arm sits, so it does not need adjustment below.
+
+### Position the obstacles
+
+<!-- ASSET P1 photo-measure-workspace (PHOTO): tape measure on the table / measuring a boundary -->
+
+The dimensions and translations for the table and walls above are placeholders. Replace them with your own in two passes:
+
+1. **Tape-measure the box sizes.** Measure your table's length, width, and thickness, and the length and height of your workspace boundary. These go straight into each obstacle's `geometries` block (`x`, `y`, `z`), replacing the placeholder numbers above.
+2. **Use the 3D scene tab to place the boxes.** An arm is rarely mounted at the exact center of a table; most workshop setups clamp it to one end instead. Open the **3D scene** tab, then in the upper right corner click the hammer icon to enter build mode. From build mode, select an obstacle from the **World** panel. You can then use the red arrows to drag the obstacle into a position that mirrors your workspace. This is a visual calibration against what you see in the 3D scene, not a formula to solve.
+
+You can check your obstacle configuration against the companion repo's [obstacles-template.json](https://github.com/viam-devrel/pick-and-place/blob/main/config/obstacles-template.json), which has the full set with example measurements filled in for an arm mounted in the center of a table. The full machine configuration, including all pose switches and obstacles, is in [machine-fragment.json](https://github.com/viam-devrel/pick-and-place/blob/main/config/machine-fragment.json). Treat both as references to check your work against, not as files to import over what you configured by hand.
+
+## Test the full static sequence
+
+<!-- ASSET P2 logs-clean-sequence (UI): Logs with no collision errors after the run -->
+
+From the **Control** tab, trigger the pose switches in this order:
+
+```text
+home-pose (2) -> approach-pose (2) -> Open gripper ->
+grasp-pose (2) -> Grab -> travel-pose (2) ->
+place-pose (2) -> Open gripper -> home-pose (2)
+```
+
+The **Open** and **Grab** buttons are the same gripper controls you used in Phase 2: **Grab** closes the fingers on a block and **Open** releases it.
+
+<!-- ASSET P0 static-sequence (MOTION): the arm running the full static loop home->approach->grasp->travel->place->home -->
+
+<div class="alert cookieconsent-optout-marketing" role="alert">
+  Please <a href="javascript:Cookiebot.renew()">accept marketing cookies</a> to watch the following <a href="https://www.youtube-nocookie.com/embed/7wRyUKvnjSg">YouTube video.</a>
+</div>
+
+
+
+
+    
+    
+    
+<picture>
+
+  
+<img src="/error.svg" alt="Error" class="embed-responsive embed-responsive-16by9 cookieconsent-optout-marketing" id="" style="" loading="lazy">
+  
+
+</picture>
+
+<div class="cookieconsent-optin-marketing">
+<div class="embed-responsive embed-responsive-16by9">
+  <iframe class="embed-responsive-item cookieconsent-optin-marketing" data-src="https://www.youtube-nocookie.com/embed/7wRyUKvnjSg" data-cookieconsent="marketing" allowfullscreen>
+  </iframe>
+</div>
+</div>
+
+
+As the arm moves, open the **3D scene** tab to watch its path alongside the table surface and the safety walls.
+
+The planner refuses to plan through configured geometry, so an obstacle conflict shows up as a planning failure in the logs, not as the arm passing through the obstacle. Open the **Logs** tab alongside the 3D scene to catch any such planning failure in real time.
+
+<div class="checkpoint">
+  <p class="checkpoint-title"><i class="icon fas fa-check-circle"></i>Checkpoint</p>
+  <div class="checkpoint-body">At this point you have triggered the full sequence manually, one pose at a time: the arm reaches every pose, the gripper opens and closes at the correct moments, and the Logs tab shows no collision errors. For each move, the motion service planned a collision-free path, steering the arm around the table and the safety walls you configured rather than through them. If planning fails at a step, open the 3D scene tab to see what geometry the planner sees, then adjust the pose or the obstacle dimensions and retry. A common cause is an obstacle positioned slightly off from its physical counterpart, so the planner sees the arm path as intersecting geometry that the physical arm actually clears.</div>
+</div>
+
+
+You now have a working static sequence. In Phase 4 you drive this same sequence from a Python script, replacing the manual switch triggers with code.
+
+<nav class="workshop-nav" aria-label="Workshop phase navigation"><p class="workshop-progress">Phase 3 of 6</p><div class="workshop-nav-links"><a class="workshop-nav-prev" href="/tutorials/pick-and-place/configure-resources/">&larr; Previous</a><a class="workshop-nav-next" href="/tutorials/pick-and-place/control-the-robot-from-python/">Next &rarr;</a></div>
+</nav>
+
+

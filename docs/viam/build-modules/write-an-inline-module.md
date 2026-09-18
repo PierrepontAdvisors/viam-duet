@@ -1,0 +1,573 @@
+# Write an inline module
+
+Write and deploy a custom module directly in the browser using Viam's inline module editor.
+> Source: https://docs.viam.com/build-modules/write-an-inline-module/
+
+
+Viam provides built-in support for many types of hardware and software, but you
+may want to use hardware that Viam doesn't support out of the box, or add
+application-specific logic. Modules let you add that support yourself.
+
+An inline module is the fastest way to get started. You write your module code
+directly in the Viam app's browser-based editor -- no IDE, terminal, or GitHub
+account required. When you click **Save & Deploy**, Viam builds your module in
+the cloud and deploys it to your machine automatically.
+
+Inline modules implement the Generic service API -- a single `DoCommand`
+method for arbitrary control logic. To write a hardware driver or use a more
+specific API, see
+[Write a driver module](/build-modules/write-a-driver-module/) or
+[Write a logic module](/build-modules/write-a-logic-module/).
+
+For background on inline modules, how they compare to externally managed
+modules, and the Generic service API, see the
+[overview](/build-modules/overview/#inline-and-externally-managed-modules).
+
+To illustrate each step, this page uses a distance-responsive servo controller
+as a worked example -- a service that reads an ultrasonic sensor and adjusts a
+servo angle based on distance. The same patterns apply to any control logic;
+substitute your own attributes, dependencies, and command behavior.
+
+## Steps
+
+### 1. Create the module
+
+1. In the [Viam app](https://app.viam.com), navigate to your machine's
+   **CONFIGURE** tab.
+2. Click **+** and select **Control code**.
+3. In the "Choose where to host your code" dialog, select **Viam-hosted** and
+   click **Choose**.
+4. Name your module (for example, `servo-distance-control`) and choose a language
+   (**Python** or **Go**).
+5. Click **Create module**.
+
+You can also reach this dialog from your machine's **CONNECT** tab by selecting
+**Control code sample** from the sidebar and clicking **Create inline module**.
+Both paths open the same dialog and land you in the same editor.
+
+The browser opens the code editor with a working template that includes all
+necessary imports and method stubs.
+
+### 2. Understand the template
+
+The editor opens a single file -- your module's main source file. The template
+includes three methods you need to fill in:
+
+
+
+
+### Python
+
+The editable file is `src/models/generic_service.py`. It contains a class that
+extends `GenericService` and `EasyResource`:
+
+```python
+class MyGenericService(GenericService, EasyResource):
+    MODEL: ClassVar[Model] = Model(
+        ModelFamily("my-org", "servo-distance-control"), "generic-service"
+    )
+```
+The three methods to implement:
+
+<ul>
+<li>**`validate_config`** – check that configuration attributes are valid and
+declare dependencies.</li>
+<li>**`new`** – initialize your service with attributes and dependencies.</li>
+<li>**`do_command`** – your control logic.</li>
+</ul>
+<blockquote>
+**Important:**
+
+Do not change the class name or the `MODEL` triplet. Viam uses these
+auto-generated values to identify your module. Changing them will break your
+inline module.
+
+</blockquote>
+
+### Go
+
+The editable file is `module.go`. It contains a struct, a config type, and
+registration logic:
+
+```go
+var (
+    GenericService   = resource.NewModel("my-org", "servo-distance-control", "generic-service")
+    errUnimplemented = errors.New("unimplemented")
+)
+
+func init() {
+    resource.RegisterService(genericservice.API, GenericService,
+        resource.Registration[resource.Resource, *Config]{
+            Constructor: newGenericService,
+        },
+    )
+}
+```
+`errUnimplemented` is a pre-declared error value you can return from method
+branches you have not implemented yet (for example,
+`return nil, errUnimplemented`).
+
+The areas you’ll edit:
+
+<ul>
+<li>**`Config` struct** – add JSON-tagged fields for each attribute your
+service accepts.</li>
+<li>**`Validate`** on the `Config` struct – check attributes, return
+dependencies.</li>
+<li>**`genericService` struct** – add fields to hold runtime state
+(resolved dependencies, parsed config values).</li>
+<li>**`NewGenericService`** – populate the struct fields from attributes
+and dependencies.</li>
+<li>**`DoCommand`** – your control logic.</li>
+</ul>
+<blockquote>
+**Important:**
+
+Do not change the model name triplet, struct names, or public function names.
+Viam uses these auto-generated values to identify your module. Changing them
+will break your inline module.
+
+</blockquote>
+
+
+
+### 3. Implement validate_config
+
+The validate method runs every time the machine configuration changes. It checks
+that the attributes passed to your service are valid and declares dependencies
+on other components or services.
+
+This example validates attributes for a distance-responsive servo controller --
+a service that reads an ultrasonic sensor and adjusts a servo angle based on
+distance.
+
+For this example, we use:
+
+- `sensor_range_start` -- lowest expected sensor reading, in meters. Required.
+- `sensor_range_end` -- highest expected sensor reading, in meters. Required.
+- `servo_angle_min` -- servo angle at the low end of the sensor range, in degrees. Optional; defaults to 0.
+- `servo_angle_max` -- servo angle at the high end of the sensor range, in degrees. Optional; defaults to 180.
+- `reversed` -- if true, map the low sensor reading to the high servo angle. Optional; defaults to false.
+- `servo` -- name of the servo component the service controls. Required.
+- `sensor` -- name of the distance sensor the service reads. Required.
+
+
+
+
+### Python
+
+```python
+@classmethod
+def validate_config(
+    cls, config: ComponentConfig
+) -> Tuple[Sequence[str], Sequence[str]]:
+    attrs = struct_to_dict(config.attributes)
+
+    # Required numeric attributes
+    sensor_range_start = attrs.get("sensor_range_start")
+    if sensor_range_start is None or not isinstance(
+        sensor_range_start, (int, float)
+    ):
+        raise ValueError(
+            "attribute 'sensor_range_start' is required "
+            "and must be an int or float value"
+        )
+
+    sensor_range_end = attrs.get("sensor_range_end")
+    if sensor_range_end is None or not isinstance(
+        sensor_range_end, (int, float)
+    ):
+        raise ValueError(
+            "attribute 'sensor_range_end' is required "
+            "and must be an int or float value"
+        )
+
+    # Required dependency attributes
+    required_deps: List[str] = []
+
+    servo_name = attrs.get("servo")
+    if not isinstance(servo_name, str) or not servo_name:
+        raise ValueError(
+            "attribute 'servo' (non-empty string) is required"
+        )
+    required_deps.append(servo_name)
+
+    sensor_name = attrs.get("sensor")
+    if not isinstance(sensor_name, str) or not sensor_name:
+        raise ValueError(
+            "attribute 'sensor' (non-empty string) is required"
+        )
+    required_deps.append(sensor_name)
+
+    return required_deps, []
+```
+The return value is a tuple of two lists:
+
+<ol>
+<li>**Required dependencies** – component or service names that must exist and
+be ready before your service starts.</li>
+<li>**Optional dependencies** – names your service can use if available but
+does not require.</li>
+</ol>
+
+### Go
+
+```go
+type Config struct {
+    SensorRangeStart float64 `json:"sensor_range_start"`
+    SensorRangeEnd   float64 `json:"sensor_range_end"`
+    ServoAngleMin    *int64  `json:"servo_angle_min"`
+    ServoAngleMax    *int64  `json:"servo_angle_max"`
+    Reversed         *bool   `json:"reversed"`
+    Servo            string  `json:"servo"`
+    Sensor           string  `json:"sensor"`
+}
+
+func (cfg *Config) Validate(path string) ([]string, []string, error) {
+    if cfg.SensorRangeStart == 0 {
+        return nil, nil, fmt.Errorf(
+            "%s: 'sensor_range_start' is required and must be non-zero",
+            path,
+        )
+    }
+    if cfg.SensorRangeEnd == 0 {
+        return nil, nil, fmt.Errorf(
+            "%s: 'sensor_range_end' is required and must be non-zero",
+            path,
+        )
+    }
+
+    requiredDeps := []string{}
+    if cfg.Servo == "" {
+        return nil, nil, fmt.Errorf(
+            "%s: 'servo' (non-empty string) is required", path,
+        )
+    }
+    requiredDeps = append(requiredDeps, cfg.Servo)
+
+    if cfg.Sensor == "" {
+        return nil, nil, fmt.Errorf(
+            "%s: 'sensor' (non-empty string) is required", path,
+        )
+    }
+    requiredDeps = append(requiredDeps, cfg.Sensor)
+
+    return requiredDeps, []string{}, nil
+}
+```
+The `Validate` method returns two slices (required dependencies and optional
+dependencies) and an error.
+
+
+
+### 4. Implement the constructor
+
+The constructor runs when the service is first created and again whenever its
+configuration changes. Use it to parse attributes and resolve dependencies.
+
+
+
+
+### Python
+
+```python
+@classmethod
+def new(
+    cls, config: ComponentConfig,
+    dependencies: Mapping[ResourceName, ResourceBase]
+) -> Self:
+    self = super().new(config, dependencies)
+    attrs = struct_to_dict(config.attributes)
+
+    # Required attributes
+    self.sensor_range_start = float(attrs.get("sensor_range_start"))
+    self.sensor_range_end = float(attrs.get("sensor_range_end"))
+
+    # Optional attributes with defaults
+    self.servo_angle_min = float(attrs.get("servo_angle_min", 0))
+    self.servo_angle_max = float(attrs.get("servo_angle_max", 180))
+    self.reversed = attrs.get("reversed", False)
+
+    # Resolve dependencies
+    servo_name = attrs.get("servo")
+    sensor_name = attrs.get("sensor")
+    self.servo = dependencies[Servo.get_resource_name(servo_name)]
+    self.sensor = dependencies[Sensor.get_resource_name(sensor_name)]
+
+    return self
+```
+
+### Go
+
+```go
+func NewGenericService(
+    ctx context.Context, deps resource.Dependencies,
+    name resource.Name, conf *Config, logger logging.Logger,
+) (resource.Resource, error) {
+    cancelCtx, cancelFunc := context.WithCancel(context.Background())
+
+    // Apply defaults for optional fields
+    servoAngleMin := int64(0)
+    if conf.ServoAngleMin != nil {
+        servoAngleMin = *conf.ServoAngleMin
+    }
+    servoAngleMax := int64(180)
+    if conf.ServoAngleMax != nil {
+        servoAngleMax = *conf.ServoAngleMax
+    }
+    reversed := false
+    if conf.Reversed != nil {
+        reversed = *conf.Reversed
+    }
+
+    // Resolve dependencies
+    servoDep, err := servo.FromProvider(deps, conf.Servo)
+    if err != nil {
+        return nil, err
+    }
+    sensorDep, err := sensor.FromProvider(deps, conf.Sensor)
+    if err != nil {
+        return nil, err
+    }
+
+    return &genericService{
+        name:             name,
+        logger:           logger,
+        cfg:              conf,
+        cancelCtx:        cancelCtx,
+        cancelFunc:       cancelFunc,
+        servo:            servoDep,
+        sensor:           sensorDep,
+        sensorRangeStart: conf.SensorRangeStart,
+        sensorRangeEnd:   conf.SensorRangeEnd,
+        servoAngleMin:    servoAngleMin,
+        servoAngleMax:    servoAngleMax,
+        reversed:         reversed,
+    }, nil
+}
+```
+The scaffold contains both a private constructor, `newGenericService`, and a
+public constructor, `NewGenericService`. The private constructor converts the
+raw `resource.Config` into a typed `*Config` and delegates to the public
+constructor. Leave the private constructor alone – put your logic in
+`NewGenericService`.
+
+
+
+### 5. Implement DoCommand
+
+`DoCommand` is where your control logic goes. This example reads a distance
+sensor and maps the reading to a servo angle:
+
+
+
+
+### Python
+
+```python
+async def do_command(
+    self, command: Mapping[str, ValueTypes], *,
+    timeout: Optional[float] = None, **kwargs
+) -> Mapping[str, ValueTypes]:
+    readings = await self.sensor.get_readings()
+    if not readings:
+        raise ValueError("No sensor readings available")
+
+    value = next(iter(readings.values()))
+
+    # Map sensor range to servo angle range
+    t = (value - self.sensor_range_start) / (
+        self.sensor_range_end - self.sensor_range_start
+    )
+    t = max(0.0, min(1.0, 1.0 - t if self.reversed else t))
+
+    angle = self.servo_angle_min + t * (
+        self.servo_angle_max - self.servo_angle_min
+    )
+    await self.servo.move(int(angle))
+
+    return {"servo_angle_deg": angle}
+```
+
+### Go
+
+```go
+func (s *genericService) DoCommand(
+    ctx context.Context, cmd map[string]interface{},
+) (map[string]interface{}, error) {
+    readings, _ := s.sensor.Readings(ctx, nil)
+    value, ok := readings["distance"].(float64)
+    if !ok {
+        return nil, fmt.Errorf("sensor reading 'distance' must be a float64")
+    }
+
+    // Map sensor range to servo angle range
+    t := (value - s.sensorRangeStart) /
+        (s.sensorRangeEnd - s.sensorRangeStart)
+    if t < 0 { t = 0 } else if t > 1 { t = 1 }
+    if s.reversed { t = 1 - t }
+
+    angle := float64(s.servoAngleMin) +
+        t * (float64(s.servoAngleMax) - float64(s.servoAngleMin))
+    return map[string]interface{}{
+        "servo_angle_deg": angle,
+    }, s.servo.Move(ctx, uint32(angle), nil)
+}
+```
+
+
+
+In this example no DoCommand payload is used. You can use the command payload to
+customize behavior per invocation. Attributes are constant across all
+invocations; the DoCommand payload can vary with each call.
+
+### 6. Save and deploy
+
+1. Click **Save & Deploy** in the code editor toolbar.
+2. Viam uploads your code as a new version and starts a cloud build.
+3. Builds typically take 2-5 minutes. You can continue editing while a build
+   runs -- your next save creates a new version.
+4. If the build fails, click **View Logs** to see what went wrong.
+
+Each save creates a new version in your module's history. You can switch between
+versions using the version dropdown in the editor toolbar.
+
+### 7. Test on a machine
+
+#### Add the module to a machine
+
+1. In the code editor, click **Add to machine**.
+2. Select a location, machine, and part.
+3. Click **Add**.
+
+The Viam app navigates you to the machine's **CONFIGURE** tab with your module
+added.
+
+#### Configure the service
+
+1. In the module section, click **Add** to add a model of your generic service.
+2. If your service depends on any hardware that isn't already configured on the
+   machine, add those components now. Click the **+** icon next to your machine
+   part's name in the left sidebar and follow
+   [Configure hardware components](/hardware/configure-hardware/) to pick a
+   model and set attributes. The service references components by the names
+   you give them.
+3. Configure the attributes for your generic service:
+
+```json
+{
+  "sensor_range_start": 0.05,
+  "sensor_range_end": 0.3,
+  "servo_angle_min": 40,
+  "servo_angle_max": 270,
+  "reversed": true,
+  "servo": "servo-1",
+  "sensor": "sensor-1"
+}
+```
+
+4. Click **Save**.
+
+#### Send test commands
+
+1. On the **CONFIGURE** tab, expand your generic service's **Test** section.
+2. Expand **DoCommand**.
+3. Enter a command (or an empty map `{}` if your DoCommand does not use the
+   payload):
+
+```json
+{}
+```
+
+4. Click **Execute**. You should see a response like:
+
+```json
+{ "servo_angle_deg": 155.0 }
+```
+
+### 8. Automate with a scheduled job
+
+The DoCommand section in the Viam app runs your logic once per click. To have
+it run automatically:
+
+1. Click **+** and select **Job**.
+2. Name the job and click **Create**.
+3. Choose a schedule. For control logic that should always run, select
+   **Continuous**.
+4. Select your generic service as the resource.
+5. Edit the DoCommand payload or leave it as an empty map if no payload is
+   needed.
+6. Click **Save**.
+
+## Try It
+
+1. Create a new inline module from the **+** menu.
+2. Implement `validate_config`, the constructor, and `do_command`.
+3. Click **Save & Deploy** and wait for the build to complete.
+4. Add the module to a machine and configure the service with dependencies.
+5. Execute a DoCommand and verify the response.
+6. Set up a scheduled job to run the logic continuously.
+
+## Troubleshooting
+
+**Build fails after saving**
+
+
+
+- Click **View Logs** in the build progress bar to see the error.
+- Common causes: syntax errors, missing imports, incompatible dependencies.
+- You can fix the code and save again -- each save creates a new version.
+
+
+
+
+**Module not appearing on machine**
+
+
+
+- Verify the machine is online and connected to the cloud.
+- Check that you added the module using the **Add to machine** button in the
+  code editor, or that the module appears in the machine's configuration.
+- The module version defaults to `latest`. After a successful build, the machine
+  picks up the new version automatically within a few minutes.
+
+
+
+
+**DoCommand returns an error**
+
+
+
+- Check that all dependencies are configured on the machine and are working.
+  Use the test section of each dependency to verify them in isolation.
+- Verify the attribute names in your service configuration match what
+  `validate_config` expects.
+- Check the **LOGS** tab for detailed error messages.
+
+
+
+
+**Changes to code not taking effect**
+
+
+
+- Make sure the build completed successfully. Check the build progress bar in
+  the code editor.
+- The machine must be online to receive the updated module. Check the machine's
+  status in the Viam app.
+- By default, modules are configured with version `latest`, which means every
+  new build deploys automatically. If the version is pinned, update it manually.
+
+
+
+
+## What's Next
+
+- [Write a Driver Module](/build-modules/write-a-driver-module/) -- build a module
+  with a typed resource API when you need to manage your own source code and
+  build pipeline.
+- [Write a Logic Module](/build-modules/write-a-logic-module/) -- build control
+  logic as an externally managed module with full IDE support.
+- [Deploy a Module](/build-modules/deploy-a-module/) -- package and upload
+  a module to the Viam registry for distribution to other machines or users.
+

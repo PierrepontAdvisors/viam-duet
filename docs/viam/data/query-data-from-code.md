@@ -1,0 +1,263 @@
+# Query data from code
+
+Query captured data programmatically using the Viam Python or Go SDK.
+> Source: https://docs.viam.com/data/query-data-from-code/
+
+
+Pull captured data into your own programs using the Viam data client API. You can run the same SQL and MQL queries available in the app's query editor from Python or Go code.
+
+> **Tip: discover your data structure:**
+> 
+> 
+> Not sure what fields to query? Run this in the [query editor](/data/query-data/) first:
+> 
+> ```sql
+> SELECT data FROM readings
+> WHERE component_name = 'YOUR-COMPONENT'
+>   AND time_received >= CAST('2000-01-01T00:00:00.000Z' AS TIMESTAMP)
+> LIMIT 1
+> ```
+> 
+> Switch to **table view** to see nested fields as dot-notation column headers. Use those paths in your code. See the [readings table schema](/data/schema/#column-reference) for the full reference.
+> 
+
+> **Known issue: SQL queries need an explicit lower time bound:**
+> 
+> 
+> SQL queries against `readings` currently return no rows unless the `WHERE` clause includes an explicit lower bound on `time_received`. Include `AND time_received >= CAST('2000-01-01T00:00:00.000Z' AS TIMESTAMP)` in any SQL example on this page if you copy it. MQL queries are not affected. Tracked as APP-10891.
+> 
+
+> **Note:**
+> 
+> Tabular data queries (`TabularDataByMQL` and `TabularDataBySQL`) share a 100 TB monthly processing limit across your organization. Queries that exceed the limit return an error. [Contact us](mailto:support@viam.com) to request an increase.
+
+## Set up a connection
+
+To get your credentials:
+
+1. Go to your machine's page in the Viam app.
+2. Click the **CONNECT** tab.
+3. Select **API keys**.
+4. Copy the **API key** and **API key ID**.
+
+Find your organization ID in the Viam app by clicking your organization name and selecting **Settings**.
+
+
+
+
+
+### Python
+
+Install the Viam Python SDK in a virtual environment by following [Install the Python SDK](/reference/sdks/python/python-venv/).
+
+```python
+import asyncio
+from viam.rpc.dial import DialOptions
+from viam.app.viam_client import ViamClient
+
+API_KEY = "YOUR-API-KEY"
+API_KEY_ID = "YOUR-API-KEY-ID"
+ORG_ID = "YOUR-ORGANIZATION-ID"
+
+async def main():
+    dial_options = DialOptions.with_api_key(
+        api_key=API_KEY,
+        api_key_id=API_KEY_ID,
+    )
+    client = await ViamClient.create_from_dial_options(dial_options)
+    data_client = client.data_client
+
+    # ... your queries here ...
+
+    client.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Go
+
+```bash
+mkdir query-data && cd query-data
+go mod init query-data
+go get go.viam.com/rdk
+```
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+
+    "go.viam.com/rdk/app"
+    "go.viam.com/rdk/logging"
+)
+
+func main() {
+    ctx := context.Background()
+    logger := logging.NewDebugLogger("query-data")
+
+    viamClient, err := app.CreateViamClientWithAPIKey(
+        ctx, app.Options{}, "YOUR-API-KEY", "YOUR-API-KEY-ID", logger)
+    if err != nil {
+        logger.Fatal(err)
+    }
+    defer viamClient.Close()
+
+    dataClient := viamClient.DataClient()
+
+    // ... your queries here ...
+}
+```
+
+
+
+## Query with SQL
+
+Use `tabular_data_by_sql` to run SQL queries. Results come back as a list of rows.
+
+
+
+
+### Python
+
+```python
+# Returns a list of dictionaries, one per row
+results = await data_client.tabular_data_by_sql(
+    organization_id=ORG_ID,
+    sql_query=(
+        "SELECT time_received, "
+        "  data.readings.temperature AS temperature "
+        "FROM readings "
+        "WHERE component_name = 'my-sensor' "
+        "  AND time_received >= CAST('2000-01-01T00:00:00.000Z' AS TIMESTAMP) "
+        "ORDER BY time_received DESC "
+        "LIMIT 5"
+    ),
+)
+
+for row in results:
+    print(row)
+```
+
+### Go
+
+```go
+// Returns a slice of maps, one per row
+results, err := dataClient.TabularDataBySQL(ctx, orgID,
+    "SELECT time_received, "+
+        "data.readings.temperature AS temperature "+
+        "FROM readings "+
+        "WHERE component_name = 'my-sensor' "+
+        "  AND time_received >= CAST('2000-01-01T00:00:00.000Z' AS TIMESTAMP) "+
+        "ORDER BY time_received DESC LIMIT 5")
+if err != nil {
+    logger.Fatal(err)
+}
+
+for _, row := range results {
+    fmt.Printf("%v\n", row)
+}
+```
+
+
+
+## Query with MQL
+
+Use `tabular_data_by_mql` for MongoDB aggregation pipelines. MQL is more powerful than SQL for grouping, computing averages, and reshaping nested data.
+
+
+
+
+### Python
+
+```python
+# Returns a list of dictionaries from the aggregation result
+results = await data_client.tabular_data_by_mql(
+    organization_id=ORG_ID,
+    query=[
+        {"$match": {"component_name": "my-sensor"}},
+        {"$group": {
+            "_id": "$component_name",
+            "avg_temp": {"$avg": "$data.readings.temperature"},
+            "count": {"$sum": 1},
+        }},
+    ],
+)
+
+for entry in results:
+    print(entry)
+```
+
+### Go
+
+```go
+// Returns a slice of maps from the aggregation result
+results, err := dataClient.TabularDataByMQL(ctx, orgID,
+    []map[string]interface{}{
+        {"$match": map[string]interface{}{
+            "component_name": "my-sensor",
+        }},
+        {"$group": map[string]interface{}{
+            "_id":      "$component_name",
+            "avg_temp": map[string]interface{}{"$avg": "$data.readings.temperature"},
+            "count":    map[string]interface{}{"$sum": 1},
+        }},
+    }, nil)
+if err != nil {
+    logger.Fatal(err)
+}
+
+for _, entry := range results {
+    fmt.Printf("%v\n", entry)
+}
+```
+
+
+
+## Reuse a saved query
+
+If you saved a query in the Viam app's query editor, you can run it from code by passing its name as `query_prefix_name`. The saved query runs first, and any stages you include in `query` run on its output, so you can keep a common pipeline in one place and add stages when you call it.
+
+
+
+
+### Python
+
+```python
+# Run the saved query "daily-averages", then keep the top 10 results
+results = await data_client.tabular_data_by_mql(
+    organization_id=ORG_ID,
+    query=[
+        {"$limit": 10},
+    ],
+    query_prefix_name="daily-averages",
+)
+```
+
+### Go
+
+```go
+// Run the saved query "daily-averages", then keep the top 10 results
+results, err := dataClient.TabularDataByMQL(ctx, orgID,
+    []map[string]interface{}{
+        {"$limit": 10},
+    },
+    &app.TabularDataByMQLOptions{QueryPrefixName: "daily-averages"})
+if err != nil {
+    logger.Fatal(err)
+}
+```
+
+
+
+Saving queries is available for MQL only. See [Save and reuse queries](/data/query-data/#save-and-reuse-queries) to create one in the app.
+
+## What's next
+
+- [Query reference](/data/reference/): schema, supported operators, and optimization tips
+- [Create a data pipeline](/data/pipelines/create-a-pipeline/): schedule recurring queries
+- [Sync to your database](/data/sync-data-to-your-database/): export data to your own MongoDB instance
+- [Data client API reference](/reference/apis/data-client/): full method documentation
+

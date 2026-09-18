@@ -1,0 +1,195 @@
+# Access machine resources from within a module
+
+From within a modular resource, you can access other machine resources using dependencies.
+> Source: https://docs.viam.com/build-modules/dependencies/
+
+
+From within a modular resource, you can access other machine [resources](/reference/glossary/#term-resource)
+ using dependencies.
+For background on required and optional dependencies, see the
+[overview](/build-modules/overview/#dependencies).
+
+## The dependency pattern
+
+Every dependency follows two steps: declare it in validation, then resolve it in your constructor. Once resolved, you call methods on it like any other resource.
+
+The examples below show a base that depends on two motors -- a required left motor and an optional right motor (for a base that can operate in single-motor mode).
+
+### 1. Declare dependencies in validation
+
+Dependency names come from your resource's configuration attributes, keeping the module flexible:
+
+```json {class="line-numbers linkable-line-numbers"}
+{
+  "name": "my-base",
+  "api": "rdk:component:base",
+  "model": "myorg:mymodule:mybase",
+  "attributes": {
+    "left_motor": "motor-1",
+    "right_motor": "motor-2"
+  }
+}
+```
+
+Your validation method parses these names and returns them as required or optional dependencies:
+
+
+
+
+### Python
+
+```python
+@classmethod
+def validate_config(
+    cls, config: ComponentConfig
+) -> Tuple[Sequence[str], Sequence[str]]:
+    req_deps = []
+    opt_deps = []
+    fields = config.attributes.fields
+
+    # Required dependency
+    if "left_motor" not in fields:
+        raise Exception("missing required left_motor attribute")
+    req_deps.append(fields["left_motor"].string_value)
+
+    # Optional dependency
+    if "right_motor" in fields:
+        opt_deps.append(fields["right_motor"].string_value)
+
+    return req_deps, opt_deps
+```
+
+### Go
+
+Define your config struct with fields for each dependency name:
+
+```go
+type Config struct {
+    LeftMotor  string `json:"left_motor"`
+    RightMotor string `json:"right_motor"`
+}
+
+func (cfg *Config) Validate(path string) ([]string, []string, error) {
+    // Required dependency
+    if cfg.LeftMotor == "" {
+        return nil, nil,
+            resource.NewConfigValidationFieldRequiredError(
+                path, "left_motor")
+    }
+    reqDeps := []string{cfg.LeftMotor}
+
+    // Optional dependency
+    var optDeps []string
+    if cfg.RightMotor != "" {
+        optDeps = append(optDeps, cfg.RightMotor)
+    }
+
+    return reqDeps, optDeps, nil
+}
+```
+
+
+
+### 2. Resolve dependencies
+
+Resolve dependencies in your constructor. Use the dependency name to look up the resource, then cast it to the correct type.
+
+
+
+
+### Python
+
+```python
+from typing import cast
+from viam.components.motor import Motor
+
+@classmethod
+def new(
+    cls, config: ComponentConfig,
+    dependencies: Mapping[ResourceName, ResourceBase]
+) -> Self:
+    instance = cls(config.name)
+    fields = config.attributes.fields
+
+    # Required dependency -- direct lookup
+    left_name = fields["left_motor"].string_value
+    instance.left = cast(
+        Motor,
+        dependencies[Motor.get_resource_name(left_name)])
+
+    # Optional dependency -- use .get() and handle None
+    instance.right = None
+    if "right_motor" in fields:
+        right_name = fields["right_motor"].string_value
+        right_resource = dependencies.get(
+            Motor.get_resource_name(right_name))
+        if right_resource is not None:
+            instance.right = cast(Motor, right_resource)
+
+    return instance
+```
+
+### Go
+
+```go
+import (
+    "go.viam.com/rdk/components/motor"
+)
+
+func newMyBase(ctx context.Context, deps resource.Dependencies,
+    conf resource.Config, logger logging.Logger,
+) (base.Base, error) {
+    baseConfig, err := resource.NativeConfig[*Config](conf)
+    if err != nil {
+        return nil, err
+    }
+
+    b := &myBase{
+        Named:  conf.ResourceName().AsNamed(),
+        logger: logger,
+    }
+
+    // Required dependency
+    b.left, err = motor.FromProvider(deps, baseConfig.LeftMotor)
+    if err != nil {
+        return nil, err
+    }
+
+    // Optional dependency -- check config, ignore error
+    if baseConfig.RightMotor != "" {
+        b.right, err = motor.FromProvider(
+            deps, baseConfig.RightMotor)
+        if err != nil {
+            logger.Infow("right motor not available, "+
+                "running in single-motor mode",
+                "error", err)
+        }
+    }
+
+    return b, nil
+}
+```
+
+
+
+> **Note:**
+> 
+> Config changes rebuild the resource: `viam-server` closes the existing instance and calls your constructor with the new config. Put dependency resolution in the constructor so it runs on both initial creation and every config change.
+
+> **Accessing built-in services:**
+> 
+> Some services like the motion service are available by default as part of `viam-server` even though they don’t appear in your machine config. To depend on one, use its full resource name in your validation method:
+> 
+> **Python:** `req_deps.append("rdk:service:motion/builtin")`
+> 
+> **Go:** `deps := []string{motion.Named("builtin").String()}`
+> 
+> Then resolve it the same way as any other dependency.
+
+## What's next
+
+- [Write a Driver Module](/build-modules/write-a-driver-module/) -- full walkthrough including dependency handling in context.
+- [Write a Logic Module](/build-modules/write-a-logic-module/) -- build a module that coordinates multiple resources.
+- [Access platform APIs](/build-modules/platform-apis/) -- access fleet management, data, and ML training APIs from within a module.
+- For full examples, see the [Try Viam tutorial](/try/) or [complex module examples on GitHub](https://github.com/viamrobotics/viam-python-sdk/tree/main/examples/complex_module/src).
+

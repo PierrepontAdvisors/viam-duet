@@ -1,0 +1,451 @@
+# Retrieve billing information with Viam's billing client API
+
+Use the billing client API to retrieve billing information from Viam.
+> Source: https://docs.viam.com/reference/apis/billing-client/
+
+
+The billing client allows you to retrieve billing information from Viam.
+
+The billing API supports the following methods:
+
+<!-- prettier-ignore -->
+| Method Name | Description |
+| ----------- | ----------- |
+| [`GetCurrentMonthUsage`](/reference/apis/billing-client/#getcurrentmonthusage) | Access data usage information for the current billing period for a given organization. |
+| [`GetOrgBillingInformation`](/reference/apis/billing-client/#getorgbillinginformation) | Access billing information (payment method, billing tier, etc.) for a given org. |
+| [`GetInvoicesSummary`](/reference/apis/billing-client/#getinvoicessummary) | Access total outstanding balance plus invoice summaries for a given organization. |
+| [`GetInvoicePDF`](/reference/apis/billing-client/#getinvoicepdf) | Access invoice PDF data and optionally save it to a provided file path. |
+| [`CreateInvoiceAndChargeImmediately`](/reference/apis/billing-client/#createinvoiceandchargeimmediately) | Create a flat fee invoice and charge the organization immediately. The caller must be an owner of the organization being charged. This function blocks until payment is confirmed, but will time out after 2 minutes if there is no confirmation. |
+| [`ChargeOrganization`](/reference/apis/billing-client/#chargeorganization) | Charge an organization for usage. |
+
+
+## Establish a connection
+
+To use the billing client API, you need to instantiate a `ViamClient` and then instantiate a `BillingClient`.
+
+You need an API key and API key ID with [Org owner permissions](/organization/rbac/#organization-settings-and-roles) to use the billing client API.
+To get an API key (and corresponding ID), use the [web UI](/organization/api-keys/#create-an-api-key)
+to the [Viam CLI](/cli/).
+
+
+
+
+### From a client application
+
+<h3 id="python" class="main-content-heading">
+    Python
+    
+</h3>
+```python
+import asyncio
+
+from viam.rpc.dial import DialOptions, Credentials
+from viam.app.viam_client import ViamClient
+from viam.app.billing_client import BillingClient
+
+async def connect() -> ViamClient:
+    dial_options = DialOptions(
+      credentials=Credentials(
+        type="api-key",
+        # TODO: Replace "<API-KEY>" (including brackets) with your machine's
+        # API key
+        payload='<API-KEY>',
+      ),
+      # TODO: Replace "<API-KEY-ID>" (including brackets) with your machine's
+      # API key ID
+      auth_entity='<API-KEY-ID>'
+    )
+    return await ViamClient.create_from_dial_options(dial_options)
+
+async def main():
+    # Make a ViamClient
+    async with await connect() as viam_client:
+        # Instantiate a BillingClient to run data client API methods on
+        billing_client = viam_client.billing_client
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+<h3 id="go" class="main-content-heading">
+    Go
+    
+</h3>
+```go
+package main
+
+import (
+  "context"
+
+  "go.viam.com/rdk/app"
+  "go.viam.com/rdk/logging"
+)
+
+func main() {
+  logger := logging.NewDebugLogger("client")
+  ctx := context.Background()
+  // TODO: Replace "<API-KEY>" (including brackets) with your machine's API key
+  // TODO: Replace "<API-KEY-ID>" (including brackets) with your machine's
+  // API key ID
+  viamClient, err := app.CreateViamClientWithAPIKey(
+    ctx, app.Options{}, "<API-KEY>", "<API-KEY-ID>", logger)
+  if err != nil {
+    logger.Fatal(err)
+  }
+  defer viamClient.Close()
+
+  billingClient := viamClient.BillingClient()
+}
+```
+<h3 id="typescript" class="main-content-heading">
+    TypeScript
+    
+</h3>
+```ts
+async function connect(): Promise<VIAM.ViamClient> {
+  // TODO: Replace "<API-KEY-ID>" (including brackets) with your machine's
+  const API_KEY_ID = "<API-KEY-ID>";
+  // TODO: Replace "<API-KEY>" (including brackets) with your machine's API key
+  const API_KEY = "<API-KEY>";
+  const opts: VIAM.ViamClientOptions = {
+    serviceHost: "https://app.viam.com:443",
+    credentials: {
+      type: "api-key",
+      authEntity: API_KEY_ID,
+      payload: API_KEY,
+    },
+  };
+
+  const client = await VIAM.createViamClient(opts);
+  return client;
+}
+
+const viamClient = await connect();
+const billingClient = viamClient.billingClient;
+```
+
+### From within a Module
+
+See [Use platform APIs from within a module](/build-modules/platform-apis/).
+
+
+
+Once you have instantiated a `BillingClient`, you can run [API methods](#api) against the `BillingClient` object (named `billing_client` in the examples).
+
+## API
+
+### GetCurrentMonthUsage
+
+Access data usage information for the current billing period for a given organization.
+This method only returns usage for organizations with monthly billing at the end of the month (`"in_arrears": true`).
+You can also find your usage data on the [**Payment and billing** page](/organization/billing/).
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `org_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the organization to request usage data for.
+- `timeout` ([float](https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex)) (optional): An option to set how long to wait (in seconds) before calling a time-out and closing the underlying RPC call.
+
+**Returns:**
+
+- ([viam.proto.app.billing.GetCurrentMonthUsageResponse](https://python.viam.dev/autoapi/viam/proto/app/billing/index.html#viam.proto.app.billing.GetCurrentMonthUsageResponse)): :   the current month usage information.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+usage = await billing_client.get_current_month_usage(<ORG-ID>)
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/billing_client/index.html#viam.app.billing_client.BillingClient.get_current_month_usage).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `orgID` [(string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [(*GetCurrentMonthUsageResponse)](https://pkg.go.dev/go.viam.com/rdk/app#GetCurrentMonthUsageResponse)
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#BillingClient.GetCurrentMonthUsage).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `orgId` (string) (required): The organization ID.
+
+**Returns:**
+
+- (Promise<GetCurrentMonthUsageResponse>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+const usage = await billing.getCurrentMonthUsage('<organization-id>');
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/BillingClient.html#getcurrentmonthusage).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### GetOrgBillingInformation
+
+Access billing information (payment method, billing tier, etc.) for a given org.
+You can also find this information on the [**Payment and billing** page](/organization/billing/).
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `org_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the organization to request data for.
+- `timeout` ([float](https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex)) (optional): An option to set how long to wait (in seconds) before calling a time-out and closing the underlying RPC call.
+
+**Returns:**
+
+- ([viam.proto.app.billing.GetOrgBillingInformationResponse](https://python.viam.dev/autoapi/viam/proto/app/billing/index.html#viam.proto.app.billing.GetOrgBillingInformationResponse)): :   the organization billing information.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+information = await billing_client.get_org_billing_information("<ORG-ID>")
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/billing_client/index.html#viam.app.billing_client.BillingClient.get_org_billing_information).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `orgID` [(string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [(*GetOrgBillingInformationResponse)](https://pkg.go.dev/go.viam.com/rdk/app#GetOrgBillingInformationResponse)
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#BillingClient.GetOrgBillingInformation).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `orgId` (string) (required): The organization ID.
+
+**Returns:**
+
+- (Promise<[GetOrgBillingInformationResponse](https://ts.viam.dev/classes/billingApi.GetOrgBillingInformationResponse.html)>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+const billingInfo = await billing.getOrgBillingInformation('<organization-id>');
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/BillingClient.html#getorgbillinginformation).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### GetInvoicesSummary
+
+Access total outstanding balance plus invoice summaries for a given organization.
+This includes both monthly and annual invoices depending on the organization's billing configuration.
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `org_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the organization to request data for.
+- `timeout` ([float](https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex)) (optional): An option to set how long to wait (in seconds) before calling a time-out and closing the underlying RPC call.
+
+**Returns:**
+
+- ([viam.proto.app.billing.GetInvoicesSummaryResponse](https://python.viam.dev/autoapi/viam/proto/app/billing/index.html#viam.proto.app.billing.GetInvoicesSummaryResponse)): :   the summaries of all organization invoices.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+summary = await billing_client.get_invoices_summary(<ORG-ID>)
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/billing_client/index.html#viam.app.billing_client.BillingClient.get_invoices_summary).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `orgID` [(string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [(float64)](https://pkg.go.dev/builtin#float64)
+- [([]*InvoiceSummary)](https://pkg.go.dev/go.viam.com/rdk/app#InvoiceSummary)
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#BillingClient.GetInvoicesSummary).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `orgId` (string) (required): The organization ID.
+
+**Returns:**
+
+- (Promise<[GetInvoicesSummaryResponse](https://ts.viam.dev/classes/billingApi.GetInvoicesSummaryResponse.html)>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+const invoicesSummary = await billing.getInvoicesSummary('<organization-id>');
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/BillingClient.html#getinvoicessummary).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### GetInvoicePDF
+
+Access invoice PDF data and optionally save it to a provided file path.
+You can also find your invoices on the [**Payment and billing** page](/organization/billing/).
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `invoice_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the invoice being requested.
+- `org_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the organization to request data from.
+- `dest` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the filepath to save the invoice to.
+- `timeout` ([float](https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex)) (optional): An option to set how long to wait (in seconds) before calling a time-out and closing the underlying RPC call.
+
+**Returns:**
+
+- None.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+await billing_client.get_invoice_pdf(<INVOICE-ID>, <ORG-ID>, "invoice.pdf")
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/billing_client/index.html#viam.app.billing_client.BillingClient.get_invoice_pdf).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `id`
+- `orgID` [(string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [([]byte)](https://pkg.go.dev/builtin#byte)
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#BillingClient.GetInvoicePDF).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `id` (string) (required): The invoice ID.
+- `orgId` (string) (required): The organization ID.
+
+**Returns:**
+
+- (Promise<Uint8Array<ArrayBuffer>>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+const invoicePdf = await billing.getInvoicePdf('<invoice-id>', '<organization-id>');
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/BillingClient.html#getinvoicepdf).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### CreateInvoiceAndChargeImmediately
+
+Create a flat fee invoice and charge the organization immediately. The caller must be an owner of the organization being charged. This function blocks until payment is confirmed, but will time out after 2 minutes if there is no confirmation.
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `org_id_to_charge` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required)
+- `amount` ([float](https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex)) (required)
+- `description` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (optional)
+- `org_id_for_branding` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (optional)
+- `disable_email` ([bool](https://docs.python.org/3/library/stdtypes.html#boolean-type-bool)) (required)
+
+**Returns:**
+
+- ([viam.proto.app.billing.CreateInvoiceAndChargeImmediatelyResponse](https://python.viam.dev/autoapi/viam/proto/app/billing/index.html#viam.proto.app.billing.CreateInvoiceAndChargeImmediatelyResponse))
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/billing_client/index.html#viam.app.billing_client.BillingClient.create_invoice_and_charge_immediately).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### ChargeOrganization
+
+Charge an organization for usage.
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `org_id_to_charge` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the organization to charge.
+- `subtotal` ([float](https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex)) (required): the subtotal amount in dollars.
+- `tax` ([float](https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex)) (required): the tax amount in dollars to add to the subtotal.
+- `description` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (optional): a short description of the charge to display on the invoice PDF (must be 1000 characters or less).
+- `org_id_for_branding` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (optional): the organization whose branding to use in the invoice PDF and confirmation email.
+- `disable_confirmation_email` ([bool](https://docs.python.org/3/library/stdtypes.html#boolean-type-bool)) (required): whether or not to disable sending an email confirmation for the invoice.
+
+**Returns:**
+
+- ([viam.proto.app.billing.ChargeOrganizationResponse](https://python.viam.dev/autoapi/viam/proto/app/billing/index.html#viam.proto.app.billing.ChargeOrganizationResponse)): :   the invoice id.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+invoice_id = await billing_client.charge_organization(
+    <ORG-ID-TO-CHARGE>,
+    9.99,
+    0.70,
+    "A charge with tax.",
+    <ORG-ID-FOR-BRANDING>,
+    True,
+)
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/billing_client/index.html#viam.app.billing_client.BillingClient.charge_organization).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+

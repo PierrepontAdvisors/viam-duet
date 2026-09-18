@@ -1,0 +1,566 @@
+# Work with ML training jobs with Viam's ML training API
+
+Use the ML training client API to manage ML training jobs taking place in Viam's cloud app.
+> Source: https://docs.viam.com/reference/apis/ml-training-client/
+
+
+The ML training API allows you to get information about and cancel ML training jobs running on Viam.
+
+The ML training client API supports the following methods:
+
+<!-- prettier-ignore -->
+| Method Name | Description |
+| ----------- | ----------- |
+| [`SubmitTrainingJob`](/reference/apis/ml-training-client/#submittrainingjob) | Submit a training job. |
+| [`SubmitCustomTrainingJob`](/reference/apis/ml-training-client/#submitcustomtrainingjob) | Submit a training job from a custom training script. |
+| [`GetTrainingJob`](/reference/apis/ml-training-client/#gettrainingjob) | Get training job metadata. |
+| [`ListTrainingJobs`](/reference/apis/ml-training-client/#listtrainingjobs) | Get training job metadata for all jobs within an organization. |
+| [`CancelTrainingJob`](/reference/apis/ml-training-client/#canceltrainingjob) | Cancel the specified training job. |
+| [`DeleteCompletedTrainingJob`](/reference/apis/ml-training-client/#deletecompletedtrainingjob) | Delete a completed training job from the database, whether the job succeeded or failed. |
+
+
+## Establish a connection
+
+To use the ML training client API, you need to instantiate a `ViamClient` and then instantiate an `MLTrainingClient`.
+
+You need an API key and API key ID with [Org owner permissions](/organization/rbac/#organization-settings-and-roles) to use the MLTraining client API.
+To get an API key (and corresponding ID), use the [web UI](/organization/api-keys/#create-an-api-key)
+to the [Viam CLI](/cli/).
+
+
+
+
+### From a client application
+
+<h3 id="python" class="main-content-heading">
+    Python
+    
+</h3>
+```python
+import asyncio
+
+from viam.rpc.dial import DialOptions, Credentials
+from viam.app.viam_client import ViamClient
+
+async def connect() -> ViamClient:
+    dial_options = DialOptions(
+      credentials=Credentials(
+        type="api-key",
+        # TODO: Replace "<API-KEY>" (including brackets) with your machine's
+        # API key
+        payload='<API-KEY>',
+      ),
+      # TODO: Replace "<API-KEY-ID>" (including brackets) with your machine's
+      # API key ID
+      auth_entity='<API-KEY-ID>'
+    )
+    return await ViamClient.create_from_dial_options(dial_options)
+
+async def main():
+    # Make a ViamClient
+    async with await connect() as viam_client:
+        # Instantiate an MLTrainingClient to run ML training client API methods on
+        ml_training_client = viam_client.ml_training_client
+
+if __name__ == '__main__':
+    asyncio.run(main())
+```
+<h3 id="go" class="main-content-heading">
+    Go
+    
+</h3>
+```go
+package main
+
+import (
+  "context"
+
+  "go.viam.com/rdk/app"
+  "go.viam.com/rdk/logging"
+)
+
+func main() {
+  logger := logging.NewDebugLogger("client")
+  ctx := context.Background()
+  // TODO: Replace "<API-KEY>" (including brackets) with your machine's API key
+  // TODO: Replace "<API-KEY-ID>" (including brackets) with your machine's
+  // API key ID
+  viamClient, err := app.CreateViamClientWithAPIKey(
+    ctx, app.Options{}, "<API-KEY>", "<API-KEY-ID>", logger)
+  if err != nil {
+    logger.Fatal(err)
+  }
+  defer viamClient.Close()
+
+  mlTrainingClient := viamClient.MLTrainingClient()
+}
+```
+<h3 id="typescript" class="main-content-heading">
+    TypeScript
+    
+</h3>
+```ts
+async function connect(): Promise<VIAM.ViamClient> {
+  // TODO: Replace "<API-KEY-ID>" (including brackets) with your machine's
+  // API key ID
+  const API_KEY_ID = "<API-KEY-ID>";
+  // TODO: Replace "<API-KEY>" (including brackets) with your machine's API key
+  const API_KEY = "<API-KEY>";
+  const opts: VIAM.ViamClientOptions = {
+    serviceHost: "https://app.viam.com:443",
+    credentials: {
+      type: "api-key",
+      authEntity: API_KEY_ID,
+      payload: API_KEY,
+    },
+  };
+
+  const client = await VIAM.createViamClient(opts);
+  return client;
+}
+
+const viamClient = await connect();
+const mlTrainingClient = viamClient.mlTrainingClient;
+```
+
+### From within a Module
+
+See [Use platform APIs from within a module](/build-modules/platform-apis/).
+
+
+
+Once you have instantiated an `MLTrainingClient`, you can run the following [API methods](#api) against the `MLTrainingClient` object (named `ml_training_client` in the examples).
+
+## API
+
+### SubmitTrainingJob
+
+Submit a training job.
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `org_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): The ID of the organization to submit the training job to. To retrieve this, expand your organization's dropdown in the top right corner on [Viam](https://app.viam.com/), select **Settings**, and copy **Organization ID**.
+- `dataset_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): The ID of the dataset to train the ML model on. To retrieve this, navigate to your [dataset's page](https://app.viam.com/data/datasets), click **...** in the left-hand menu, and click **Copy dataset ID**.
+- `model_name` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the model name.
+- `model_version` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): The version of the ML model you're training. This string must be unique from any previous versions you've set.
+- `model_type` (viam.proto.app.mltraining.ModelType.ValueType) (required): The type of the ML model. Options: `ModelType.MODEL_TYPE_SINGLE_LABEL_CLASSIFICATION`, `ModelType.MODEL_TYPE_MULTI_LABEL_CLASSIFICATION`, `ModelType.MODEL_TYPE_OBJECT_DETECTION`.
+- `tags` (List[[str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)]) (required): the labels to train the model on.
+
+**Returns:**
+
+- ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)): :   the ID of the training job.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+from viam.proto.app.mltraining import ModelType
+
+job_id = await ml_training_client.submit_training_job(
+    org_id="<organization-id>",
+    dataset_id="<dataset-id>",
+    model_name="<your-model-name>",
+    model_version="1",
+    model_type=ModelType.MODEL_TYPE_SINGLE_LABEL_CLASSIFICATION,
+    tags=["tag1", "tag2"]
+)
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/ml_training_client/index.html#viam.app.ml_training_client.MLTrainingClient.submit_training_job).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `args` [(SubmitTrainingJobArgs)](https://pkg.go.dev/go.viam.com/rdk/app#SubmitTrainingJobArgs)
+- `modelType` [(ModelType)](https://pkg.go.dev/go.viam.com/rdk/app#ModelType)
+- `tags` [([]string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [(string)](https://pkg.go.dev/builtin#string)
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#MLTrainingClient.SubmitTrainingJob).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `organizationId` (string) (required): The organization ID.
+- `datasetId` (string) (required): The dataset ID.
+- `modelName` (string) (required): The model name.
+- `modelVersion` (string) (required): The model version.
+- `modelType` ([ModelType](https://ts.viam.dev/enums/ModelType.html)) (required): The model type.
+- `tags` (string) (required): The tags.
+
+**Returns:**
+
+- (Promise<string>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+await mlTrainingClient.submitTrainingJob(
+  '<organization-id>',
+  '<dataset-id>',
+  '<your-model-name>',
+  '1.0.0',
+  ModelType.SINGLE_LABEL_CLASSIFICATION,
+  ['tag1', 'tag2'],
+);
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/MlTrainingClient.html#submittrainingjob).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### SubmitCustomTrainingJob
+
+Submit a training job from a custom training script.
+Follow the guide to [Train a Model with a Custom Python Training Script](/train/custom-training-scripts/).
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `org_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the org to submit the training job to.
+- `dataset_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the dataset to train the model on.
+- `registry_item_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the training script from the registry.
+- `registry_item_version` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the version of the training script from the registry.
+- `model_name` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the model name.
+- `model_version` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the model version.
+
+**Returns:**
+
+- ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)): :   the ID of the training job.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+job_id = await ml_training_client.submit_custom_training_job(
+    org_id="<organization-id>",
+    dataset_id="<dataset-id>",
+    registry_item_id="viam:classification-tflite",
+    registry_item_version="2024-08-13T12-11-54",
+    model_name="<your-model-name>",
+    model_version="1"
+)
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/ml_training_client/index.html#viam.app.ml_training_client.MLTrainingClient.submit_custom_training_job).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `args` [(SubmitTrainingJobArgs)](https://pkg.go.dev/go.viam.com/rdk/app#SubmitTrainingJobArgs)
+- `registryItemID`
+- `registryItemVersion` [(string)](https://pkg.go.dev/builtin#string)
+- `arguments` [(map[string]string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [(string)](https://pkg.go.dev/builtin#string)
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#MLTrainingClient.SubmitCustomTrainingJob).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `organizationId` (string) (required): The organization ID.
+- `datasetId` (string) (required): The dataset ID.
+- `registryItemId` (string) (required): The registry item ID.
+- `registryItemVersion` (string) (required): The registry item version.
+- `modelName` (string) (required): The model name.
+- `modelVersion` (string) (required): The model version.
+
+**Returns:**
+
+- (Promise<string>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+await mlTrainingClient.submitCustomTrainingJob(
+  '<organization-id>',
+  '<dataset-id>',
+  'viam:classification-tflite',
+  '1.0.0',
+  '<your-model-name>',
+  '1.0.0',
+);
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/MlTrainingClient.html#submitcustomtrainingjob).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### GetTrainingJob
+
+Get training job metadata.
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the requested training job.
+
+**Returns:**
+
+- ([viam.proto.app.mltraining.TrainingJobMetadata](https://python.viam.dev/autoapi/viam/proto/app/mltraining/index.html#viam.proto.app.mltraining.TrainingJobMetadata)): :   the training job data.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+job_metadata = await ml_training_client.get_training_job(
+    id="<job-id>")
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/ml_training_client/index.html#viam.app.ml_training_client.MLTrainingClient.get_training_job).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `id` [(string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [(*TrainingJobMetadata)](https://pkg.go.dev/go.viam.com/rdk/app#TrainingJobMetadata)
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#MLTrainingClient.GetTrainingJob).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `id` (string) (required): The training job ID.
+
+**Returns:**
+
+- (Promise<[TrainingJobMetadata](https://ts.viam.dev/classes/mlTrainingApi.TrainingJobMetadata.html) | undefined>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+const job = await mlTrainingClient.getTrainingJob('<training-job-id>');
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/MlTrainingClient.html#gettrainingjob).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### ListTrainingJobs
+
+Get training job metadata for all jobs within an organization.
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `org_id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the org to request training job data from.
+- `training_status` ([viam.proto.app.mltraining.TrainingStatus.ValueType](https://python.viam.dev/autoapi/viam/gen/app/mltraining/v1/ml_training_pb2/index.html#viam.gen.app.mltraining.v1.ml_training_pb2.TrainingStatus)) (optional): the status to filter the training jobs list by. If unspecified, all training jobs will be returned.
+
+**Returns:**
+
+- ([List[viam.proto.app.mltraining.TrainingJobMetadata]](https://python.viam.dev/autoapi/viam/proto/app/mltraining/index.html#viam.proto.app.mltraining.TrainingJobMetadata)): :   the list of training job data.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+jobs_metadata = await ml_training_client.list_training_jobs(
+    org_id="<org-id>")
+
+first_job_id = jobs_metadata[1].id
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/ml_training_client/index.html#viam.app.ml_training_client.MLTrainingClient.list_training_jobs).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `organizationID` [(string)](https://pkg.go.dev/builtin#string)
+- `status` [(TrainingStatus)](https://pkg.go.dev/go.viam.com/rdk/app#TrainingStatus)
+
+**Returns:**
+
+- [([]*TrainingJobMetadata)](https://pkg.go.dev/go.viam.com/rdk/app#TrainingJobMetadata)
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#MLTrainingClient.ListTrainingJobs).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `organizationId` (string) (required): The organization ID.
+- `status` ([TrainingStatus](https://ts.viam.dev/enums/TrainingStatus.html)) (required): The training job status.
+
+**Returns:**
+
+- (Promise<[TrainingJobMetadata](https://ts.viam.dev/classes/mlTrainingApi.TrainingJobMetadata.html)[]>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+const jobs = await mlTrainingClient.listTrainingJobs(
+  '<organization-id>',
+  TrainingStatus.RUNNING,
+);
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/MlTrainingClient.html#listtrainingjobs).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### CancelTrainingJob
+
+Cancel the specified training job.
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): ID of the training job you wish to get metadata from. Retrieve this value with [`ListTrainingJobs()`](#listtrainingjobs).
+
+**Returns:**
+
+- None.
+
+**Raises:**
+
+- (GRPCError): if no training job exists with the given ID.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+await ml_training_client.cancel_training_job(
+    id="<job-id>")
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/ml_training_client/index.html#viam.app.ml_training_client.MLTrainingClient.cancel_training_job).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `id` [(string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#MLTrainingClient.CancelTrainingJob).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `id` (string) (required): The training job ID.
+
+**Returns:**
+
+- (Promise<null>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+await mlTrainingClient.cancelTrainingJob('<training-job-id>');
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/MlTrainingClient.html#canceltrainingjob).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+### DeleteCompletedTrainingJob
+
+Delete a completed training job from the database, whether the job succeeded or failed.
+
+{{< tabs >}}
+{{% tab name="Python" %}}
+
+**Parameters:**
+
+- `id` ([str](https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str)) (required): the ID of the training job to delete.
+
+**Returns:**
+
+- None.
+
+**Example:**
+
+```python {class="line-numbers linkable-line-numbers"}
+await ml_training_client.delete_completed_training_job(
+    id="<job-id>")
+```
+
+For more information, see the [Python SDK Docs](https://python.viam.dev/autoapi/viam/app/ml_training_client/index.html#viam.app.ml_training_client.MLTrainingClient.delete_completed_training_job).
+
+{{% /tab %}}
+{{% tab name="Go" %}}
+
+**Parameters:**
+
+- `ctx` [(Context)](https://pkg.go.dev/context#Context): A Context carries a deadline, a cancellation signal, and other values across API boundaries.
+- `id` [(string)](https://pkg.go.dev/builtin#string)
+
+**Returns:**
+
+- [(error)](https://pkg.go.dev/builtin#error): An error, if one occurred.
+
+For more information, see the [Go SDK Docs](https://pkg.go.dev/go.viam.com/rdk/app#MLTrainingClient.DeleteCompletedTrainingJob).
+
+{{% /tab %}}
+{{% tab name="TypeScript" %}}
+
+**Parameters:**
+
+- `id` (string) (required): The training job ID.
+
+**Returns:**
+
+- (Promise<null>)
+
+**Example:**
+
+```ts {class="line-numbers linkable-line-numbers"}
+await mlTrainingClient.deleteCompletedTrainingJob('<training-job-id>');
+```
+
+For more information, see the [TypeScript SDK Docs](https://ts.viam.dev/interfaces/MlTrainingClient.html#deletecompletedtrainingjob).
+
+{{% /tab %}}
+{{< /tabs >}}
+
+

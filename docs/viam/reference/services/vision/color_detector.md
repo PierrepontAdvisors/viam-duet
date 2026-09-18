@@ -1,0 +1,302 @@
+# Configure a color_detector
+
+Configure the color_detector vision service to find regions of a specific hue in camera images. No ML model required.
+> Source: https://docs.viam.com/reference/services/vision/color_detector/
+
+
+The `color_detector` vision service is a heuristic detector that draws boxes around connected regions of a specified hue. It runs entirely on the machine with no ML model. Use it for any task where the target stands out by color: red objects on a conveyor, green plants against soil, a blue marker against a wall.
+
+The detector cannot detect black, white, or perfect grays (pixels whose red, green, and blue values are equal). It only detects hues on the color wheel.
+
+> **Tip:**
+> 
+> Object colors vary dramatically with lighting. Verify your target color value under actual lighting conditions. Tools like [Color Picker for Chrome](https://chrome.google.com/webstore/detail/color-picker-for-chrome/clldacgmdnnanihiibdgemajcfkmfhia) can extract a hex color from a screenshot of the camera feed. If the color is not reliably detected, increase `hue_tolerance_pct`.
+
+## Configure
+
+
+
+
+### Builder
+
+<ol>
+<li>Navigate to the **CONFIGURE** tab of your machine’s page.</li>
+<li>Click the **+** icon next to your machine part and select **Blocks**.</li>
+<li>In the search field, type `color detector` and select the `vision/color_detector` result.</li>
+<li>Click **Add to machine**, enter a name, and click **Add to machine** again to confirm.</li>
+<li>Choose a color and a hue tolerance, then set a segment size in pixels.</li>
+<li>Select a default camera.</li>
+</ol>
+<picture>
+<source srcset="/services/vision/color-detector-panel_hu_ed7d181a95b05188.webp" type="image/webp" width="500" height="308">
+<img src="/services/vision/color-detector-panel.png" width="500" height="308" alt="Color detector panel showing color picker, hue tolerance, and segment size fields" class="" id="" style="" loading="lazy">
+</picture>
+
+### JSON Template
+
+```json
+"services": [
+  {
+    "name": "<service_name>",
+    "api": "rdk:service:vision",
+    "model": "color_detector",
+    "attributes": {
+      "detect_color": "#RRGGBB",
+      "hue_tolerance_pct": <number>,
+      "segment_size_px": <integer>,
+      "saturation_cutoff_pct": <number>,
+      "value_cutoff_pct": <number>,
+      "label": "<label>",
+      "camera_name": "<camera-name>"
+    }
+  }
+]
+```
+
+### JSON Example
+
+```json
+"services": [
+  {
+    "name": "blue_square",
+    "api": "rdk:service:vision",
+    "model": "color_detector",
+    "attributes": {
+      "detect_color": "#1C4599",
+      "hue_tolerance_pct": 0.07,
+      "segment_size_px": 100,
+      "value_cutoff_pct": 0.15,
+      "label": "blue",
+      "camera_name": "camera-1"
+    }
+  },
+  {
+    "name": "green_triangle",
+    "api": "rdk:service:vision",
+    "model": "color_detector",
+    "attributes": {
+      "detect_color": "#62963F",
+      "hue_tolerance_pct": 0.05,
+      "segment_size_px": 200,
+      "value_cutoff_pct": 0.20,
+      "label": "green",
+      "camera_name": "camera-1"
+    }
+  }
+]
+```
+
+
+
+## Attributes
+
+<!-- prettier-ignore -->
+| Attribute | Type | Required? | Description |
+| --------- | ---- | --------- | ----------- |
+| `detect_color` | string | **Required** | The target color in hex format (`#RRGGBB`). Must not be black, white, or any grayscale value. |
+| `hue_tolerance_pct` | float | **Required** | How much hue variation to accept, between `0.0` (exact match) and `1.0` (any color). Start at `0.05` and increase if detection is unreliable. Values outside `(0.0, 1.0]` fail at startup. |
+| `segment_size_px` | int | **Required** | Minimum pixel area of a connected color region for it to count as a detection. Filters out small noise blobs. |
+| `saturation_cutoff_pct` | float | Optional | Pixels with HSV saturation below this are treated as gray and ignored. Must be in `[0.0, 1.0]`. <br> Default: `0.2` |
+| `value_cutoff_pct` | float | Optional | Pixels with HSV value (brightness) below this are treated as black and ignored. Must be in `[0.0, 1.0]`. <br> Default: `0.3` |
+| `label` | string | Optional | Label applied to detected bounding boxes. If unset, detections have no label. |
+| `camera_name` | string | Optional | Default camera for calls such as `GetDetectionsFromCamera`. Must name a configured camera. |
+
+> **Info:**
+> 
+> `hue_tolerance_pct`, `saturation_cutoff_pct`, and `value_cutoff_pct` describe cutoff thresholds using the HSV color model. They do not specify the absolute saturation or brightness of the target color. `hue_tolerance_pct` controls how strictly the detector matches your `detect_color`; the saturation and value cutoffs filter out pixels that are too gray or too dark before matching.
+
+## Test your detector
+
+### Live camera footage
+
+1. Open your machine in the Viam app and either click the vision service's **Test** area or navigate to the **CONTROL** tab and select the vision service.
+2. In the **Camera** dropdown, select the camera whose feed you want the detector to run on. Detections appear as bounding boxes on the live camera feed and refresh automatically.
+
+
+
+
+
+
+    
+    
+    
+<picture>
+
+  
+  
+<source srcset="/services/vision/detections_hu_3f2471549a2fd843.webp" type="image/webp" width="450" height="289">
+<img src="/services/vision/detections.png" width="450" height="289" alt="Live camera feed with bounding boxes drawn around detected regions" class="" id="" style="" loading="lazy">
+  
+
+</picture>
+
+
+
+
+For a continuous overlay, configure a [transform camera](/reference/components/camera/transform/):
+
+```json
+{
+  "pipeline": [
+    {
+      "type": "detections",
+      "attributes": {
+        "confidence_threshold": 0.5,
+        "detector_name": "<vision-service-name>",
+        "valid_labels": ["<label>"]
+      }
+    }
+  ],
+  "source": "<camera-name>"
+}
+```
+
+### Code
+
+```python {class="line-numbers linkable-line-numbers"}
+from viam.components.camera import Camera
+from viam.services.vision import VisionClient
+
+robot = await connect()
+camera_name = "camera-1"
+
+cam = Camera.from_robot(robot, camera_name)
+my_detector = VisionClient.from_robot(robot, "blue_square")
+
+# Get detections from the camera in one call
+detections = await my_detector.get_detections_from_camera(camera_name)
+
+# Or capture an image first, then run detections on it
+images, _ = await cam.get_images()
+img = images[0]
+detections_from_image = await my_detector.get_detections(img)
+
+await robot.close()
+```
+
+```go {class="line-numbers linkable-line-numbers"}
+import (
+  "go.viam.com/rdk/components/camera"
+  "go.viam.com/rdk/services/vision"
+)
+
+cameraName := "camera-1"
+myCam, err := camera.FromProvider(machine, cameraName)
+if err != nil {
+  logger.Fatalf("cannot get camera: %v", err)
+}
+
+myDetector, err := vision.FromProvider(machine, "blue_square")
+if err != nil {
+  logger.Fatalf("cannot get vision service: %v", err)
+}
+
+// Get detections from the camera in one call
+detections, err := myDetector.DetectionsFromCamera(context.Background(), cameraName, nil)
+if err != nil {
+  logger.Fatalf("could not get detections: %v", err)
+}
+if len(detections) > 0 {
+  logger.Info(detections[0])
+}
+
+// Or capture an image first, then run detections on it
+img, err := camera.DecodeImageFromCamera(context.Background(), myCam, nil, nil)
+if err != nil {
+  logger.Fatalf("could not decode image: %v", err)
+}
+detectionsFromImage, err := myDetector.Detections(context.Background(), img, nil)
+if err != nil {
+  logger.Fatalf("could not get detections: %v", err)
+}
+if len(detectionsFromImage) > 0 {
+  logger.Info(detectionsFromImage[0])
+}
+```
+
+## Troubleshooting
+
+**Service fails to start with "saturation of 0" error**
+
+
+
+Your `detect_color` is black, white, or a perfect gray. The detector can only match hues on the color wheel. Pick a saturated color and try again.
+
+
+
+
+**Service fails to start with "too unsaturated" error**
+
+
+
+Your `detect_color` has saturation below the saturation cutoff. Either pick a more saturated color, or lower `saturation_cutoff_pct`.
+
+
+
+
+**Service fails to start with hue_tolerance_pct error**
+
+
+
+`hue_tolerance_pct` must be strictly greater than `0.0` and at most `1.0`. A value of `0` is not allowed because it would require a pixel-perfect hue match that camera noise makes effectively impossible.
+
+
+
+
+**Detector runs but returns no detections**
+
+
+
+- Check the color under actual lighting conditions. Use a color picker on a live camera screenshot to find the real hex value. The color on the object often looks different through the camera.
+- Increase `hue_tolerance_pct` (try `0.10` to `0.15`) if the color is close but not exact.
+- Lower `segment_size_px` if the color region in the image is small.
+- If the lighting is dim, lower `value_cutoff_pct` (for example, `0.10`).
+
+
+
+
+**Detector returns too many false positives**
+
+
+
+- Decrease `hue_tolerance_pct` to require a closer match.
+- Raise `saturation_cutoff_pct` to ignore washed-out regions.
+- Increase `segment_size_px` to ignore small noise blobs.
+
+
+
+
+## Next steps
+
+<div class="card-container">
+  <div class="row-no-margin">
+<div class="col hover-card "><a href="/vision/object-detection/detect/"><div ><div>Detect objects</div><p>Retrieve 2D bounding-box detections from a vision service, filter by confidence and class, and run detections in a loop.</p></div>
+    </a></div>
+
+<div class="col hover-card "><a href="/vision/configure/"><div ><div>Configure a vision pipeline</div><p>Wire up an ML model service and a vision service so your machine&#39;s camera can produce detections, classifications, or 3D point cloud objects.</p></div>
+    </a></div>
+
+<div class="col hover-card "><a href="/reference/services/vision/mlmodel/"><div class="hover-card-img">
+
+
+
+
+    
+    
+    
+<picture>
+
+  
+  
+<source srcset="/services/vision/dog-detector_hu_dcb4fabeb8a1f027.webp" type="image/webp">
+<img src="/services/vision/dog-detector.png" alt="mlmodel" class="" id="" style="" loading="lazy">
+  
+
+</picture>
+
+</div><div class="small-hover-card-div"><div>mlmodel</div><p>Configure the mlmodel vision service to turn a deployed ML model into a detector, classifier, or 3D segmenter.</p></div>
+    </a></div>
+
+</div>
+</div>
+

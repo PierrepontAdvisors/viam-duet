@@ -1,0 +1,486 @@
+# viam-server reference
+
+viam-server is the open-source, on-machine portion of the Viam platform.
+> Source: https://docs.viam.com/reference/viam-server/
+
+
+The `viam-server` executable runs on a computer and manages hardware, software, and data for a machine.
+`viam-server` is built from the open-source [Robot Development Kit (RDK)](https://github.com/viamrobotics/rdk).
+If you are working with microcontrollers, [`viam-micro-server`](/reference/device-setup/setup-micro/) is a lightweight version of `viam-server` which can run on resource-limited embedded systems that cannot run the fully-featured `viam-server`.
+
+To use Viam with a machine, you create a configuration specifying which hardware and software the machine consists of.
+`viam-server` then manages and runs the drivers for the configured [resources](/reference/glossary/#term-resource)
+.
+
+Overall, `viam-server` manages:
+
+- [Communication](#communication)
+- [Start-up](#start-up)
+- [Reconfiguration](#reconfiguration)
+- [Maintenance windows](#maintenance-window)
+- [Shutdown](#shutdown)
+- [Logging](#logging)
+
+## Communication
+
+`viam-server` handles all [gRPC](/reference/glossary/#term-grpc)
+ and [WebRTC](/reference/glossary/#term-webrtc)
+ communication for connecting machines to the cloud or for connecting to other parts of your machine.
+
+All communication happens securely over HTTPS using secret tokens that are in the machine's config.
+
+## Lifecycle
+
+### Start-up
+
+The machine setup steps copy your machine's credentials to your machine.
+When you turn on your machine, `viam-server` starts up and uses the provided credentials to fetch its configuration from Viam.
+
+`viam-server` ensures that any configured [modules](/reference/glossary/#term-module)
+, [built-in resources](/reference/glossary/#term-resource)
+ and [modular resources](/reference/glossary/#term-modular-resource)
+ are loaded on startup.
+`viam-server` handles [dependency](/build-modules/dependencies/) management between resources.
+
+After start-up, `viam-server` manages:
+
+- the connections to hardware,
+- the running services, and
+- the [modules](/reference/glossary/#term-module)
+ that provide the [modular resources](/reference/glossary/#term-modular-resource)
+.
+
+### Reconfiguration
+
+Once the machine has a configuration, it caches it locally (in a file at <FILE>~/.viam/cached_cloud_config\_\<PART-ID\>.json</FILE>) and can use the config for up to 60 days.
+Since the configuration is cached locally, your machine does not need to stay connected to Viam after it has obtained its configuration file.
+
+If it is online, the machine automatically checks for new configurations every 15 seconds.
+When you or your collaborators change the configuration of a machine, `viam-server` automatically synchronizes the configuration to your machine and updates the running resources.
+
+Reconfiguration of individual resources happens concurrently if there are no configured dependencies for any resources.
+If there are configured dependencies, resources are reconfigured in groups.
+
+You can see configuration changes made by yourself or by your collaborators by selecting **History** on the right side of your machine part's card on the **CONFIGURE** tab.
+You can also revert to an earlier configuration from the History tab.
+
+<div style="display: none;">
+If you want to force a reconfiguration of a resource, you can click the **Disable** button in the resource menu, save, and then re-enable the resource.
+
+Alternatively, if you are having issues with a module, try the **Restart module** button in the module menu.
+</div>
+
+### Maintenance window
+
+There are a few updates that may make your machine temporarily unavailable:
+
+- [`viam-agent` updating itself](/reference/viam-agent/#version-control)
+- [`viam-agent` updating `viam-server`](/reference/viam-agent/#version-control)
+- configuration updates
+
+To avoid performing these updates until your machine is ready for maintenance, you can define a maintenance window.
+A maintenance window consists of one or multiple conditions that determine if maintenance is currently allowed.
+To configure a maintenance window, you need to create a sensor that returns true when your maintenance conditions are met and false otherwise.
+
+
+
+
+### Builder UI
+
+To configure a maintenance window, click the **+** icon next to your [machine part](/reference/glossary/part/)
+in the left-hand menu of the **CONFIGURE** tab and select **Maintenance window**.
+
+In the new panel, specify the name of the sensor and the key for the value to be used to determine when maintenance is allowed.
+
+### JSON
+
+To configure a maintenance window, add the following configuration to your machine’s JSON configuration:
+
+```json
+// components: [ ... ],
+// services: [ ... ],
+maintenance : {
+   "sensor_name" : string,
+   "maintenance_allowed_key" : string
+}
+```
+
+
+
+<!-- prettier-ignore -->
+| Attribute | Type | Required? | Description |
+| --------- | ---- | --------- | ----------- |
+| `sensor_name` | string | **Required** | The full name of the sensor that provides the information if it is safe to update a machine's configuration. For example `rdk:component:sensor/sensor1`. |
+| `maintenance_allowed_key` | string | **Required** | The key of the key value pair for the reading returned by the sensor. |
+
+### Shutdown
+
+During machine shutdown, `viam-server` handles modular resource instances similarly to built-in resource instances - it signals them for shutdown in topological (dependency) order.
+
+## Logging
+
+Log messages appear under the **LOGS** tab for a machine.
+
+The default log level for `viam-server` and any running resources is `"Info"`.
+Logs are stored for 30 days before they are deleted.
+
+If you need more logs for an individual resource, click **Enable debug logs** in the **...** menu on the resource.
+
+To set other log levels for individual resources, add the `log_configuration` option to the resource's JSON configuration:
+
+```json
+"log_configuration": {
+    "level": "Debug"
+},
+"attributes": { ... }
+```
+
+For modular resources, you must instead set the `log_level` attribute on the module itself:
+
+```json {class="line-numbers linkable-line-numbers" data-line="3"}
+"module_id": "viam:raspberry-pi",
+"version": "1.9.0",
+"log_level":  "debug"
+```
+
+Alternatively, you can configure logs for all machine resources, inside your machine config.
+To specify the log level for a specific resource, add the `log` field to your machine config:
+
+For example:
+
+```json
+"components": [ ... ]
+"log": [
+    {
+    "pattern": "rdk.components.arm",
+    "level": "debug",
+    }, {
+    "pattern": "rdk.services.*",
+    "level": "debug",
+    }, {
+    "pattern": "<module-name>",
+    "level": "debug",
+    }
+]
+```
+
+<!-- prettier-ignore -->
+| Attribute | Description |
+| --------- | ----------- |
+| `pattern` | A regular expression (regex) pattern matching one or more resources. |
+| `level` | The log level: `"debug"`, `"info"`, `"warn"`, or `"error"`. |
+
+Patterns are processed from top to bottom.
+If multiple patterns apply, the last pattern to be processed will apply.
+If log configurations are applied at a resource level using the `log_configuration` field, these take precedence over log levels applied in the `log` field of the machine configuration.
+
+**Click to view full configuration example**
+
+
+
+```json {class="line-numbers linkable-line-numbers" data-line="10-18"}
+{
+  "components": [
+    {
+      "name": "camera1",
+      "api": "rdk:component:camera",
+      "model": "fake"
+    }
+  ],
+  "services": [],
+  "log": [
+    {
+      "pattern": "rdk.resource_manager",
+      "level": "info"
+    },
+    {
+      "pattern": "rdk.resource_manager.*",
+      "level": "debug"
+    }
+  ]
+}
+```
+
+
+
+
+### Disable log deduplication
+
+By default, `viam-server` deduplicates log messages that are deemed noisy.
+A log is deemed noisy after the same message is logged more than 3 times within one minute.
+
+Log deduplication is automatically disabled when debug logging is active, whether you enable logging with `"debug": true` in your machine's configuration or with the `-debug` command-line flag.
+You do not need to set `disable_log_deduplication` separately when running in debug mode.
+
+To disable log deduplication without enabling debug mode, set `disable_log_deduplication` in your machine's configuration:
+
+```json
+"disable_log_deduplication": true
+```
+
+**Click to view full configuration example**
+
+
+
+```json {class="line-numbers linkable-line-numbers" data-line="10"}
+{
+  "components": [
+    {
+      "name": "camera1",
+      "api": "rdk:component:camera",
+      "model": "fake"
+    }
+  ],
+  "services": [],
+  "disable_log_deduplication": true
+}
+```
+
+
+
+
+### Delete machine logs
+
+You cannot delete machine logs.
+If your machine has generated a large amount of logs and you are concerned about the cost, you can:
+
+1. Copy the machine's configuration to a new machine.
+2. Delete the old machine.
+
+If you delete a machine you will not be charged for the remainder of the 30 days until logs from that machine are deleted.
+
+### Debugging
+
+You can enable debug level logs in two ways:
+
+- Start `viam-server` with the `-debug` option.
+- Add `"debug": true` to the machine's configuration:
+
+  ```json
+  {
+    "debug": true,
+    "components": [{ ... }]
+  }
+  ```
+
+Enabling debug level logs will take precedence over all logging configuration set using the `log` field on a machine or the `log_configuration` field on a resource.
+
+## Core options
+
+<!-- prettier-ignore -->
+| Option | Description |
+| ------ | ----------- |
+| `-allow-insecure-creds` | Allow connections to send credentials over plaintext. |
+| `-config <filename>` | The machine configuration file containing machine cloud credentials or a full configuration. |
+| `-cpuprofile string` | Write CPU profile to file. |
+| `-debug` | Enable debug level logs. |
+| `-disable-mdns` | Disable server discovery through multicast DNS. |
+| `-dump-resources <filepath>` | Dump all resource registrations as JSON to the provided file path. |
+| `-ftdc` | Enable fulltime data capture for diagnostics. Default: `true`. |
+| `-log-file <filename>` | Write logs to a file with log rotation. |
+| `-network-check` | Only runs normal network checks. |
+| `-no-tls` | Starts an insecure HTTP server without TLS certificates even if one exists. |
+| `-output-telemetry` | Print out telemetry data (metrics and spans). |
+| `-reveal-sensitive-config-diffs` | Show config diffs. |
+| `-shareddir <directory-name>` | The location of the static web assets. |
+| `-untrusted-env` | Disable processes and shell from running in an untrusted environment. |
+| `-version` | Print version. |
+| `-webprofile` | Include profiler in HTTP server. |
+| `-webrtc` | Force WebRTC connections instead of direct connections. Default: `true`. |
+
+## Environment variables
+
+You can set the following environment variables to configure `viam-server` behavior without command-line flags:
+
+<!-- prettier-ignore -->
+| Variable | Description |
+| -------- | ----------- |
+| `VIAM_HOME` | Path to the directory where `viam-server` stores cached files and module data. Defaults to `~/.viam`. |
+| `VIAM_CONFIG_READ_TIMEOUT` | Override the default 15-second timeout for reading the machine configuration, for example `30s` or `1m`. |
+| `VIAM_RESOURCE_REQUESTS_LIMIT` | Override the default limit of 100 concurrent gRPC requests allowed per resource. |
+| `VIAM_MODULE_STARTUP_TIMEOUT` | Override the default 5-minute module startup timeout, for example `10m` or `30s`. |
+| `VIAM_RESOURCE_CONFIGURATION_TIMEOUT` | Override the default 2-minute per-resource configuration timeout. |
+| `VIAM_LOGFILE` | Path to a log file. `viam-server` writes logs to this file in addition to standard output. This differs from the `-log-file` flag, which writes to the file instead of standard output. |
+| `VIAM_NO_WINDOWS_EVENT_LOGGER` | If set to any value, disables writing logs to the Windows Event Logger and Event Tracing for Windows (ETW). Only relevant on Windows. |
+
+## Install `viam-server` without the web UI
+
+> **Tip:**
+> 
+> The recommended way to install `viam-server` and connect your machine to Viam is covered in the [Set up a machine](/set-up-a-machine/).
+
+If you need to install `viam-server` without the web UI, you can run the following commands.
+
+
+
+
+### Linux (Aarch64)
+
+```sh
+sudo /bin/sh -c "$(curl -fsSL https://storage.googleapis.com/packages.viam.com/apps/viam-agent/install.sh)"
+```
+The `viam-agent` and `viam-server` binaries are installed at <FILE>/opt/viam/bin/viam-server</FILE>.
+
+### Linux (x86_64)
+
+```sh
+sudo /bin/sh -c "$(curl -fsSL https://storage.googleapis.com/packages.viam.com/apps/viam-agent/install.sh)"
+```
+The `viam-agent` and `viam-server` binaries are installed at <FILE>/opt/viam/bin/viam-server</FILE>.
+
+### macOS
+
+```bash
+brew trust viamrobotics/brews && brew tap viamrobotics/brews && brew install viam-server
+```
+The `viam-server` binary is installed at <FILE>/opt/homebrew/bin/viam-server</FILE> on Apple silicon and at <FILE>/usr/local/bin/viam-server</FILE> on Intel Macs.
+The tap ships bottles for Apple silicon only, so on an Intel Mac brew builds `viam-server` from source, which takes considerably longer.
+
+To run `viam-server` in the background, save your machine configuration to <FILE>$(brew –prefix)/etc/viam.json</FILE>, then start it as a launchd service:
+
+```sh
+brew services start viam-server
+```
+The service restarts `viam-server` if it exits and writes logs to <FILE>$(brew –prefix)/var/log/viam-server.log</FILE>.
+
+[`viam-agent`](/reference/viam-agent/) does not support macOS, so brew is the only way to keep `viam-server` running in the background on a Mac.
+Upgrade it yourself with `brew upgrade viam-server`; nothing updates it from the cloud.
+
+### Windows Subsystem for Linux (WSL)
+
+```bash
+curl https://storage.googleapis.com/packages.viam.com/apps/viam-server/viam-server-stable-x86_64 -o viam-server && chmod 755 viam-server
+```
+
+### Windows native
+
+To install `viam-agent` on native Windows, open **Command Prompt as administrator** and run the following command.
+Replace `<KEY_ID>` and `<KEY>` with an [API key](/organization/api-keys/) that can access your machine, and `<PART_ID>` with your machine part’s ID.
+To copy the part ID, click the **Live** / **Offline** status dropdown at the top of your machine’s page, then click **Part ID**.
+
+```bat
+mkdir C:\etc 2>nul & curl -fsSL -H "key_id:<KEY_ID>" -H "key:<KEY>" "https://app.viam.com/api/json1/config?id=<PART_ID>&client=true" -o C:\etc\viam.json && curl -fsSL "https://storage.googleapis.com/packages.viam.com/apps/viam-agent/viam-agent-stable-windows-x86_64.msi" -o "%TEMP%\viam-agent.msi" && msiexec /i "%TEMP%\viam-agent.msi" /qn /norestart
+```
+This command fetches the machine configuration, downloads the installer, and installs `viam-agent` silently.
+Use Cmd, not PowerShell.
+
+The `viam-agent` and `viam-server` binaries are installed at <FILE>C:\opt\viam\cache</FILE>.
+
+
+
+### Install a specific version of `viam-server`
+
+In some cases, you may need to install an older version of `viam-server`.
+
+
+
+
+### Linux
+
+For Linux systems, the recommended approach to install an older version is to build from source:
+
+```sh
+# Clone the RDK repository
+git clone https://github.com/viamrobotics/rdk.git
+
+# Change to the RDK directory
+cd rdk
+
+# Check out a specific version tag (replace v0.46.0 with your desired version)
+git checkout v0.46.0
+
+# Build the server
+make server
+
+# The binary will be available in the bin directory for your architecture
+cd bin/Linux-amd64  # or Linux-arm64 for ARM-based systems
+```
+You can then run the server directly:
+
+```sh
+sudo ./viam-server -config /path/to/your/config.json
+```
+
+### macOS
+
+There are two approaches to installing an older version of `viam-server` on macOS:
+
+<h3 id="option-1-build-from-source" class="main-content-heading">
+    Option 1: Build from source
+    
+</h3>The most reliable way to install a specific version of `viam-server` is to clone the RDK repository at a specific tag and build it yourself:
+
+```sh
+# Clone the RDK repository
+git clone https://github.com/viamrobotics/rdk.git
+
+# Change to the RDK directory
+cd rdk
+
+# Check out a specific version tag (replace v0.46.0 with your desired version)
+git checkout v0.46.0
+
+# Build the server
+make server
+
+# The binary will be available in the bin directory for your architecture
+cd bin/Darwin-arm64  # Use the folder matching your architecture
+```
+You can then run the server directly:
+
+```sh
+./viam-server -config /path/to/your/config.json
+```
+<h3 id="option-2-use-an-older-version-of-the-homebrew-tap" class="main-content-heading">
+    Option 2: Use an older version of the Homebrew tap
+    
+</h3>If you’ve already installed `viam-server` with Homebrew, you can try checking out an older version of the Viam Homebrew tap:
+
+```sh
+# Navigate to the Homebrew tap directory
+cd /opt/homebrew/Library/Taps/viamrobotics/homebrew-brews/
+
+# Check out an older version of the tap
+git checkout <older-commit-hash>
+
+# Reinstall viam-server
+brew reinstall viam-server
+```
+Note that this method may not work for versions that are too old, as Homebrew doesn’t officially support installing older versions of dependencies. If the version you need is significantly older, building from source (Option 1) is recommended.
+
+
+
+## Next steps
+
+<div class="card-container">
+  <div class="row-no-margin">
+<div class="col hover-card "><a href="/reference/apis/"><div class="hover-card-img">
+
+
+
+
+    
+    
+    
+<picture>
+
+  
+  
+<source srcset="/general/code_hu_4529bc090043da28.webp" type="image/webp">
+<img src="/general/code.png" alt="APIs" class="" id="" style="" loading="lazy">
+  
+
+</picture>
+
+</div><div class="small-hover-card-div"><div>APIs</div><p>Access and control your machine or fleet with the SDKs&#39; client libraries for the resource and robot APIs.</p></div>
+    </a></div>
+
+<div class="col hover-card "><a href="/hardware/configure-hardware/"><div ><div>Overview</div><p>Understand how Viam represents hardware, add components to your machine, and configure them.</p></div>
+    </a></div>
+
+<div class="col hover-card "><a href="/set-up-a-machine/"><div ><div>Set up a machine</div><p>Create a machine in the Viam app and install Viam on your compute machine.</p></div>
+    </a></div>
+
+</div>
+</div>
+

@@ -1,0 +1,150 @@
+# Move a gantry
+
+Control gantry axes directly or plan complex gantry motion.
+> Source: https://docs.viam.com/motion-planning/move-gantry/
+
+
+A gantry moves along one or more linear axes, so an axis position is already
+a Cartesian coordinate: no joint-angle conversion needed.
+Most gantry motion is a direct axis command and nothing
+more. But if the gantry shares its workspace with obstacles, carries a payload
+that must avoid something, or moves alongside another machine, the motion
+service plans a collision-aware path the same way it does for an arm. This
+guide covers both.
+
+## Direct axis control
+
+Use the gantry component API for direct moves to specific positions.
+Direct axis control skips the motion service: the gantry drives straight
+to the target positions without collision checking. Use it when you know
+the path is clear and you want the move to happen now. Read current state first
+(`get_position`, `get_lengths`) so you know where each axis sits and
+how much travel is available.
+
+
+
+
+### Python
+
+```python
+from viam.components.gantry import Gantry
+
+gantry = Gantry.from_robot(machine, "my-gantry")
+
+# Read current position (mm for each axis)
+positions = await gantry.get_position()
+print(f"Current positions: {positions}")
+
+# Read axis lengths
+lengths = await gantry.get_lengths()
+print(f"Axis lengths: {lengths}")
+
+# Move to a specific position (speeds are required, one per axis, in mm/s)
+await gantry.move_to_position(
+    positions=[200, 300, 100],
+    speeds=[100, 100, 100],
+)
+```
+
+### Go
+
+```go
+import "go.viam.com/rdk/components/gantry"
+
+myGantry, err := gantry.FromProvider(machine, "my-gantry")
+if err != nil {
+    logger.Fatal(err)
+}
+
+positions, err := myGantry.Position(ctx, nil)
+if err != nil {
+    logger.Fatal(err)
+}
+fmt.Printf("Current positions: %v\n", positions)
+
+lengths, err := myGantry.Lengths(ctx, nil)
+if err != nil {
+    logger.Fatal(err)
+}
+fmt.Printf("Axis lengths: %v\n", lengths)
+
+// Speeds are required, one per axis, in mm/s.
+err = myGantry.MoveToPosition(
+    ctx,
+    []float64{200, 300, 100},
+    []float64{100, 100, 100},
+    nil,
+)
+if err != nil {
+    logger.Fatal(err)
+}
+```
+
+
+
+## Motion-service planning
+
+The motion service treats a gantry the same way it treats an arm. You pass
+a target pose; the motion service plans a collision-free path that respects
+the obstacles in the frame system and any `WorldState` you supply, and moves
+the gantry along it. Planning takes longer than a direct move (a planning
+call before execution). Plan through the motion service when obstacles share
+the workspace, when you coordinate the gantry with other components, or when
+you want one planning API across your fleet.
+
+
+
+
+### Python
+
+```python
+from viam.services.motion import MotionClient
+from viam.proto.common import PoseInFrame, Pose
+
+motion_service = MotionClient.from_robot(machine, "builtin")
+
+destination = PoseInFrame(
+    reference_frame="world",
+    pose=Pose(x=200, y=300, z=100, o_x=0, o_y=0, o_z=1, theta=0)
+)
+
+await motion_service.move(
+    component_name="my-gantry",
+    destination=destination,
+)
+```
+
+### Go
+
+```go
+import (
+    "github.com/golang/geo/r3"
+    "go.viam.com/rdk/referenceframe"
+    "go.viam.com/rdk/services/motion"
+    "go.viam.com/rdk/spatialmath"
+)
+
+// motionService follows the same setup as Move an arm to a pose.
+destination := referenceframe.NewPoseInFrame("world",
+    spatialmath.NewPose(
+        r3.Vector{X: 200, Y: 300, Z: 100},
+        &spatialmath.OrientationVectorDegrees{OX: 0, OY: 0, OZ: 1, Theta: 0},
+    ))
+
+_, err = motionService.Move(ctx, motion.MoveReq{
+    ComponentName: "my-gantry",
+    Destination:   destination,
+})
+```
+
+
+
+## What's next
+
+- [Define your frame system](/motion-planning/frame-system/): required
+  when planning gantry moves through the motion service.
+- [Move arm to pose](/motion-planning/move-an-arm/move-to-pose/):
+  similar workflow for robot arms.
+- [Define obstacles](/motion-planning/obstacles/):
+  add obstacle geometry for collision avoidance.
+
