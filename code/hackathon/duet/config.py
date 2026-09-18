@@ -19,6 +19,7 @@ SPEED_TRAVEL = 30.0    # deg/s, matches the machine's configured speed
 SPEED_DRAW = 15.0
 SPEED_DOCK = 10.0
 
+MARKER = "green"             # the one marker in the dock; the visitor draws with it too
 GRIPPER_OPEN_FOR_PICK = 500   # 0 closed .. 850 open; set to barrel width + 15 mm in stage 3
 UNCAP_LIFT_MM = 40.0          # straight-up pull that uncaps the marker
 DOCK_HOVER_MM = 60.0          # safe height above a slot

@@ -1,8 +1,11 @@
-"""Stage 2: draw a hard-coded square with a marker held in the gripper, timing every planned move.
+"""Stage 2: pick the marker from the dock, draw a hard-coded square, return it, timing every planned move.
 
-    python -m duet.stroke_bench          60 mm square at the board center
-    python -m duet.stroke_bench 40       40 mm square
-    python -m duet.stroke_bench 60 --dry same, traced 20 mm above the surface without touching it
+    python -m duet.stroke_bench            60 mm square at the board center
+    python -m duet.stroke_bench 40         40 mm square
+    python -m duet.stroke_bench 60 --dry   same, traced 20 mm above the surface without touching it
+    python -m duet.stroke_bench 60 --held  the marker is already in the gripper; skip the dock pick and return
+
+At any prompt, type q and press Enter to quit. Ctrl-C does not interrupt a prompt.
 """
 from __future__ import annotations
 
@@ -17,23 +20,26 @@ from duet.controller import Controller
 
 
 async def ask(prompt: str) -> str:
-    return await asyncio.to_thread(input, prompt)
+    answer = (await asyncio.to_thread(input, prompt)).strip().lower()
+    if answer == "q":
+        raise SystemExit("quit; the arm stays where it is")
+    return answer
 
 
-async def main(side_mm: float, dry: bool) -> None:
+async def main(side_mm: float, dry: bool, held: bool) -> None:
     poses = load_poses()
     board = BoardToRobot.from_poses(poses)
     cx, cy, h = cfg.BOARD_W_MM / 2, cfg.BOARD_H_MM / 2, side_mm / 2
     square = [(cx - h, cy - h), (cx + h, cy - h), (cx + h, cy + h), (cx - h, cy + h), (cx - h, cy - h)]
     async with await viam_conn.connect() as machine:
         c = Controller(machine, poses, board)
-        c.held_mode = True
-        await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
-        await ask("Put a marker between the fingers, tip down. Enter to grab... ")
-        await c.gripper.grab()
+        c.held_mode = held
+        what = "draw" if held else f"pick the {cfg.MARKER} marker from the dock and draw"
+        await ask(f"Stand clear of the arm, board, and dock. Enter to {what}, q to quit... ")
         await c.go_look()
-        await ask("Hands clear of the board? Enter to draw... ")
+        await c.pick_marker(cfg.MARKER)      # no-op with --held
         result = await c.draw([square], budget_mm=10_000, budget_s=600, z_offset_mm=cfg.LIFT_MM if dry else 0.0)
+        await c.return_marker(cfg.MARKER)    # no-op with --held
         await c.go_look()
     t = c.move_times
     print(f"strokes {result.strokes_done}, {result.drawn_mm:.0f} mm in {result.seconds:.1f} s")
@@ -43,5 +49,5 @@ async def main(side_mm: float, dry: bool) -> None:
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if a != "--dry"]
-    asyncio.run(main(float(args[0]) if args else 60.0, dry="--dry" in sys.argv))
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    asyncio.run(main(float(args[0]) if args else 60.0, dry="--dry" in sys.argv, held="--held" in sys.argv))

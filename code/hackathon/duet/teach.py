@@ -53,16 +53,14 @@ async def ask(prompt: str) -> str:
 
 
 async def prepare_gripper(c: Controller) -> bool:
-    """Open the gripper. If it reports holding something (this unit's report is unreliable), the
-    operator chooses: keep it, open it, or abort. Returns True when a held marker was kept."""
-    holding = await c.gripper.is_holding_something()
-    if holding.is_holding_something:
-        answer = await ask("The gripper reports holding something. k = keep it and continue, "
-                           "o = open it (whatever it holds will drop), q = abort: ")
-        if answer == "k":
-            return True
-        if answer != "o":
-            raise Abort()
+    """The operator says what the gripper holds, because this unit's holding sensor is unreliable:
+    k = keep what it holds, o = open the fingers, q = abort. Returns True when kept."""
+    answer = await ask("Is a marker already in the gripper? k = keep it, o = open the fingers "
+                       "(anything held will drop), q = abort: ")
+    if answer == "k":
+        return True
+    if answer != "o":
+        raise Abort()
     await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
     return False
 

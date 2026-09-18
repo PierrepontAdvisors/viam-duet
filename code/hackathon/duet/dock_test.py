@@ -1,7 +1,8 @@
 """Stage 3: pick, uncap, recap, and return one marker N times; count clean cycles.
 
-    python -m duet.dock_test red 20
-    python -m duet.dock_test gripper 300     open the gripper to a position on the 0..850 scale and stop
+    python -m duet.dock_test green 20
+    python -m duet.dock_test cycles 20        same, using the configured marker (config.MARKER)
+    python -m duet.dock_test gripper 300      open the gripper to a position on the 0..850 scale and stop
 
 At any prompt, type q and press Enter to stop. Ctrl-C does not interrupt a prompt.
 """
@@ -11,6 +12,7 @@ import asyncio
 import sys
 
 import viam_conn
+from duet import config as cfg
 from duet.calib import load_poses
 from duet.controller import Controller
 
@@ -60,7 +62,7 @@ def main(argv: list[str]) -> None:
             raise SystemExit("usage: python -m duet.dock_test gripper <0..850>")
         asyncio.run(set_gripper(int(argv[1])))
         return
-    slot = argv[0]
+    slot = argv[0] if argv[0] not in ("cycles",) else cfg.MARKER
     if slot not in SLOTS:
         raise SystemExit(f"unknown marker '{slot}'; choose one of {', '.join(SLOTS)}")
     count = int(argv[1]) if len(argv) > 1 else 20
