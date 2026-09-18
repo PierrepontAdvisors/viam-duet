@@ -524,7 +524,7 @@ class Controller:
         self.last_error: str | None = None
         self._abort = asyncio.Event()
         self._lock = asyncio.Lock()
-        self._waiting = False                        # a recover() is waiting for the lock; nothing may slip in front
+        self._waiting = 0                            # recover() calls waiting for the lock; nothing may slip in front
 
     # ---- primitives --------------------------------------------------------------------------
     async def _move(self, pose: Pose, linear: bool = False) -> None:
@@ -586,14 +586,14 @@ class Controller:
                 raise Busy("a sequence is already running; wait for it or call stop()")
             await self._lock.acquire()
         else:
-            self._waiting = True
+            self._waiting += 1
             try:
                 async with asyncio.timeout(wait_s):
                     await self._lock.acquire()
             except TimeoutError:
                 raise Busy(f"a sequence is still running after {wait_s:.0f} s") from None
             finally:
-                self._waiting = False
+                self._waiting -= 1
         try:
             self._abort.clear()
             if check_hand and await self._hand_present():
@@ -750,7 +750,8 @@ class Controller:
                 await self._move(shifted(await self.tip_pose(), dz=self._lift_mm), linear=True)
                 self._mark_clear()
             await self.set_speed(cfg.SPEED_TRAVEL)
-        self.last_error = None
+        if not self._abort.is_set():   # a stop() during the recovery lift leaves the error in place
+            self.last_error = None
 
     async def status(self) -> dict:
         joints = await self.arm.get_joint_positions()
