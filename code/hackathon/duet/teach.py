@@ -52,30 +52,34 @@ async def ask(prompt: str) -> str:
     return answer
 
 
-async def prepare_gripper(c: Controller, with_marker: bool) -> None:
-    """Get the gripper into the state the verb needs. If it already reports holding something,
-    the operator chooses: keep it (and skip the grab), open it, or abort."""
+async def prepare_gripper(c: Controller) -> bool:
+    """Open the gripper. If it reports holding something (this unit's report is unreliable), the
+    operator chooses: keep it, open it, or abort. Returns True when a held marker was kept."""
     holding = await c.gripper.is_holding_something()
     if holding.is_holding_something:
         answer = await ask("The gripper reports holding something. k = keep it and continue, "
                            "o = open it (whatever it holds will drop), q = abort: ")
         if answer == "k":
-            return
+            return True
         if answer != "o":
             raise Abort()
     await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
-    if with_marker:
-        await ask("Put a marker between the fingers, tip down. Enter to grab, q to abort... ")
-        await c.gripper.grab()
+    return False
 
 
 async def teach(name: str, prompt: str, with_marker: bool, release_after: bool = False) -> None:
     async with await viam_conn.connect() as machine:
         c = Controller(machine, load_poses())
         try:
-            await prepare_gripper(c, with_marker)
+            kept = await prepare_gripper(c)
             await c.manual_mode(True)
             try:
+                if with_marker and not kept:
+                    await ask("MANUAL MODE, the arm is free to move by hand. Lower the open fingers around "
+                              "the marker's barrel, standing in its cap or held there by hand.\n"
+                              "Enter to grab, q to abort... ")
+                    await c.gripper.grab()
+                    await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
                 await ask(f"MANUAL MODE, the arm is free to move by hand. {prompt}\n"
                           "Enter when it is placed, q to abort... ")
                 pose = await c.tip_pose()
@@ -150,9 +154,9 @@ def main(argv: list[str]) -> None:
             asyncio.run(teach(f"slot.{choice}", f"Put the open fingers around the {choice} marker's barrel at "
                               "grip height while it stands in its cap, gripper pointing straight down.", False))
         else:
-            asyncio.run(teach(f"seat.{choice}", f"Push the {choice} marker's cap into the putty in its row "
-                              "position and seat the tip in it, gripper pointing straight down.", True,
-                              release_after=True))
+            asyncio.run(teach(f"seat.{choice}", f"Make sure the {choice} marker's cap is pushed into the putty "
+                              "at its row position with the tip seated in it and the gripper pointing straight down. "
+                              "If it already is, just press Enter.", True, release_after=True))
     elif verb == "corner":
         if choice not in CORNERS:
             raise SystemExit(f"unknown corner '{choice}'; choose one of {', '.join(CORNERS)}")
