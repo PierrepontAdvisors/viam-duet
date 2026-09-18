@@ -8,9 +8,10 @@ SESSIONS_DIR = PACKAGE_DIR.parent / "sessions"  # per-session photos and video, 
 POSES_PATH = DATA_DIR / "poses.json"
 CALIBRATION_PATH = DATA_DIR / "calibration.json"
 
-# Writing surface inside the raised frame. Landscape as the camera sees it; confirm in stage 4.
-BOARD_W_MM = 279.0
-BOARD_H_MM = 216.0
+# Writing surface inside the raised frame, measured from the taught corners on 2026-09-18: the edge
+# touched off as top-left -> top-right is the short one. Board x runs along it, board y down the long edge.
+BOARD_W_MM = 172.0
+BOARD_H_MM = 237.0
 INSET_MM = 15.0        # drawable area starts this far inside the corners
 LIFT_MM = 20.0         # pen-up travel height above the board
 WAYPOINT_MM = 8.0      # spacing of planned moves along a stroke; set from the stage 2 measurement
