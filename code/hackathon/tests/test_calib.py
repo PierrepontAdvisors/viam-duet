@@ -1,3 +1,4 @@
+import pytest
 from viam.proto.common import Pose
 
 from duet.calib import BoardToRobot, dict_to_pose, load_poses, pose_to_dict, save_pose
@@ -51,3 +52,20 @@ def test_from_poses_uses_corner_entries(tmp_path):
     save_pose("corner.bl", down(84, -100, 5), path)
     b = BoardToRobot.from_poses(load_poses(path))
     assert round(b.to_world(279, 216).x, 6) == 84
+
+
+def test_far_corner_is_parallelogram_closure():
+    far = flat_board().to_world(279, 216)
+    assert (round(far.x, 6), round(far.y, 6), far.z) == (84, 179, 5)
+
+
+def test_file_roundtrip_preserves_all_fields(tmp_path):
+    path = tmp_path / "poses.json"
+    original = Pose(x=1.5, y=-2.5, z=3.25, o_x=0.1, o_y=0.2, o_z=-0.97, theta=12.5)
+    save_pose("corner.tl", original, path)
+    assert dict_to_pose(load_poses(path)["corner"]["tl"]) == original
+
+
+def test_from_poses_reports_missing_corners():
+    with pytest.raises(ValueError, match="missing corner touch-offs: tr, bl"):
+        BoardToRobot.from_poses({"corner": {"tl": pose_to_dict(down(0, 0, 0))}})

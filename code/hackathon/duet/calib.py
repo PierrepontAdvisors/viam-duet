@@ -31,7 +31,7 @@ def load_poses(path: Path = cfg.POSES_PATH) -> dict:
 
 
 def save_pose(name: str, pose: Pose, path: Path = cfg.POSES_PATH) -> dict:
-    """Store `pose` under a dotted name such as 'slot.red'; rewrite the file; return the new dict."""
+    """Store `pose` under a dotted name such as 'slot.red'; rewrite the file atomically; return the new dict."""
     poses = load_poses(path)
     node = poses
     *parents, leaf = name.split(".")
@@ -39,7 +39,9 @@ def save_pose(name: str, pose: Pose, path: Path = cfg.POSES_PATH) -> dict:
         node = node.setdefault(key, {})
     node[leaf] = pose_to_dict(pose)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(poses, indent=2, sort_keys=True) + "\n")
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(poses, indent=2, sort_keys=True) + "\n")
+    tmp.replace(path)   # atomic on POSIX: a crash mid-write cannot truncate the taught poses
     return poses
 
 
@@ -62,12 +64,17 @@ class BoardToRobot:
 
     @classmethod
     def from_poses(cls, poses: dict) -> "BoardToRobot":
-        c = poses["corner"]
-        return cls.from_corners(dict_to_pose(c["tl"]), dict_to_pose(c["tr"]), dict_to_pose(c["bl"]),
-                                cfg.BOARD_W_MM, cfg.BOARD_H_MM)
+        corners = poses.get("corner", {})
+        missing = [name for name in ("tl", "tr", "bl") if name not in corners]
+        if missing:
+            raise ValueError(f"missing corner touch-offs: {', '.join(missing)}; "
+                             "run `python -m duet.teach corner <name>` for each")
+        return cls.from_corners(dict_to_pose(corners["tl"]), dict_to_pose(corners["tr"]),
+                                dict_to_pose(corners["bl"]), cfg.BOARD_W_MM, cfg.BOARD_H_MM)
 
     def to_world(self, u: float, v: float, lift: float = 0.0) -> Pose:
-        """Gripper pose that puts the marker tip at board point (u, v), raised by `lift` mm."""
+        """Gripper pose that puts the marker tip at board point (u, v), raised by `lift` mm.
+        `lift` is along world z, not the board normal; the board is assumed to be close to level."""
         o, ex, ey = (np.array(t) for t in (self.origin, self.ex, self.ey))
         p = o + ex * (u / self.width_mm) + ey * (v / self.height_mm)
         ox, oy, oz, th = self.orientation
