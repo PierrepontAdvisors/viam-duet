@@ -8,6 +8,8 @@
     python -m duet.teach show            print every stored pose
     python -m duet.teach verify          replay every stored pose, 30 mm high, one at a time
     python -m duet.teach recover         clear the arm's error state after a fault
+    python -m duet.teach pick            pick the marker from the dock with the runtime grip and hold it,
+                                         so corners can be re-taught with the exact grip the robot uses
 
 At any prompt, type q and press Enter to abort: manual mode is exited and nothing is saved.
 Ctrl-C does not interrupt a prompt, so use q.
@@ -143,6 +145,20 @@ async def recover() -> None:
         print("arm error cleared")
 
 
+async def pick() -> None:
+    async with await viam_conn.connect() as machine:
+        c = Controller(machine, load_poses())
+        try:
+            await ask(f"Stand clear of the arm and dock. Enter to pick the {cfg.MARKER} marker with the runtime "
+                      "grip and hold it, q to abort... ")
+        except Abort:
+            return
+        await c.go_look()
+        await c.pick_marker(cfg.MARKER)
+        print("holding the marker above the dock. Now run `teach corner tl|tr|bl` and answer k, "
+              "then `teach seat green` with k to put it back.")
+
+
 def main(argv: list[str]) -> None:
     if not argv:
         raise SystemExit(__doc__)
@@ -178,6 +194,8 @@ def main(argv: list[str]) -> None:
         asyncio.run(verify())
     elif verb == "recover":
         asyncio.run(recover())
+    elif verb == "pick":
+        asyncio.run(pick())
     else:
         raise SystemExit(__doc__)
 
