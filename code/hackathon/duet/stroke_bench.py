@@ -6,6 +6,7 @@
     python -m duet.stroke_bench 60 --held  the marker is already in the gripper; skip the dock pick and return
     python -m duet.stroke_bench 60 --dock  pick from the dock and return even when config.HELD_MODE is on
     python -m duet.stroke_bench 60 --pen 3 draw 3 mm above the touched-off plane for this run (tunes PEN_DOWN_OFFSET_MM)
+    python -m duet.stroke_bench 20 --at 15 15  a 20 mm square whose top-left corner is at board (15, 15) mm
 
 At any prompt, type q and press Enter to quit. Ctrl-C does not interrupt a prompt.
 """
@@ -28,11 +29,14 @@ async def ask(prompt: str) -> str:
     return answer
 
 
-async def main(side_mm: float, dry: bool, held: bool) -> None:
+async def main(side_mm: float, dry: bool, held: bool, at: tuple[float, float] | None = None) -> None:
     poses = load_poses()
     board = BoardToRobot.from_poses(poses)
-    cx, cy, h = cfg.BOARD_W_MM / 2, cfg.BOARD_H_MM / 2, side_mm / 2
-    square = [(cx - h, cy - h), (cx + h, cy - h), (cx + h, cy + h), (cx - h, cy + h), (cx - h, cy - h)]
+    if at is None:
+        x0, y0 = cfg.BOARD_W_MM / 2 - side_mm / 2, cfg.BOARD_H_MM / 2 - side_mm / 2
+    else:
+        x0, y0 = at
+    square = [(x0, y0), (x0 + side_mm, y0), (x0 + side_mm, y0 + side_mm), (x0, y0 + side_mm), (x0, y0)]
     async with await viam_conn.connect() as machine:
         c = Controller(machine, poses, board)
         c.held_mode = held
@@ -58,5 +62,11 @@ if __name__ == "__main__":
         del argv[i:i + 2]
     args = [a for a in argv if not a.startswith("--")]
     print(f"pen-down offset {cfg.PEN_DOWN_OFFSET_MM:.1f} mm above the touched-off plane")
+    at = None
+    if "--at" in argv:
+        i = argv.index("--at")
+        at = (float(argv[i + 1]), float(argv[i + 2]))
+        del argv[i:i + 3]
+    args = [a for a in argv if not a.startswith("--")]
     held = ("--held" in argv or cfg.HELD_MODE) and "--dock" not in argv
-    asyncio.run(main(float(args[0]) if args else 60.0, dry="--dry" in argv, held=held))
+    asyncio.run(main(float(args[0]) if args else 60.0, dry="--dry" in argv, held=held, at=at))
