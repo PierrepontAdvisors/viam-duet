@@ -293,6 +293,11 @@ class Controller:
     async def clear_error(self) -> None:
         await self.arm.do_command({"clear_error": True})
 
+    async def manual_mode(self, on: bool) -> None:
+        """xArm teaching mode: the arm goes limp so the operator can move it by hand. Not a
+        sequence: no lock and no hand gate, because hands on the arm are the point."""
+        await self.arm.do_command({"enter_manual_mode": True} if on else {"exit_manual_mode": True})
+
     async def recover(self) -> None:
         """After a stop or a fault: wait for the aborted sequence to unwind, clear the arm's error
         state, and if the tool was left low lift it straight up before anything else moves. Runs

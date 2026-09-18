@@ -402,3 +402,16 @@ def test_cancelling_a_sequence_halts_the_arm_and_propagates():
 def test_short_stroke_fixture_matches_the_waypoint_spacing():
     # test_stop_during_the_final_lift_keeps_needs_lift assumes SHORT resamples to exactly two points
     assert len(resample(SHORT, cfg.WAYPOINT_MM)) == 2
+
+
+def test_manual_mode_sends_the_xarm_commands_without_the_sequence_gate():
+    async def hand():
+        return True   # a hand IS on the arm during teaching; manual mode must not be gated by it
+
+    async def scenario():
+        c = make_controller(hand_check=hand)
+        await c.manual_mode(True)
+        await c.manual_mode(False)
+        return c
+    c = asyncio.run(scenario())
+    assert c.arm.commands == [{"enter_manual_mode": True}, {"exit_manual_mode": True}]

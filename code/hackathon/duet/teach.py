@@ -6,13 +6,15 @@
     python -m duet.teach corner tl       holding a marker, tip touching the top-left inner corner (also tr, bl)
     python -m duet.teach show            print every stored pose
     python -m duet.teach verify          replay every stored pose, 30 mm high, one at a time
+    python -m duet.teach recover         clear the arm's error state after a fault
+
+At any prompt, type q and press Enter to abort: manual mode is exited and nothing is saved.
+Ctrl-C does not interrupt a prompt, so use q.
 """
 from __future__ import annotations
 
 import asyncio
 import sys
-
-from viam.components.arm import Arm
 
 import viam_conn
 from duet import config as cfg
@@ -24,8 +26,13 @@ CORNERS = ("tl", "tr", "bl")
 VERIFY_LIFT_MM = 30.0
 
 
+class Abort(Exception):
+    """The operator typed q at a prompt."""
+
+
 def flatten(poses: dict, prefix: str = "") -> list[tuple[str, dict]]:
-    """[('corner.tl', {...}), ('look', {...}), ...] in sorted order."""
+    """[('corner.tl', {...}), ('look', {...}), ...] in sorted order. A leaf is a pose dict, which
+    has the pose keys; anything else is a group. Group names are never pose field names."""
     out: list[tuple[str, dict]] = []
     for key, value in sorted(poses.items()):
         name = f"{prefix}{key}"
@@ -37,31 +44,59 @@ def flatten(poses: dict, prefix: str = "") -> list[tuple[str, dict]]:
 
 
 async def ask(prompt: str) -> str:
-    return await asyncio.to_thread(input, prompt)   # keeps the Viam session alive while you work
+    """Terminal prompt on a worker thread so the Viam session stays alive. `q` aborts."""
+    answer = (await asyncio.to_thread(input, prompt)).strip().lower()
+    if answer == "q":
+        raise Abort()
+    return answer
+
+
+async def open_gripper_safely(c: Controller) -> None:
+    """Open the gripper, but ask first if it reports holding something, since that would drop it."""
+    holding = await c.gripper.is_holding_something()
+    if holding.is_holding_something:
+        if await ask("The gripper reports holding something. Open it anyway? y/N: ") != "y":
+            raise Abort()
+    await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
 
 
 async def teach(name: str, prompt: str, with_marker: bool, release_after: bool = False) -> None:
     async with await viam_conn.connect() as machine:
-        arm = Arm.from_robot(machine, viam_conn.ARM)
         c = Controller(machine, load_poses())
-        await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
-        if with_marker:
-            await ask("Put a marker between the fingers, tip down. Enter to grab... ")
-            await c.gripper.grab()
-        await arm.do_command({"enter_manual_mode": True})
         try:
-            await ask(f"MANUAL MODE. {prompt}\nThen press Enter here... ")
-            pose = await c.tip_pose()
-        finally:
-            await arm.do_command({"exit_manual_mode": True})
-        save_pose(name, pose)
-        print(f"saved {name}: x={pose.x:.1f} y={pose.y:.1f} z={pose.z:.1f}")
-        if release_after:
+            await open_gripper_safely(c)
+            if with_marker:
+                await ask("Put a marker between the fingers, tip down. Enter to grab, q to abort... ")
+                await c.gripper.grab()
+            await c.manual_mode(True)
+            try:
+                await ask(f"MANUAL MODE, the arm is free to move by hand. {prompt}\n"
+                          "Enter when it is placed, q to abort... ")
+                pose = await c.tip_pose()
+            finally:
+                await c.manual_mode(False)
+            save_pose(name, pose)
+            print(f"saved {name}: x={pose.x:.1f} y={pose.y:.1f} z={pose.z:.1f}")
+        except Abort:
+            print("aborted: nothing saved")
+            return
+        if not release_after:
+            return
+        try:
+            await ask("Hands clear of the arm? Enter to release the marker and lift, q to keep holding it... ")
+        except Abort:
+            print("marker still held; the arm has not moved")
+            return
+        try:
             await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)   # leave the marker standing in its cap
             await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
             await c.set_speed(cfg.SPEED_DOCK)
             await c.move_to(shifted(pose, dz=cfg.DOCK_HOVER_MM))
             await c.set_speed(cfg.SPEED_TRAVEL)
+        except Exception as exc:
+            print(f"lift failed after saving {name}: {exc}\n"
+                  "The gripper is open and the arm is near the dock. Check that it is clear, then run "
+                  "`python -m duet.teach recover` before the next command.")
 
 
 async def verify() -> None:
@@ -69,37 +104,56 @@ async def verify() -> None:
     async with await viam_conn.connect() as machine:
         c = Controller(machine, poses)
         await c.set_speed(cfg.SPEED_DOCK)
-        for name, d in flatten(poses):
-            pose = dict_to_pose(d)
-            target = pose if name == "look" else shifted(pose, dz=VERIFY_LIFT_MM)
-            where = "exact" if name == "look" else f"{VERIFY_LIFT_MM:.0f} mm above"
-            await ask(f"next: {name} ({where}). Enter to move, Ctrl-C to abort... ")
-            await c.move_to(target)
-            print(f"  at {name}")
-        await c.set_speed(cfg.SPEED_TRAVEL)
+        try:
+            for name, d in flatten(poses):
+                pose = dict_to_pose(d)
+                target = pose if name == "look" else shifted(pose, dz=VERIFY_LIFT_MM)
+                where = "exact" if name == "look" else f"{VERIFY_LIFT_MM:.0f} mm above"
+                await ask(f"next: {name} ({where}). Stand clear. Enter to move, q to stop... ")
+                await c.move_to(target)
+                print(f"  at {name}")
+        except Abort:
+            print("stopped; the arm stays where it is")
+        finally:
+            await c.set_speed(cfg.SPEED_TRAVEL)
+
+
+async def recover() -> None:
+    async with await viam_conn.connect() as machine:
+        await Controller(machine, load_poses()).recover()
+        print("arm error cleared")
 
 
 def main(argv: list[str]) -> None:
     if not argv:
         raise SystemExit(__doc__)
     verb, args = argv[0], argv[1:]
+    choice = args[0] if args else ""
     if verb == "look":
         asyncio.run(teach("look", "Move the arm to the look pose: 350 to 400 mm above the board, "
                           "tilted 15 to 20 degrees so the light's reflection is out of the camera frame.", False))
-    elif verb == "slot" and args and args[0] in SLOTS:
-        asyncio.run(teach(f"slot.{args[0]}", f"Put the open fingers around the {args[0]} marker's barrel at "
-                          "grip height while it stands in its cap, gripper pointing straight down.", False))
-    elif verb == "seat" and args and args[0] in SLOTS:
-        asyncio.run(teach(f"seat.{args[0]}", f"Push the {args[0]} marker's cap into the putty in its row "
-                          "position and seat the tip in it, gripper pointing straight down.", True, release_after=True))
-    elif verb == "corner" and args and args[0] in CORNERS:
-        asyncio.run(teach(f"corner.{args[0]}", f"Rest the marker tip on the writing surface at the {args[0]} "
+    elif verb in ("slot", "seat"):
+        if choice not in SLOTS:
+            raise SystemExit(f"unknown marker '{choice}'; choose one of {', '.join(SLOTS)}")
+        if verb == "slot":
+            asyncio.run(teach(f"slot.{choice}", f"Put the open fingers around the {choice} marker's barrel at "
+                              "grip height while it stands in its cap, gripper pointing straight down.", False))
+        else:
+            asyncio.run(teach(f"seat.{choice}", f"Push the {choice} marker's cap into the putty in its row "
+                              "position and seat the tip in it, gripper pointing straight down.", True,
+                              release_after=True))
+    elif verb == "corner":
+        if choice not in CORNERS:
+            raise SystemExit(f"unknown corner '{choice}'; choose one of {', '.join(CORNERS)}")
+        asyncio.run(teach(f"corner.{choice}", f"Rest the marker tip on the writing surface at the {choice} "
                           "inner corner, gripper pointing straight down.", True))
     elif verb == "show":
         for name, d in flatten(load_poses()):
             print(f"{name:12s} x={d['x']:7.1f} y={d['y']:7.1f} z={d['z']:7.1f}")
     elif verb == "verify":
         asyncio.run(verify())
+    elif verb == "recover":
+        asyncio.run(recover())
     else:
         raise SystemExit(__doc__)
 
