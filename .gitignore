@@ -24,3 +24,10 @@ node_modules/
 *.key
 *api-key*
 viam-credentials*
+viam-*.json
+viam.json
+api-key.json
+
+# cloned third-party reference repos
+code/hackathon/reference/
+code/hackathon/captures/

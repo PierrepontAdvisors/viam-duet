@@ -19,4 +19,10 @@ Viam terms in my own words. Rewrite these as understanding improves.
 - **Point cloud** — A set of 3D points, here produced by the vision service from a camera, used to find objects to pick.
 - **Vision service** — Detects objects, classifies images, or returns point clouds from a camera, often backed by an ML model.
 - **Motion service** — Plans and executes movement of a component (the gripper on the arm) to a destination pose while avoiding obstacles.
+- **Model** — one implementation of a component or service type, e.g. `arm/simulated`. All models of a type share the API; the model decides what's behind it.
+- **DoCommand** — the escape hatch on every resource for commands the standard API doesn't cover. The pick-station uses it to report grasp and hover poses.
+- **Orientation vector** — Viam's orientation format: the direction the tool's z-axis points plus a rotation (theta) about it. `ov_degrees` in the app; `o_x/o_y/o_z/theta` in the SDK.
+- **Tool center point** — the flange-to-tool-tip distance (196 mm here) that puts the gripper frame at the point that touches the work.
+- **WorldState** — the set of obstacles passed to a single motion service call. Each obstacle is a geometry in a named frame; `world` makes it fixed, the gripper frame makes it move with the arm.
+- **Scene store vs planner** — the 3D scene draws whatever you tell it (via the pack-sequencer); the planner only avoids what you pass in a WorldState. The two are not linked.
 - **API key** — Credential used by SDK code and the CLI to authenticate to a machine or organization. Keep out of git.
