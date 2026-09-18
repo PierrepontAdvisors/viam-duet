@@ -23,11 +23,11 @@ from pydantic import BaseModel
 import viam_conn
 from duet import config as cfg
 from duet import planner, svg, vision
-from duet.strokes import Polyline, length
+from duet.strokes import Polyline, cut_to_budget, length
 from duet.styles import haring
 
 MODEL = "claude-opus-5"
-TIMEOUT_S = 8.0
+TIMEOUT_S = 12.0   # the PRD says 8; Opus 5 at low effort measured 7.4 s on the first board, too close
 GRID_MM = 20
 
 
@@ -149,11 +149,14 @@ def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Poly
 def plan_turn(result: TurnResult, human: list[Polyline], existing_ink: list[Polyline],
               length_setting: str) -> tuple[list[Polyline], str]:
     """Validated and styled polylines for the arm, from a proposal or the fallback."""
+    budget = cfg.BUDGET_MM[length_setting]
     if result.proposal is None:
-        return haring.fallback(human)
+        styled, color = haring.fallback(human)
+        return cut_to_budget(styled, budget), color
     strokes = [s.model_dump() for s in result.proposal.strokes]
-    safe = planner.validate(strokes, existing_ink, cfg.BUDGET_MM[length_setting])
-    return haring.style(safe)
+    safe = planner.validate(strokes, existing_ink, budget)
+    styled, color = haring.style(safe)
+    return cut_to_budget(styled, budget), color     # styling adds passes and ticks; the budget is for the arm
 
 
 def main(argv: list[str]) -> None:
