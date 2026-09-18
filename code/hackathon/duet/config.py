@@ -29,3 +29,7 @@ BUDGET_S = {"short": 15.0, "medium": 40.0, "long": 90.0}
 
 MOVE_TIMEOUT_S = 30.0
 LINE_TOLERANCE_MM = 1.0
+
+HAND_CHECK_TIMEOUT_S = 2.0    # a hand check slower than this counts as a hand present
+GRIPPER_SETTLE_S = 0.3        # pause after grab or open before the next move
+REQUIRE_GRAB_DETECT = False   # set True in stage 3 if this gripper unit reports grab() reliably
