@@ -292,15 +292,16 @@ class Controller:
     async def _stroke(self, pts: Polyline, z_offset_mm: float) -> float:
         """Travel to the first point, draw through every point, lift. Returns millimeters drawn."""
         lifted = cfg.LIFT_MM + z_offset_mm
+        down = cfg.PEN_DOWN_OFFSET_MM + z_offset_mm   # the touched-off plane presses too hard; ride above it
         await self.set_speed(cfg.SPEED_TRAVEL)
         await self._move(self.board.to_world(*pts[0], lift=lifted))
         await self.set_speed(cfg.SPEED_DRAW)
         self._mark_low(cfg.LIFT_MM)
-        await self._move(self.board.to_world(*pts[0], lift=z_offset_mm), linear=True)
+        await self._move(self.board.to_world(*pts[0], lift=down), linear=True)
         drawn = 0.0
         prev = pts[0]
         for p in pts[1:]:
-            await self._move(self.board.to_world(*p, lift=z_offset_mm), linear=True)
+            await self._move(self.board.to_world(*p, lift=down), linear=True)
             drawn += math.dist(prev, p)
             prev = p
         await self._move(self.board.to_world(*prev, lift=lifted), linear=True)

@@ -4,6 +4,7 @@
     python -m duet.stroke_bench 40         40 mm square
     python -m duet.stroke_bench 60 --dry   same, traced 20 mm above the surface without touching it
     python -m duet.stroke_bench 60 --held  the marker is already in the gripper; skip the dock pick and return
+    python -m duet.stroke_bench 60 --pen 3 draw 3 mm above the touched-off plane for this run (tunes PEN_DOWN_OFFSET_MM)
 
 At any prompt, type q and press Enter to quit. Ctrl-C does not interrupt a prompt.
 """
@@ -49,5 +50,11 @@ async def main(side_mm: float, dry: bool, held: bool) -> None:
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    asyncio.run(main(float(args[0]) if args else 60.0, dry="--dry" in sys.argv, held="--held" in sys.argv))
+    argv = sys.argv[1:]
+    if "--pen" in argv:
+        i = argv.index("--pen")
+        cfg.PEN_DOWN_OFFSET_MM = float(argv[i + 1])
+        del argv[i:i + 2]
+    args = [a for a in argv if not a.startswith("--")]
+    print(f"pen-down offset {cfg.PEN_DOWN_OFFSET_MM:.1f} mm above the touched-off plane")
+    asyncio.run(main(float(args[0]) if args else 60.0, dry="--dry" in argv, held="--held" in argv))
