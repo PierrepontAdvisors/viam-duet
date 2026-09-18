@@ -52,23 +52,28 @@ async def ask(prompt: str) -> str:
     return answer
 
 
-async def open_gripper_safely(c: Controller) -> None:
-    """Open the gripper, but ask first if it reports holding something, since that would drop it."""
+async def prepare_gripper(c: Controller, with_marker: bool) -> None:
+    """Get the gripper into the state the verb needs. If it already reports holding something,
+    the operator chooses: keep it (and skip the grab), open it, or abort."""
     holding = await c.gripper.is_holding_something()
     if holding.is_holding_something:
-        if await ask("The gripper reports holding something. Open it anyway? y/N: ") != "y":
+        answer = await ask("The gripper reports holding something. k = keep it and continue, "
+                           "o = open it (whatever it holds will drop), q = abort: ")
+        if answer == "k":
+            return
+        if answer != "o":
             raise Abort()
     await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
+    if with_marker:
+        await ask("Put a marker between the fingers, tip down. Enter to grab, q to abort... ")
+        await c.gripper.grab()
 
 
 async def teach(name: str, prompt: str, with_marker: bool, release_after: bool = False) -> None:
     async with await viam_conn.connect() as machine:
         c = Controller(machine, load_poses())
         try:
-            await open_gripper_safely(c)
-            if with_marker:
-                await ask("Put a marker between the fingers, tip down. Enter to grab, q to abort... ")
-                await c.gripper.grab()
+            await prepare_gripper(c, with_marker)
             await c.manual_mode(True)
             try:
                 await ask(f"MANUAL MODE, the arm is free to move by hand. {prompt}\n"
