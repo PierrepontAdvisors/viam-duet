@@ -13,10 +13,16 @@ class FakeMotion:
     def __init__(self, move_delay_s=0.01):
         self.calls = 0
         self.move_delay_s = move_delay_s
-        self.refuse_call = None   # when set, exactly that call number returns False
+        self.refuse_call = None        # when set, exactly that call number returns False
+        self.destinations = []         # every commanded PoseInFrame, in order
+        self.stop_during_call = None   # when set, call controller.stop() from inside that move
+        self.controller = None
 
     async def move(self, **kw):
         self.calls += 1
+        self.destinations.append(kw["destination"])
+        if self.calls == self.stop_during_call:
+            await self.controller.stop()
         await asyncio.sleep(self.move_delay_s)
         return self.calls != self.refuse_call
 
@@ -25,9 +31,10 @@ class FakeMotion:
 
 
 class FakeArm:
-    def __init__(self):
+    def __init__(self, stop_error=None):
         self.stopped = 0
         self.commands = []
+        self.stop_error = stop_error
 
     async def do_command(self, cmd):
         self.commands.append(cmd)
@@ -35,6 +42,8 @@ class FakeArm:
 
     async def stop(self):
         self.stopped += 1
+        if self.stop_error is not None:
+            raise self.stop_error
 
 
 class FakeGripper:
@@ -55,12 +64,14 @@ def down(x, y, z):
 
 
 SQUARE = [(100, 100), (160, 100), (160, 160), (100, 160), (100, 100)]
+SHORT = [(100, 100), (104, 100)]   # two waypoints: travel, pen-down, one waypoint, lift
 
 
-def make_controller(hand_check=None, gripper=None):
+def make_controller(hand_check=None, gripper=None, arm=None):
     """Build a Controller around fakes without connecting to a machine."""
     c = C.Controller.__new__(C.Controller)
-    c.arm, c.gripper, c.motion = FakeArm(), gripper or FakeGripper(), FakeMotion()
+    c.arm, c.gripper, c.motion = arm or FakeArm(), gripper or FakeGripper(), FakeMotion()
+    c.motion.controller = c
     c.poses = {"look": {"x": 0, "y": 0, "z": 300, "o_x": 0, "o_y": 0, "o_z": -1, "theta": 0},
                "slot": {"red": {"x": 50, "y": 50, "z": 40, "o_x": 0, "o_y": 0, "o_z": -1, "theta": 0}}}
     c.board = BoardToRobot.from_corners(down(300, -100, 5), down(300, 179, 5), down(84, -100, 5), 279, 216)
@@ -73,6 +84,7 @@ def make_controller(hand_check=None, gripper=None):
     c.last_error = None
     c._abort = asyncio.Event()
     c._lock = asyncio.Lock()
+    c._waiting = False
     return c
 
 
@@ -103,6 +115,41 @@ def test_exception_inside_a_sequence_halts_and_records_the_error():
     assert c.last_error.startswith("KeyError")
 
 
+def test_halt_failure_keeps_the_original_cause():
+    async def scenario():
+        c = make_controller(arm=FakeArm(stop_error=RuntimeError("arm offline")))
+        c.poses = {}
+        with pytest.raises(KeyError):
+            await c.go_look()
+        return c
+    c = asyncio.run(scenario())
+    assert "KeyError" in c.last_error
+    assert "arm.stop failed: arm offline" in c.last_error
+
+
+def test_lock_is_released_after_a_refusal_and_after_a_fault():
+    state = {"hand": True}
+
+    async def hand():
+        return state["hand"]
+
+    async def scenario():
+        c = make_controller(hand_check=hand)
+        with pytest.raises(C.Blocked):
+            await c.go_look()
+        state["hand"] = False
+        await c.go_look()                     # the refusal must not have kept the lock
+        good_poses, c.poses = c.poses, {}
+        with pytest.raises(KeyError):
+            await c.go_look()
+        c.poses = good_poses
+        await c.go_look()                     # nor the fault
+        return c
+    c = asyncio.run(scenario())
+    assert c.motion.calls == 2
+    assert c._lock.locked() is False
+
+
 def test_busy_rejects_a_concurrent_command_instead_of_queuing_it():
     async def scenario():
         c = make_controller()
@@ -114,6 +161,45 @@ def test_busy_rejects_a_concurrent_command_instead_of_queuing_it():
         return c
     c = asyncio.run(scenario())
     assert c.arm.stopped == 0
+
+
+def test_command_cannot_barge_in_front_of_a_waiting_recover():
+    async def scenario():
+        c = make_controller()
+        c.motion.move_delay_s = 0.2
+        draw = asyncio.create_task(c.draw([SQUARE], 10_000, 600))
+        await asyncio.sleep(0.05)
+        await c.stop()
+        recovery = asyncio.create_task(c.recover())
+        await asyncio.sleep(0.01)             # recover() is now waiting for the lock
+        with pytest.raises(C.Busy):
+            await c.move_to(down(0, 0, 100))   # must be rejected, not queued behind the recovery
+        await recovery
+        with pytest.raises(C.Aborted):
+            await draw
+        return c
+    c = asyncio.run(scenario())
+    assert c.needs_lift is False
+    assert c.last_error is None
+
+
+def test_recover_gives_up_after_the_wait_budget(monkeypatch):
+    monkeypatch.setattr(cfg, "MOVE_TIMEOUT_S", 0.05)
+
+    async def scenario():
+        c = make_controller()
+        c.motion.move_delay_s = 0.5
+        draw = asyncio.create_task(c.draw([SHORT], 10_000, 600))
+        await asyncio.sleep(0.01)
+        with pytest.raises(C.Busy, match="still running"):
+            await c.recover()
+        await c.stop()
+        with pytest.raises(C.Aborted):
+            await draw
+        await c.go_look()                     # the lock is usable once the sequence unwinds
+        return c
+    c = asyncio.run(scenario())
+    assert c._lock.locked() is False
 
 
 def test_hand_between_strokes_ends_the_turn_without_a_halt():
@@ -184,6 +270,21 @@ def test_refused_move_mid_stroke_halts_and_recover_lifts():
     assert c.needs_lift is False
     assert c.last_error is None
     assert {"clear_error": True} in c.arm.commands
+    lift = c.motion.destinations[-1].pose
+    assert (lift.x, lift.y, lift.z) == (0, 0, 1 + cfg.LIFT_MM)   # straight up from tip_pose by LIFT_MM
+
+
+def test_stop_during_the_final_lift_keeps_needs_lift():
+    async def scenario():
+        c = make_controller()
+        c.motion.stop_during_call = 4   # the lift move of SHORT: travel, pen-down, waypoint, lift
+        await c.draw([SHORT], 10_000, 600)
+        assert c.needs_lift is True     # the lift may have been truncated by the stop
+        await c.recover()
+        return c
+    c = asyncio.run(scenario())
+    assert c.needs_lift is False
+    assert c.arm.stopped == 1
 
 
 def test_recover_ignores_the_hand_gate():
@@ -224,6 +325,19 @@ def test_dock_abort_recovers_with_the_uncap_height():
             await c.pick_marker("red")
         assert c.needs_lift is True and c._lift_mm == cfg.UNCAP_LIFT_MM
         await c.recover()
+        return c
+    c = asyncio.run(scenario())
+    assert c.needs_lift is False
+    lift = c.motion.destinations[-1].pose
+    assert (lift.x, lift.y, lift.z) == (0, 0, 1 + cfg.UNCAP_LIFT_MM)
+
+
+def test_move_to_low_marks_needs_lift_for_recover():
+    async def scenario():
+        c = make_controller()
+        await c.move_to(down(50, 50, 40), low=True)
+        assert c.needs_lift is True and c._lift_mm == cfg.UNCAP_LIFT_MM
+        await c.move_to(down(0, 0, 300))
         return c
     c = asyncio.run(scenario())
     assert c.needs_lift is False
