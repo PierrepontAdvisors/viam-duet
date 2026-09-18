@@ -10,6 +10,10 @@
     python -m duet.teach recover         clear the arm's error state after a fault
     python -m duet.teach pick            pick the marker from the dock with the runtime grip and hold it,
                                          so corners can be re-taught with the exact grip the robot uses
+    python -m duet.teach load            go to the look pose with the gripper open, close on the pen you place,
+                                         and hold it (held mode); then re-teach the corners with k
+    python -m duet.teach touch [mm]      lower the held tip to the board center at the pen offset (default
+                                         config.PEN_DOWN_OFFSET_MM) and pause so you can see if it just touches
 
 At any prompt, type q and press Enter to abort: manual mode is exited and nothing is saved.
 Ctrl-C does not interrupt a prompt, so use q.
@@ -21,7 +25,7 @@ import sys
 
 import viam_conn
 from duet import config as cfg
-from duet.calib import dict_to_pose, load_poses, save_pose
+from duet.calib import BoardToRobot, dict_to_pose, load_poses, save_pose
 from duet.controller import Controller, shifted
 
 SLOTS = ("red", "green", "blue")
@@ -159,6 +163,51 @@ async def pick() -> None:
               "then `teach seat green` with k to put it back.")
 
 
+async def load() -> None:
+    """Held mode: bring the open gripper to the look pose, close on the pen the operator places."""
+    async with await viam_conn.connect() as machine:
+        c = Controller(machine, load_poses())
+        try:
+            await ask("Stand clear. Enter to move to the look pose with the gripper open, q to abort... ")
+            await c.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
+            await c.go_look()
+            await ask("Place the pen between the fingers, tip down, at the height you want it held. "
+                      "Keep hold of it. Enter to close the gripper, q to abort... ")
+        except Abort:
+            print("aborted")
+            return
+        await c.gripper.grab()
+        await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
+        print("holding the pen. Now run `teach corner tl`, `tr`, `bl` answering k, then `teach touch`.")
+
+
+async def touch(offset_mm: float) -> None:
+    """Lower the held tip to the board center at `offset_mm` above the touched-off plane and pause."""
+    poses = load_poses()
+    board = BoardToRobot.from_poses(poses)
+    cx, cy = cfg.BOARD_W_MM / 2, cfg.BOARD_H_MM / 2
+    async with await viam_conn.connect() as machine:
+        c = Controller(machine, poses, board)
+        try:
+            await ask(f"Stand clear. Enter to lower the tip to the board center {offset_mm:.1f} mm above the "
+                      "touched-off plane, q to abort... ")
+        except Abort:
+            print("aborted")
+            return
+        await c.set_speed(cfg.SPEED_TRAVEL)
+        await c.move_to(board.to_world(cx, cy, lift=cfg.LIFT_MM))
+        await c.set_speed(cfg.SPEED_DRAW)
+        await c.move_to(board.to_world(cx, cy, lift=offset_mm), linear=True, low=True)
+        try:
+            await ask("Look at the tip: just touching, pressing, or in the air? Enter to lift... ")
+        except Abort:
+            pass
+        await c.move_to(board.to_world(cx, cy, lift=cfg.LIFT_MM), linear=True)
+        await c.set_speed(cfg.SPEED_TRAVEL)
+        print(f"lifted. Re-run with a different value if needed, then set PEN_DOWN_OFFSET_MM in config.py "
+              f"(currently {cfg.PEN_DOWN_OFFSET_MM:.1f}).")
+
+
 def main(argv: list[str]) -> None:
     if not argv:
         raise SystemExit(__doc__)
@@ -196,6 +245,10 @@ def main(argv: list[str]) -> None:
         asyncio.run(recover())
     elif verb == "pick":
         asyncio.run(pick())
+    elif verb == "load":
+        asyncio.run(load())
+    elif verb == "touch":
+        asyncio.run(touch(float(choice) if choice else cfg.PEN_DOWN_OFFSET_MM))
     else:
         raise SystemExit(__doc__)
 
