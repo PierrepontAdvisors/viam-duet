@@ -27,7 +27,7 @@ from duet.strokes import Polyline, cut_to_budget, length
 from duet.styles import haring
 
 MODEL = "claude-opus-5"
-TIMEOUT_S = 12.0   # the PRD says 8; Opus 5 at low effort measured 7.4 s on the first board, too close
+TIMEOUT_S = {"short": 12.0, "medium": 25.0, "long": 45.0}   # a long scene is thousands of output tokens; 12 s timed out
 GRID_MM = 20
 
 
@@ -115,7 +115,7 @@ class TurnResult:
 def make_client() -> anthropic.Anthropic:
     if not viam_conn.ANTHROPIC_API_KEY:
         raise SystemExit("ANTHROPIC_API_KEY is missing from code/hackathon/.env")
-    return anthropic.Anthropic(api_key=viam_conn.ANTHROPIC_API_KEY, timeout=TIMEOUT_S, max_retries=0)
+    return anthropic.Anthropic(api_key=viam_conn.ANTHROPIC_API_KEY, timeout=TIMEOUT_S["long"], max_retries=0)
 
 
 def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Polyline], history: list[dict],
@@ -132,7 +132,7 @@ def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Poly
             f"Earlier exchanges:\n{hist}")
     t0 = time.monotonic()
     try:
-        response = client.messages.parse(
+        response = client.with_options(timeout=TIMEOUT_S[length_setting]).messages.parse(
             model=MODEL,
             max_tokens=8000,
             system=[{"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}}],
