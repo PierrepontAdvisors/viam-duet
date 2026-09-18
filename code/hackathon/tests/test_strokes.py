@@ -36,3 +36,8 @@ def test_cut_to_budget_keeps_whole_strokes_then_cuts_one():
 
 def test_cut_to_budget_with_nothing_left():
     assert cut_to_budget([[(0, 0), (1, 0)]], 0) == []
+
+
+def test_cut_to_budget_exact_at_interior_vertex():
+    out = cut_to_budget([[(0, 0), (10, 0), (10, 10)]], 10)
+    assert out == [[(0, 0), (10, 0)]]

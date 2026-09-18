@@ -37,6 +37,8 @@ def cut_to_budget(polylines: list[Polyline], budget_mm: float) -> list[Polyline]
             continue
         partial: Polyline = [pl[0]]
         for a, b in zip(pl, pl[1:]):
+            if remaining <= 0:
+                break
             d = math.dist(a, b)
             if d <= remaining:
                 partial.append(b)
