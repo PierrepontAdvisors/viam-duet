@@ -435,8 +435,9 @@ git commit -m "feat: board-to-robot calibration and pose storage with tests"
 
 **Files:**
 - Create: `code/hackathon/duet/controller.py`
+- Test: `code/hackathon/tests/test_controller_offline.py` (stubbed clients; covers abort, halt, busy, hand refusal, recovery)
 
-No unit test: everything here talks to hardware. Task 5 to 7 are its tests.
+The hardware paths are exercised by Tasks 5 to 7. The offline test file is committed in the repo at `code/hackathon/tests/test_controller_offline.py`; copy it as-is when re-executing this plan elsewhere.
 
 - [ ] **Step 1: Write the controller**
 
@@ -452,9 +453,10 @@ from __future__ import annotations
 
 import asyncio
 import math
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from time import monotonic
-from typing import Awaitable, Callable
+from typing import AsyncIterator, Awaitable, Callable
 
 from viam.components.arm import Arm
 from viam.components.gripper import Gripper
@@ -474,7 +476,15 @@ class MoveRefused(RuntimeError):
 
 
 class Blocked(RuntimeError):
-    """A hand was over the board or dock, so the controller refused to move."""
+    """A hand was over the board or dock, so the controller refused to start."""
+
+
+class Busy(RuntimeError):
+    """Another sequence is running. Commands are rejected, never queued, so nothing fires late."""
+
+
+class Aborted(RuntimeError):
+    """stop() was called while a sequence was running."""
 
 
 @dataclass(frozen=True)
@@ -482,6 +492,7 @@ class DrawResult:
     strokes_done: int
     drawn_mm: float
     seconds: float
+    blocked: bool = False   # a hand appeared between strokes; the pen is up and the arm is idle
 
 
 def shifted(p: Pose, dx: float = 0.0, dy: float = 0.0, dz: float = 0.0) -> Pose:
@@ -493,6 +504,9 @@ LINEAR = Constraints(linear_constraint=[LinearConstraint(line_tolerance_mm=cfg.L
 
 
 class Controller:
+    """Sequences run one at a time. `stop()` halts the arm and aborts the running sequence at its
+    next move; `recover()` clears the arm's error state and lifts the tool if it was left low."""
+
     def __init__(self, machine: RobotClient, poses: dict, board: BoardToRobot | None = None):
         self.arm = Arm.from_robot(machine, viam_conn.ARM)
         self.gripper = Gripper.from_robot(machine, viam_conn.GRIPPER)
@@ -500,13 +514,21 @@ class Controller:
         self.poses = poses
         self.board = board
         self.held_mode = False                       # True: marker stays in the gripper, dock steps skipped
-        self.hand_check: Callable[[], Awaitable[bool]] | None = None   # set by the session in plan 3
+        # Set by the session in plan 3. Must answer within HAND_CHECK_TIMEOUT_S and must not call
+        # back into this controller (it runs while the sequence lock is held).
+        self.hand_check: Callable[[], Awaitable[bool]] | None = None
         self.events: asyncio.Queue = asyncio.Queue()
         self.move_times: list[float] = []            # seconds per planned move, for stroke_bench
+        self.needs_lift = False                      # tool is at or near a surface; recover() lifts first
+        self._lift_mm = cfg.LIFT_MM                  # how far recover() must lift to clear that surface
+        self.last_error: str | None = None
+        self._abort = asyncio.Event()
         self._lock = asyncio.Lock()
 
     # ---- primitives --------------------------------------------------------------------------
     async def _move(self, pose: Pose, linear: bool = False) -> None:
+        if self._abort.is_set():
+            raise Aborted("stop() was called")
         t0 = monotonic()
         ok = await self.motion.move(
             component_name=viam_conn.GRIPPER,
@@ -517,12 +539,6 @@ class Controller:
         self.move_times.append(monotonic() - t0)
         if not ok:
             raise MoveRefused(f"no path to x={pose.x:.0f} y={pose.y:.0f} z={pose.z:.0f}")
-
-    async def move_to(self, pose: Pose, linear: bool = False) -> None:
-        """Public single move, used by teach.verify."""
-        async with self._lock:
-            await self._assert_clear()
-            await self._move(pose, linear)
 
     async def set_speed(self, deg_per_s: float) -> None:
         await self.arm.do_command({"set_speed": float(deg_per_s)})
@@ -535,9 +551,56 @@ class Controller:
         result = await self.motion.get_pose(component_name=viam_conn.GRIPPER, destination_frame="world")
         return result.pose
 
-    async def _assert_clear(self) -> None:
-        if self.hand_check is not None and await self.hand_check():
-            raise Blocked("hand over the board or dock")
+    async def _hand_present(self) -> bool:
+        """Fail safe: a slow or faulting hand check counts as a hand present."""
+        if self.hand_check is None:
+            return False
+        try:
+            async with asyncio.timeout(cfg.HAND_CHECK_TIMEOUT_S):
+                return await self.hand_check()
+        except Exception as exc:
+            self.last_error = f"hand check failed ({type(exc).__name__}: {exc}); treated as a hand present"
+            return True
+
+    async def _halt(self) -> None:
+        try:
+            await self.arm.stop()
+        except Exception as exc:
+            self.last_error = f"{self.last_error or 'halt'}; arm.stop failed: {exc}"
+
+    def _mark_low(self, lift_mm: float) -> None:
+        self.needs_lift, self._lift_mm = True, lift_mm
+
+    def _mark_clear(self) -> None:
+        self.needs_lift = False
+
+    @asynccontextmanager
+    async def _sequence(self, check_hand: bool = True, wait_s: float | None = None) -> AsyncIterator[None]:
+        """One sequence at a time. Rejects with Busy if another is running (or waits up to `wait_s`
+        for it to unwind), refuses with Blocked if a hand is present, and on any failure records
+        `last_error`, halts the arm, and re-raises."""
+        if wait_s is None:
+            if self._lock.locked():
+                raise Busy("a sequence is already running; wait for it or call stop()")
+            await self._lock.acquire()
+        else:
+            try:
+                async with asyncio.timeout(wait_s):
+                    await self._lock.acquire()
+            except TimeoutError:
+                raise Busy(f"a sequence is still running after {wait_s:.0f} s") from None
+        try:
+            self._abort.clear()
+            if check_hand and await self._hand_present():
+                raise Blocked("hand over the board or dock")
+            try:
+                yield
+            except Exception as exc:
+                self.last_error = f"{type(exc).__name__}: {exc}"
+                await self._halt()
+                raise
+        finally:
+            self._lock.release()
 
     def _pose(self, *keys: str) -> Pose:
         node = self.poses
@@ -547,6 +610,8 @@ class Controller:
 
     def _apply_board_displacement(self, pose: Pose, d: tuple[float, float]) -> Pose:
         """Shift a world pose by a board-millimeter displacement, using only the board map's linear part."""
+        if self.board is None:
+            raise ValueError("a dot displacement needs the board calibration; run teach.py corner first")
         b = self.board
         ex = [c / b.width_mm for c in b.ex]
         ey = [c / b.height_mm for c in b.ey]
@@ -556,91 +621,131 @@ class Controller:
                        dz=ex[2] * d[0] + ey[2] * d[1])
 
     # ---- sequences ---------------------------------------------------------------------------
+    async def move_to(self, pose: Pose, linear: bool = False, low: bool = False) -> None:
+        """Public single move, used by teach.verify. `low=True` marks the target as at or near a
+        surface, so recover() lifts first if this move is interrupted."""
+        async with self._sequence():
+            if low:
+                self._mark_low(cfg.UNCAP_LIFT_MM)
+            await self._move(pose, linear)
+            if not low:
+                self._mark_clear()
+
     async def go_look(self) -> None:
-        async with self._lock:
-            await self._assert_clear()
+        async with self._sequence():
             await self.set_speed(cfg.SPEED_TRAVEL)
             await self._move(self._pose("look"))
+            self._mark_clear()
 
     async def pick_marker(self, slot: str, displacement_mm: tuple[float, float] = (0.0, 0.0)) -> None:
         """Hover, descend, grab, pull straight up to uncap, rise. `displacement_mm` is where the camera
         saw the marker's dot relative to its calibrated spot (plan 2); (0, 0) trusts the taught pose."""
         if self.held_mode:
             return
-        async with self._lock:
-            await self._assert_clear()
+        async with self._sequence():
             grip = self._pose("slot", slot)
-            if displacement_mm != (0.0, 0.0) and self.board is not None:
+            if displacement_mm != (0.0, 0.0):
                 grip = self._apply_board_displacement(grip, displacement_mm)
             await self.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
             await self.set_speed(cfg.SPEED_TRAVEL)
             await self._move(shifted(grip, dz=cfg.DOCK_HOVER_MM))
             await self.set_speed(cfg.SPEED_DOCK)
+            self._mark_low(cfg.UNCAP_LIFT_MM)
             await self._move(grip, linear=True)
-            await self.gripper.grab()
-            await asyncio.sleep(0.3)
+            grabbed = await self.gripper.grab()
+            await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
+            if cfg.REQUIRE_GRAB_DETECT and not grabbed:
+                raise RuntimeError(f"gripper closed on nothing at slot {slot}")
             await self._move(shifted(grip, dz=cfg.UNCAP_LIFT_MM), linear=True)
             await self._move(shifted(grip, dz=cfg.DOCK_HOVER_MM), linear=True)
+            self._mark_clear()
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def return_marker(self, slot: str) -> None:
         """Hover, descend slowly, seat the tip in the cap, press, release, rise."""
         if self.held_mode:
             return
-        async with self._lock:
-            await self._assert_clear()
+        async with self._sequence():
             seat = self._pose("seat", slot)
             await self.set_speed(cfg.SPEED_TRAVEL)
             await self._move(shifted(seat, dz=cfg.DOCK_HOVER_MM))
             await self.set_speed(cfg.SPEED_DOCK)
+            self._mark_low(cfg.UNCAP_LIFT_MM)
             await self._move(shifted(seat, dz=cfg.UNCAP_LIFT_MM), linear=True)
             await self._move(seat, linear=True)
             await self._move(shifted(seat, dz=-cfg.PRESS_MM), linear=True)
             await self.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
             await self._move(shifted(seat, dz=cfg.DOCK_HOVER_MM), linear=True)
+            self._mark_clear()
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float,
                    z_offset_mm: float = 0.0) -> DrawResult:
-        """Draw polylines (board mm) in order until either budget runs out. Pen up between strokes.
-        `z_offset_mm` raises every pen-down pose; stroke_bench uses it for a dry run above the surface."""
+        """Draw polylines (board mm) in order until either budget runs out. The stroke in progress
+        always finishes and the pen lifts. A hand seen between strokes ends the turn with
+        `blocked=True` and no emergency stop. `z_offset_mm` raises every pen-down pose (dry runs)."""
         if self.board is None:
             raise RuntimeError("no board calibration: run `python -m duet.teach corner tl|tr|bl` first")
-        async with self._lock:
+        async with self._sequence():
             start = monotonic()
             drawn = 0.0
             done = 0
-            try:
-                await self.set_speed(cfg.SPEED_TRAVEL)
-                for index, pl in enumerate(polylines):
-                    if drawn >= budget_mm or monotonic() - start >= budget_s:
-                        break
-                    await self._assert_clear()
-                    pts = resample(pl, cfg.WAYPOINT_MM)
-                    await self._move(self.board.to_world(*pts[0], lift=cfg.LIFT_MM + z_offset_mm))
-                    await self.set_speed(cfg.SPEED_DRAW)
-                    await self._move(self.board.to_world(*pts[0], lift=z_offset_mm), linear=True)
-                    prev = pts[0]
-                    for p in pts[1:]:
-                        await self._move(self.board.to_world(*p, lift=z_offset_mm), linear=True)
-                        drawn += math.dist(prev, p)
-                        prev = p
-                    await self._move(self.board.to_world(*prev, lift=cfg.LIFT_MM + z_offset_mm), linear=True)
-                    await self.set_speed(cfg.SPEED_TRAVEL)
-                    done += 1
-                    await self.events.put({"type": "progress", "stroke": index, "drawn_mm": drawn})
-            except Exception:
-                await self.stop()
-                raise
-            return DrawResult(done, drawn, monotonic() - start)
+            blocked = False
+            for index, pl in enumerate(polylines):
+                if drawn >= budget_mm or monotonic() - start >= budget_s:
+                    break
+                if index > 0 and await self._hand_present():
+                    blocked = True
+                    break
+                pts = resample(pl, cfg.WAYPOINT_MM)
+                if not pts:
+                    continue
+                drawn += await self._stroke(pts, z_offset_mm)
+                done += 1
+                await self.events.put({"type": "progress", "stroke": index, "drawn_mm": drawn})
+            return DrawResult(done, drawn, monotonic() - start, blocked)
 
+    async def _stroke(self, pts: Polyline, z_offset_mm: float) -> float:
+        """Travel to the first point, draw through every point, lift. Returns millimeters drawn."""
+        lifted = cfg.LIFT_MM + z_offset_mm
+        await self.set_speed(cfg.SPEED_TRAVEL)
+        await self._move(self.board.to_world(*pts[0], lift=lifted))
+        await self.set_speed(cfg.SPEED_DRAW)
+        self._mark_low(cfg.LIFT_MM)
+        await self._move(self.board.to_world(*pts[0], lift=z_offset_mm), linear=True)
+        drawn = 0.0
+        prev = pts[0]
+        for p in pts[1:]:
+            await self._move(self.board.to_world(*p, lift=z_offset_mm), linear=True)
+            drawn += math.dist(prev, p)
+            prev = p
+        await self._move(self.board.to_world(*prev, lift=lifted), linear=True)
+        self._mark_clear()
+        await self.set_speed(cfg.SPEED_TRAVEL)
+        return drawn
+
+    # ---- emergency and recovery --------------------------------------------------------------
     async def stop(self) -> None:
-        """Emergency path: no lock, so it works while another sequence holds it."""
-        await self.arm.stop()
+        """Emergency path, no lock: halt the arm now and abort the running sequence at its next move."""
+        self._abort.set()
+        await self._halt()
 
     async def clear_error(self) -> None:
         await self.arm.do_command({"clear_error": True})
+
+    async def recover(self) -> None:
+        """After a stop or a fault: wait for the aborted sequence to unwind, clear the arm's error
+        state, and if the tool was left low lift it straight up before anything else moves. Runs
+        without the hand gate, since the lift is a retreat from the surface and from any hand."""
+        async with self._sequence(check_hand=False, wait_s=cfg.MOVE_TIMEOUT_S + 1):
+            await self.clear_error()
+            if self.needs_lift:
+                await self.set_speed(cfg.SPEED_DOCK)
+                await self._move(shifted(await self.tip_pose(), dz=self._lift_mm), linear=True)
+                self._mark_clear()
+            await self.set_speed(cfg.SPEED_TRAVEL)
+        self.last_error = None
 
     async def status(self) -> dict:
         joints = await self.arm.get_joint_positions()
@@ -648,6 +753,8 @@ class Controller:
         return {
             "joints_deg": [round(v, 1) for v in joints.values],
             "holding": holding.is_holding_something,
+            "needs_lift": self.needs_lift,
+            "last_error": self.last_error,
             "planned_moves": len(self.move_times),
         }
 
@@ -665,7 +772,7 @@ if __name__ == "__main__":
 - [ ] **Step 2: Verify it compiles and the status command works**
 
 Run: `python -m py_compile duet/controller.py && python -m duet.controller`
-Expected: a dict with six joint angles, `holding`, and `planned_moves: 0`. If the E-stop is still latched, `holding` fails with "Emergency Stop Button Pushed In"; release the E-stop and rerun.
+Expected: a dict with six joint angles, `holding`, `needs_lift: False`, `last_error: None`, and `planned_moves: 0`. If the E-stop is still latched, `holding` fails with "Emergency Stop Button Pushed In"; release the E-stop and rerun.
 
 - [ ] **Step 3: Commit**
 
@@ -992,6 +1099,7 @@ async def cycles(slot: str, count: int) -> None:
                 await c.stop()
                 if (await ask("Fix it and press Enter to continue, or q to stop: ")).strip() == "q":
                     break
+                await c.recover()   # clears the arm's error and lifts if the tool was left low
         await c.go_look()
     print(f"{ok}/{count} cycles succeeded")
 

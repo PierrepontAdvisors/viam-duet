@@ -78,15 +78,18 @@ Public surface:
 - `pick_marker(slot, dot_xy_mm)`: open part way with `gripper.do_command({"set": N})` where N is barrel width plus 15 mm in the gripper's 0 to 850 scale (measured once in stage 3); planned move to the hover pose 60 mm above the slot; `arm.do_command({"set_speed": 10})`; linear-constrained descent to grip height, with the target shifted by the dot's displacement from its calibrated position (only the displacement is used, mapped through the linear part of the board-to-robot map, so the dots' height above the board plane adds no parallax error); `gripper.grab()`; linear-constrained pull of 40 mm straight up; rise to travel height; `set_speed` 30.
 - `return_marker(slot)`: hover; slow linear descent to seat height; press to the taught press depth; open part way; rise.
 - `draw(polylines, color)`: for each polyline in order: travel at lift height to the first point (plain planned move), linear descent to pen-down, each waypoint as a linear-constrained move at speed 15, lift. Waypoints are resampled to the spacing chosen in stage 2 (5 to 10 mm). Emits a progress event per stroke. Stops cleanly when the millimeter or second budget is exhausted: the current stroke finishes, the pen lifts.
-- `stop()`: `arm.stop()`, then a pen-up attempt.
+- `stop()`: halts the arm immediately and raises an abort flag that the running sequence sees at its next move. It never takes the lock.
+- `recover()`: waits for the aborted sequence to unwind, clears the arm's error state, and, if the tool was left at or near a surface (`needs_lift`), lifts it straight up by the height that sequence needs (20 mm from the board, 40 mm from a dock slot) before anything else. It skips the hand gate, since the lift is a retreat from the surface and from any hand. The page's Resume control calls it.
 - `clear_error()`: `arm.do_command({"clear_error": True})`.
-- `status()`: joints, gripper holding, last error.
+- `status()`: joints, gripper holding, `needs_lift`, last error.
 
 Rules:
 
 - All motion is `motion.move` on the `gripper` frame with the configured obstacles in force. `LinearConstraint(line_tolerance_mm=1.0)` on pen-down and dock vertical segments; no constraint on travel. `move_to_joint_positions` is never used.
-- The hand check runs before every sequence and between strokes. If a hand is present the controller refuses and returns a `blocked` result.
-- Any exception: `stop()`, then the session enters `Paused`. The operator clears it from the page.
+- The hand check runs at the start of every sequence and between strokes. At the start, a hand raises `Blocked` without halting. Between strokes, `draw` ends the turn with `blocked=True`, pen up, no halt. A check slower than two seconds, or one that raises, counts as a hand present, and the hook must not call back into the controller.
+- Any exception inside a sequence: the arm halts, `last_error` is recorded, and the session enters `Paused`. Resume runs `recover()` first.
+- Sequences never queue. A command issued while another runs raises `Busy`, so nothing fires late.
+- `pick_marker` checks `grab()`'s result only when `REQUIRE_GRAB_DETECT` is on, which stage 3 decides once the gripper unit's reporting is known.
 - In Held mode, `pick_marker` and `return_marker` return immediately.
 
 
