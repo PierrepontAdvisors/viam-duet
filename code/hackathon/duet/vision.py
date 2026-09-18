@@ -14,7 +14,7 @@ BOARD_PX = (int(round(cfg.BOARD_W_MM * PX_PER_MM)), int(round(cfg.BOARD_H_MM * P
 Point = tuple[float, float]
 
 
-def dark_blobs(bgr: np.ndarray, thresh: int = 40, min_area: int = 150, max_area: int = 6000) -> list[tuple[float, float, int]]:
+def dark_blobs(bgr: np.ndarray, thresh: int = 30, min_area: int = 150, max_area: int = 6000) -> list[tuple[float, float, int]]:
     """Centroids and areas of compact dark blobs. The corner marks read 14 to 35 on the gray scale,
     ink about 45, the frame's shadow line about 100 and the board 120 to 130, so 40 isolates the marks.
     At a 450 mm camera height a mark is about 2000 px."""
@@ -153,3 +153,47 @@ def trace(mask: np.ndarray, simplify_mm: float = 0.5, min_len_mm: float = 3.0) -
         if len(pl) >= 2 and sum(np.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(pl, pl[1:])) >= min_len_mm:
             out.append(pl)
     return out
+
+
+# ---- camera-to-robot alignment ------------------------------------------------------------------
+
+def find_square(board: np.ndarray, near_mm: Point, search_mm: float = 30.0, ink_thresh: int = 90) -> tuple[float, float, float, float] | None:
+    """Bounding box (x0, y0, x1, y1) in board mm of the ink square drawn around `near_mm`, ignoring
+    the corner marks (blobs touching the image border). None if nothing is there."""
+    gray = cv2.GaussianBlur(cv2.cvtColor(board, cv2.COLOR_BGR2GRAY), (3, 3), 0)
+    h, w = gray.shape
+    x0 = max(int((near_mm[0] - search_mm) * PX_PER_MM), 0)
+    y0 = max(int((near_mm[1] - search_mm) * PX_PER_MM), 0)
+    x1 = min(int((near_mm[0] + search_mm) * PX_PER_MM), w)
+    y1 = min(int((near_mm[1] + search_mm) * PX_PER_MM), h)
+    region = gray[y0:y1, x0:x1]
+    _, mask = cv2.threshold(region, ink_thresh, 255, cv2.THRESH_BINARY_INV)
+    n, _, stats, _ = cv2.connectedComponentsWithStats(mask)
+    best = None
+    for i in range(1, n):
+        x, y, bw, bh, area = (int(v) for v in stats[i])
+        touches_border = (x + x0 == 0 or y + y0 == 0 or x + x0 + bw >= w or y + y0 + bh >= h)
+        if touches_border or area < 100:
+            continue
+        if best is None or area > best[0]:
+            best = (area, x + x0, y + y0, bw, bh)
+    if best is None:
+        return None
+    _, x, y, bw, bh = best
+    return x / PX_PER_MM, y / PX_PER_MM, (x + bw) / PX_PER_MM, (y + bh) / PX_PER_MM
+
+
+def fit_axis(cam_pairs: list[tuple[float, float]]) -> tuple[float, float]:
+    """Least-squares robot = a * cam + b from (cam, robot) pairs."""
+    cam = np.array([c for c, _ in cam_pairs]); rob = np.array([r for _, r in cam_pairs])
+    a, b = np.polyfit(cam, rob, 1)
+    return float(a), float(b)
+
+
+def cam_to_robot(polylines: list[list[Point]], cal: dict) -> list[list[Point]]:
+    """Apply the calibrated per-axis map so camera-board millimeters become robot-board millimeters."""
+    m = cal.get("cam_to_robot")
+    if not m:
+        return polylines
+    ax, bx, ay, by = m["ax"], m["bx"], m["ay"], m["by"]
+    return [[(ax * x + bx, ay * y + by) for x, y in pl] for pl in polylines]

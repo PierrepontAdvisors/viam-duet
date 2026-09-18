@@ -4,6 +4,9 @@ which one is the board's top-left, and save a warped board image to check.
     python -m duet.calibrate                 detect the marks and save captures/calib_marks.jpg with labels A-D
     python -m duet.calibrate --tl C          record the calibration with image corner C as the board's top-left
     python -m duet.calibrate --check         re-detect within the calibrated regions and save the warped board
+    python -m duet.calibrate --fit 15,15,20 120,180,20
+                                             fit camera-to-robot scale and offset from squares the robot drew
+                                             (top-left x, y and side, in robot mm); reads captures/calib_board.jpg
 
 The arm must be at the look pose. Board top-left is the corner you touched off as `corner tl`.
 """
@@ -51,8 +54,32 @@ async def capture() -> np.ndarray:
         return await median_capture(Camera.from_robot(machine, viam_conn.CAMERA))
 
 
+def fit(squares: list[tuple[float, float, float]], line_mm: float = 1.0) -> None:
+    """Measure each robot-drawn square in captures/calib_board.jpg and fit robot = a * cam + b per axis."""
+    board = cv2.imread(str(CAPTURES / "calib_board.jpg"))
+    xs, ys = [], []
+    for x, y, side in squares:
+        box = vision.find_square(board, (x + side / 2, y + side / 2))
+        if box is None:
+            raise SystemExit(f"no square found near ({x}, {y})")
+        cx0, cy0, cx1, cy1 = box
+        print(f"square at robot ({x}, {y}) side {side}: camera sees x {cx0:.1f}..{cx1:.1f}, y {cy0:.1f}..{cy1:.1f}")
+        xs += [(cx0, x - line_mm / 2), (cx1, x + side + line_mm / 2)]
+        ys += [(cy0, y - line_mm / 2), (cy1, y + side + line_mm / 2)]
+    ax, bx = vision.fit_axis(xs)
+    ay, by = vision.fit_axis(ys)
+    cal = load_calibration()
+    cal["cam_to_robot"] = {"ax": ax, "bx": bx, "ay": ay, "by": by}
+    save_calibration(cal)
+    print(f"fit: robot_x = {ax:.4f} * cam_x {bx:+.2f};  robot_y = {ay:.4f} * cam_y {by:+.2f}  (saved)")
+
+
 def main(argv: list[str]) -> None:
     CAPTURES.mkdir(exist_ok=True)
+    if "--fit" in argv:
+        specs = [tuple(float(v) for v in a.split(",")) for a in argv[argv.index("--fit") + 1:] if "," in a]
+        fit(specs)
+        return
     frame = asyncio.run(capture())
     cv2.imwrite(str(CAPTURES / "calib_frame.jpg"), frame)
     if "--check" in argv:
