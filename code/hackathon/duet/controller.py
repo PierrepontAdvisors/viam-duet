@@ -164,8 +164,16 @@ class Controller:
     def _pose(self, *keys: str) -> Pose:
         node = self.poses
         for key in keys:
+            if key not in node:
+                raise KeyError(f"pose '{'.'.join(keys)}' is not taught; run `python -m duet.teach` for it")
             node = node[key]
         return dict_to_pose(node)
+
+    @staticmethod
+    def _hover(target: Pose, approach: Pose) -> Pose:
+        """Above `target`, at the approach height or DOCK_HOVER_MM above the target, whichever is higher."""
+        return Pose(x=target.x, y=target.y, z=max(target.z + cfg.DOCK_HOVER_MM, approach.z),
+                    o_x=target.o_x, o_y=target.o_y, o_z=target.o_z, theta=target.theta)
 
     def _apply_board_displacement(self, pose: Pose, d: tuple[float, float]) -> Pose:
         """Shift a world pose by a board-millimeter displacement, using only the board map's linear part."""
@@ -197,46 +205,57 @@ class Controller:
             self._mark_clear()
 
     async def pick_marker(self, slot: str, displacement_mm: tuple[float, float] = (0.0, 0.0)) -> None:
-        """Hover, descend, grab, pull straight up to uncap, rise. `displacement_mm` is where the camera
-        saw the marker's dot relative to its calibrated spot (plan 2); (0, 0) trusts the taught pose."""
+        """Enter the dock through the taught approach pose, move straight across to above the slot,
+        descend, grab, pull straight up to uncap, and back out the same way. `displacement_mm` is
+        where the camera saw the marker's dot relative to its calibrated spot (plan 2); (0, 0)
+        trusts the taught pose."""
         if self.held_mode:
             return
         async with self._sequence():
             grip = self._pose("slot", slot)
             if displacement_mm != (0.0, 0.0):
                 grip = self._apply_board_displacement(grip, displacement_mm)
+            approach = self._pose("dock", "approach")
+            hover = self._hover(grip, approach)
             await self.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
             await self.set_speed(cfg.SPEED_TRAVEL)
-            await self._move(shifted(grip, dz=cfg.DOCK_HOVER_MM))
+            await self._move(approach)                 # planned: the one taught way into the dock
             await self.set_speed(cfg.SPEED_DOCK)
+            await self._move(hover, linear=True)       # straight across, above the row
             self._mark_low(cfg.UNCAP_LIFT_MM)
-            await self._move(grip, linear=True)
+            await self._move(grip, linear=True)        # straight down onto the barrel
             grabbed = await self.gripper.grab()
             await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
             if cfg.REQUIRE_GRAB_DETECT and not grabbed:
                 raise RuntimeError(f"gripper closed on nothing at slot {slot}")
-            await self._move(shifted(grip, dz=cfg.UNCAP_LIFT_MM), linear=True)
-            await self._move(shifted(grip, dz=cfg.DOCK_HOVER_MM), linear=True)
+            await self._move(shifted(grip, dz=cfg.UNCAP_LIFT_MM), linear=True)   # uncap
+            await self._move(hover, linear=True)
             self._mark_clear()
+            await self._move(approach, linear=True)    # back out the way it came in
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def return_marker(self, slot: str) -> None:
-        """Hover, descend slowly, seat the tip in the cap, press, release, rise."""
+        """Enter through the approach pose, move above the slot, descend slowly, seat the tip in the
+        cap, press, release, and back out the same way."""
         if self.held_mode:
             return
         async with self._sequence():
             seat = self._pose("seat", slot)
+            approach = self._pose("dock", "approach")
+            hover = self._hover(seat, approach)
             await self.set_speed(cfg.SPEED_TRAVEL)
-            await self._move(shifted(seat, dz=cfg.DOCK_HOVER_MM))
+            await self._move(approach)
             await self.set_speed(cfg.SPEED_DOCK)
+            await self._move(hover, linear=True)
             self._mark_low(cfg.UNCAP_LIFT_MM)
             await self._move(shifted(seat, dz=cfg.UNCAP_LIFT_MM), linear=True)
             await self._move(seat, linear=True)
             await self._move(shifted(seat, dz=-cfg.PRESS_MM), linear=True)
             await self.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
             await asyncio.sleep(cfg.GRIPPER_SETTLE_S)
-            await self._move(shifted(seat, dz=cfg.DOCK_HOVER_MM), linear=True)
+            await self._move(hover, linear=True)
             self._mark_clear()
+            await self._move(approach, linear=True)
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float,

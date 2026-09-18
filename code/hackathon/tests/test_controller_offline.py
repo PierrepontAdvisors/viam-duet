@@ -74,6 +74,7 @@ def make_controller(hand_check=None, gripper=None, arm=None):
     c.arm, c.gripper, c.motion = arm or FakeArm(), gripper or FakeGripper(), FakeMotion()
     c.motion.controller = c
     c.poses = {"look": {"x": 0, "y": 0, "z": 300, "o_x": 0, "o_y": 0, "o_z": -1, "theta": 0},
+               "dock": {"approach": {"x": 0, "y": 0, "z": 120, "o_x": 0, "o_y": 0, "o_z": -1, "theta": 0}},
                "slot": {"red": {"x": 50, "y": 50, "z": 40, "o_x": 0, "o_y": 0, "o_z": -1, "theta": 0}}}
     c.board = BoardToRobot.from_corners(down(300, -100, 5), down(300, 179, 5), down(84, -100, 5), 279, 216)
     c.held_mode = False
@@ -321,7 +322,7 @@ def test_recover_waits_for_the_aborted_move_to_unwind():
 def test_dock_abort_recovers_with_the_uncap_height():
     async def scenario():
         c = make_controller()
-        c.motion.refuse_call = 2   # hover succeeds, the descent to grip height is refused
+        c.motion.refuse_call = 3   # approach and hover succeed, the descent to grip height is refused
         with pytest.raises(C.MoveRefused):
             await c.pick_marker("red")
         assert c.needs_lift is True and c._lift_mm == cfg.UNCAP_LIFT_MM
@@ -415,3 +416,31 @@ def test_manual_mode_sends_the_xarm_commands_without_the_sequence_gate():
         return c
     c = asyncio.run(scenario())
     assert c.arm.commands == [{"enter_manual_mode": True}, {"exit_manual_mode": True}]
+
+
+def test_pick_enters_and_leaves_the_dock_through_the_approach_pose():
+    async def scenario():
+        c = make_controller()
+        await c.pick_marker("red")
+        return c
+    c = asyncio.run(scenario())
+    path = [(d.pose.x, d.pose.y, d.pose.z) for d in c.motion.destinations]
+    assert path[0] == (0, 0, 120)                          # approach, as taught
+    assert path[1] == (50, 50, 120)                        # straight across to above the slot, approach height
+    assert path[2] == (50, 50, 40)                         # straight down to the grip
+    assert path[3] == (50, 50, 40 + cfg.UNCAP_LIFT_MM)     # uncap
+    assert path[4] == (50, 50, 120)                        # back up to hover
+    assert path[5] == (0, 0, 120)                          # back out through approach
+    assert len(path) == 6
+    assert c.needs_lift is False
+
+
+def test_missing_approach_pose_is_a_clear_error():
+    async def scenario():
+        c = make_controller()
+        del c.poses["dock"]
+        with pytest.raises(KeyError, match="dock.approach"):
+            await c.pick_marker("red")
+        return c
+    c = asyncio.run(scenario())
+    assert c.motion.calls == 0

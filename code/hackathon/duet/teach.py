@@ -1,6 +1,7 @@
 """Record poses by moving the arm by hand (xArm manual mode).
 
     python -m duet.teach look            park and look pose above the board
+    python -m duet.teach approach        dock approach pose: every pick and return enters and leaves the dock through it
     python -m duet.teach slot red        fingers around the red marker's barrel at grip height (also green, blue)
     python -m duet.teach seat red        holding the red marker, tip seated in its cap
     python -m duet.teach corner tl       holding a marker, tip touching the top-left inner corner (also tr, bl)
@@ -132,6 +133,11 @@ def main(argv: list[str]) -> None:
     if verb == "look":
         asyncio.run(teach("look", "Move the arm to the look pose: 350 to 400 mm above the board, "
                           "tilted 15 to 20 degrees so the light's reflection is out of the camera frame.", False))
+    elif verb == "approach":
+        asyncio.run(teach("dock.approach", "Move the arm to the dock approach pose: gripper pointing straight "
+                          "down about 80 mm above the marker caps, on the side of the row away from the camera "
+                          "cable, fingers aligned to close across the row. Picks enter and leave through here.",
+                          False))
     elif verb in ("slot", "seat"):
         if choice not in SLOTS:
             raise SystemExit(f"unknown marker '{choice}'; choose one of {', '.join(SLOTS)}")
