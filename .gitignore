@@ -31,3 +31,4 @@ api-key.json
 # cloned third-party reference repos
 code/hackathon/reference/
 code/hackathon/captures/
+code/hackathon/sessions/
