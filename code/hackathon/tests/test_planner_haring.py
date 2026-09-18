@@ -16,14 +16,27 @@ def test_validate_keeps_unattached_strokes_clear_of_ink():
     out = planner.validate([{"kind": "polyline", "points": [{"x": 30, "y": 70}, {"x": 90, "y": 70}]}], ink, 1000)
     assert len(out) == 2                      # cut into two pieces around the ink
     for pl in out:
-        assert all(abs(x - 60) >= 3 - 1e-6 for x, _ in pl)
+        assert all(abs(x - 60) >= cfg.CLEARANCE_MM - 1e-6 for x, _ in pl)
 
 
-def test_validate_leaves_attached_strokes_alone():
+def test_validate_ignores_the_attached_flag_and_still_keeps_clear():
     ink = [[(60, 20), (60, 120)]]
     out = planner.validate([{"kind": "polyline", "attached": True,
                              "points": [{"x": 30, "y": 70}, {"x": 90, "y": 70}]}], ink, 1000)
-    assert len(out) == 1 and length(out[0]) == 60
+    assert len(out) == 2
+    for pl in out:
+        assert all(abs(x - 60) >= cfg.CLEARANCE_MM - 1e-6 for x, _ in pl)
+
+
+def test_finalize_keeps_styled_passes_and_ticks_off_the_ink():
+    from shapely.geometry import LineString
+    ink = [[(80, 40), (80, 160)]]                       # a vertical human stroke
+    styled, _ = haring.style([[(30, 100), (74, 100)]], energy=1.0)   # ends 6 mm from it, ticks radiate
+    final = planner.finalize(styled, ink, 10_000)
+    ink_line = LineString(ink[0])
+    assert final, "something must survive"
+    for pl in final:
+        assert LineString(pl).distance(ink_line) >= cfg.CLEARANCE_MM - 1e-6
 
 
 def test_validate_converts_circles_and_respects_budget():

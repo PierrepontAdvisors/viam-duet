@@ -72,13 +72,21 @@ def stroke_to_polyline(stroke: dict) -> Polyline:
 
 
 def validate(strokes: list[dict], existing_ink: list[Polyline], budget_mm: float,
-             clearance_mm: float = 3.0) -> list[Polyline]:
-    """Proposal strokes (dicts with kind, points or cx/cy/r, attached) to safe polylines, in order."""
+             clearance_mm: float = cfg.CLEARANCE_MM) -> list[Polyline]:
+    """Proposal strokes (dicts with kind, points or cx/cy/r) to safe polylines, in order. The robot
+    never draws over existing ink: every stroke is cut away within `clearance_mm` of it, whatever
+    the proposal's `attached` flag says."""
     area = drawable_area()
     result: list[Polyline] = []
     for s in strokes:
-        parts = clip_to(stroke_to_polyline(s), area)
-        if not s.get("attached", False):
-            parts = keep_clear(parts, existing_ink, clearance_mm)
+        parts = keep_clear(clip_to(stroke_to_polyline(s), area), existing_ink, clearance_mm)
         result.extend(p for p in parts if length(p) >= MIN_PIECE_MM)
     return cut_to_budget(result, budget_mm)
+
+
+def finalize(styled: list[Polyline], existing_ink: list[Polyline], budget_mm: float,
+             clearance_mm: float = cfg.CLEARANCE_MM, min_piece_mm: float = 3.0) -> list[Polyline]:
+    """The last gate before the arm: styling adds passes and ticks, so clear them from existing ink
+    again, drop crumbs, and cut to the budget."""
+    clear = [p for p in keep_clear(styled, existing_ink, clearance_mm) if length(p) >= min_piece_mm]
+    return cut_to_budget(clear, budget_mm)

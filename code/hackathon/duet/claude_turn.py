@@ -23,7 +23,7 @@ from pydantic import BaseModel
 import viam_conn
 from duet import config as cfg
 from duet import planner, svg, vision
-from duet.strokes import Polyline, cut_to_budget, length
+from duet.strokes import Polyline, length
 from duet.styles import haring
 
 MODEL = "claude-opus-5"
@@ -64,8 +64,10 @@ off it. Only the area at least {cfg.INSET_MM:.0f} mm inside every edge is drawab
 
 Your job each turn: say in one sentence what the drawing is becoming, say in one sentence what you will add
 and why, then give the strokes as data. Strokes are polylines, circles, or arcs in board millimeters.
-Keep every stroke inside the drawable area and at least 3 mm away from existing ink, unless a stroke is
-meant to touch or continue existing ink, in which case mark it attached. The total length of all strokes
+Keep every stroke inside the drawable area. Never draw on or across ink that is already on the board:
+the person's marks are theirs. Complement them from the free space around them, at least 5 mm away;
+respond to their shapes, echo them, frame them, give them company, but do not touch them. Anything
+you draw within 5 mm of existing ink will be removed before the robot draws. Set attached to false. The total length of all strokes
 must stay within the budget you are given. The artist mode is Keith Haring: thick, simple, continuous outlines; simplified figures and creatures
 with rounded limbs in energetic poses; clear silhouettes; playful symbols; everything reads from across a
 room. Motion ticks radiating from your strokes are added for you, so do not draw them. Be generous:
@@ -155,11 +157,10 @@ def plan_turn(result: TurnResult, human: list[Polyline], existing_ink: list[Poly
     budget = cfg.BUDGET_MM[length_setting]
     if result.proposal is None:
         styled, color = haring.fallback(human)
-        return cut_to_budget(styled, budget), color
-    strokes = [s.model_dump() for s in result.proposal.strokes]
-    safe = planner.validate(strokes, existing_ink, budget)
-    styled, color = haring.style(safe)
-    return cut_to_budget(styled, budget), color     # styling adds passes and ticks; the budget is for the arm
+    else:
+        strokes = [s.model_dump() for s in result.proposal.strokes]
+        styled, color = haring.style(planner.validate(strokes, existing_ink, budget))
+    return planner.finalize(styled, existing_ink, budget), color   # never over existing ink; budget is for the arm
 
 
 def main(argv: list[str]) -> None:

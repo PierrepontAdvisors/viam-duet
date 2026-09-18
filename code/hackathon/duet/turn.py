@@ -28,7 +28,7 @@ from duet.calibrate import load_calibration
 from duet.camera import median_capture
 from duet.claude_turn import TurnResult, make_client, propose
 from duet.controller import Controller
-from duet.strokes import cut_to_budget, length
+from duet.strokes import length
 from duet.styles import haring
 
 STATE = cfg.SESSIONS_DIR / "current.json"
@@ -133,7 +133,7 @@ async def next_turn() -> None:
             print(f"\nClaude unavailable ({result.error}); the Haring fallback answers.\n")
             planned, color = haring.fallback(human)
             sees, adds = "(fallback)", "outline and ticks around your mark"
-        planned = cut_to_budget(planned, cfg.BUDGET_MM[length_setting])   # styling adds passes and ticks
+        planned = planner.finalize(planned, ink, cfg.BUDGET_MM[length_setting])   # never over existing ink
         svg.write(folder / f"plan-{n:02d}.svg", ink, [], planned, color)
         total = sum(length(p) for p in planned)
         print(f"plan: {len(planned)} strokes, {total:.0f} mm (budget {cfg.BUDGET_MM[length_setting]:.0f}); "
