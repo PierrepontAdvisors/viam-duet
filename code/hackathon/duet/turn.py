@@ -2,6 +2,7 @@
 
     python -m duet.turn start [--length short|medium|long] [--exchanges 5]   photograph the blank board
     python -m duet.turn next                                                 you drew; the robot answers
+    python -m duet.turn set --length medium --exchanges 7                    change settings between turns
     python -m duet.turn status
 
 Session files land in code/hackathon/sessions/<id>/: turn-NN-human.jpg, turn-NN-robot.jpg,
@@ -161,6 +162,22 @@ def main(argv: list[str]) -> None:
         asyncio.run(start(length_setting, exchanges))
     elif verb == "next":
         asyncio.run(next_turn())
+    elif verb == "set":
+        state = load_state()
+        if "--length" in argv:
+            value = argv[argv.index("--length") + 1]
+            if value not in cfg.BUDGET_MM:
+                raise SystemExit(f"length must be one of {', '.join(cfg.BUDGET_MM)}")
+            state["length"] = value
+        if "--exchanges" in argv:
+            value = int(argv[argv.index("--exchanges") + 1])
+            if not 1 <= value <= 20:
+                raise SystemExit("exchanges must be between 1 and 20")
+            state["exchanges"] = value
+        save_state(state)
+        print(f"session {state['id']}: length {state['length']} ({cfg.BUDGET_MM[state['length']]:.0f} mm, "
+              f"{cfg.BUDGET_S[state['length']]:.0f} s), {state['exchanges']} exchanges, "
+              f"currently at exchange {state['turn']}")
     elif verb == "status":
         s = load_state()
         print(json.dumps({k: s[k] for k in ("id", "length", "exchanges", "turn", "last_photo")}, indent=2))
