@@ -1,6 +1,7 @@
 import pytest
 from viam.proto.common import Pose
 
+from duet import config as cfg
 from duet.calib import BoardToRobot, dict_to_pose, load_poses, pose_to_dict, save_pose
 
 
@@ -51,7 +52,8 @@ def test_from_poses_uses_corner_entries(tmp_path):
     save_pose("corner.tr", down(300, 179, 5), path)
     save_pose("corner.bl", down(84, -100, 5), path)
     b = BoardToRobot.from_poses(load_poses(path))
-    assert round(b.to_world(279, 216).x, 6) == 84
+    far = b.to_world(cfg.BOARD_W_MM, cfg.BOARD_H_MM)   # the far corner is tl + ex + ey whatever the size
+    assert (round(far.x, 6), round(far.y, 6)) == (84, 179)
 
 
 def test_far_corner_is_parallelogram_closure():
