@@ -209,3 +209,17 @@ Ordering rule: if stage 3 will not pass, continue with the Marker toggle on Held
 - Whether the RealSense depth is clean enough over the white board for the hand detector, or whether the color-motion backup must be primary (stage 6).
 - Which model meets the 8-second budget (stage 5).
 
+
+## 15. Changes made during day 1 (2026-09-18, on the hardware)
+
+These supersede the sections above where they conflict.
+
+- **Held mode is the demo default** (`HELD_MODE = True`): one green marker stays in the gripper; the dock pick and return exist and were tested (one clean cycle) but are opt-in. The visitor draws with a separate marker, so the turn trigger will be "hand gone and new ink", not "markers home".
+- **Dock geometry:** picks and returns enter through a taught `dock.approach` pose via a vertical corridor 60 mm above it (`DOCK_ENTRY_MM`), and the return releases 5 mm above the seat so the marker drops into its cap (`RELEASE_DROP_MM`) instead of pressing.
+- **Pen calibration:** corners are touched off with the marker in the runtime grip (`teach load`, then `corner`), and `PEN_DOWN_OFFSET_MM = 1` rides above the touched-off plane. A hand-held touch-off put the tip 27 mm off and crushed the felt.
+- **Board:** the writing surface is 176 × 240 mm; board x runs along the short edge in the taught convention. Camera image corner D is board top-left from the straight-down look pose.
+- **Look pose:** straight down, gripper 240 mm above the plane (camera near 450 mm), taught by hand because a computed pose at 450 mm was unreachable. Corner marks are detected by darkness (threshold 30) and re-detected each turn within calibrated regions; a two-square fit maps camera millimeters to robot millimeters (`cam_to_robot` in calibration.json).
+- **Claude:** `claude-opus-5`, low effort, `messages.parse` with a Pydantic schema; measured 7.4 to 7.6 s for short turns. Timeouts are 12/25/45 s by length setting. Long turns ask for a full scene with a 4000 mm, 180 s budget.
+- **Clearance rule is absolute:** the final styled plan, passes and ticks included, is cut away within 5 mm of any existing ink (`CLEARANCE_MM`); the `attached` flag is ignored and the prompt tells Claude to complement, never touch.
+- **Loop today:** `duet.turn start` and `duet.turn next` run an exchange from the terminal with Enter prompts standing in for the trigger. Session files: photos, plan SVG, session.json. Web page, trigger, and video stitching remain for day 2.
+- **Hardware quirks:** the xArm driver drops out of manual mode on Modbus blips (teach prompts re-enter with `m`); the gripper's holding sensor is unreliable (operator confirms); planned moves average about 0.45 s.
