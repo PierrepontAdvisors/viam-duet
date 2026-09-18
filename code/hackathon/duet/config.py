@@ -38,3 +38,5 @@ LINE_TOLERANCE_MM = 1.0
 HAND_CHECK_TIMEOUT_S = 2.0    # a hand check slower than this counts as a hand present
 GRIPPER_SETTLE_S = 0.3        # pause after grab or open before the next move
 REQUIRE_GRAB_DETECT = False   # set True in stage 3 if this gripper unit reports grab() reliably
+
+COVERAGE_END = 0.33           # end the session when this fraction of the drawable area is inked
