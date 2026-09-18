@@ -16,6 +16,8 @@ Decisions made during brainstorming:
 - **Work is staged, not scheduled.** Ten stages, each with an exit test. No clock times.
 - **Haring is the only artist in P0.** Mondrian and Van Gogh are P1 functions with the same signature.
 
+
+
 ## 2. Constraints and environment
 
 - One builder. Everything runs on the builder's Mac from `code/hackathon/duet/`, using the existing Python 3.12 venv at `code/hackathon/.venv` (viam-sdk 0.80.0) plus `anthropic`, `fastapi`, `uvicorn`, `opencv-python`, `numpy`, `shapely`, `scikit-image`, `pydantic`, `pytest`. ffmpeg is installed at `/opt/homebrew/bin/ffmpeg`.
@@ -24,25 +26,29 @@ Decisions made during brainstorming:
 - The physical kit from the PRD is on hand: framed board, three fine-tip markers with caps, putty-filled dock container, tape for corner marks.
 - Safety rules from the PRD stand: E-stop within the operator's reach; the robot never moves while a hand is over the board or dock; speed stays low near the board.
 
+
+
 ## 3. Architecture
 
 One asyncio process. Modules, each with one job:
 
-| Module | Job | Depends on |
-|---|---|---|
-| `config.py` | Paths, constants (board size, inset, budgets, thresholds), env loading | nothing |
-| `camera.py` | Polls `cam.get_images()` at about 5 fps into a latest-frame slot (color, depth); provides `capture_median(n=5)` | Viam camera |
-| `calib.py` | The two transforms: pixels to board mm (homography from corner marks) and board mm to gripper pose in `world` (affine from touch-off); loads and saves `calibration.json` and `poses.json` | numpy, OpenCV |
-| `vision.py` | Pure functions on frames: find corners, warp, diff, trace, coverage, dock dots, hand-from-depth, stillness | numpy, OpenCV, scikit-image, shapely |
-| `trigger.py` | The human-turn-over state machine, fed by `vision` readings; Dock and Held rules | `vision` |
-| `claude_turn.py` | Builds the prompt with the gridded photo, calls Claude with a schema, returns a proposal or a timeout | anthropic SDK |
-| `planner.py` | Validates a proposal: clip, clearance, budget; pure | shapely |
-| `styles/haring.py` | Styles validated strokes into polylines and one color; pure | shapely |
-| `controller.py` | Owns the arm, gripper, and motion clients; look pose, dock pick and return, drawing, stop | Viam SDK, `calib` |
-| `session.py` | The turn loop state machine; the only module that calls the others in sequence | all above |
-| `recorder.py` | Session folder, turn photos, `session.json`, ffmpeg stitch | ffmpeg |
-| `web.py` | FastAPI: static page, `/ws`, `/stream.mjpg`, session files | fastapi, `camera` |
-| `static/index.html` | The single page | nothing |
+
+| Module              | Job                                                                                                                                                                                        | Depends on                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
+| `config.py`         | Paths, constants (board size, inset, budgets, thresholds), env loading                                                                                                                     | nothing                              |
+| `camera.py`         | Polls `cam.get_images()` at about 5 fps into a latest-frame slot (color, depth); provides `capture_median(n=5)`                                                                            | Viam camera                          |
+| `calib.py`          | The two transforms: pixels to board mm (homography from corner marks) and board mm to gripper pose in `world` (affine from touch-off); loads and saves `calibration.json` and `poses.json` | numpy, OpenCV                        |
+| `vision.py`         | Pure functions on frames: find corners, warp, diff, trace, coverage, dock dots, hand-from-depth, stillness                                                                                 | numpy, OpenCV, scikit-image, shapely |
+| `trigger.py`        | The human-turn-over state machine, fed by `vision` readings; Dock and Held rules                                                                                                           | `vision`                             |
+| `claude_turn.py`    | Builds the prompt with the gridded photo, calls Claude with a schema, returns a proposal or a timeout                                                                                      | anthropic SDK                        |
+| `planner.py`        | Validates a proposal: clip, clearance, budget; pure                                                                                                                                        | shapely                              |
+| `styles/haring.py`  | Styles validated strokes into polylines and one color; pure                                                                                                                                | shapely                              |
+| `controller.py`     | Owns the arm, gripper, and motion clients; look pose, dock pick and return, drawing, stop                                                                                                  | Viam SDK, `calib`                    |
+| `session.py`        | The turn loop state machine; the only module that calls the others in sequence                                                                                                             | all above                            |
+| `recorder.py`       | Session folder, turn photos, `session.json`, ffmpeg stitch                                                                                                                                 | ffmpeg                               |
+| `web.py`            | FastAPI: static page, `/ws`, `/stream.mjpg`, session files                                                                                                                                 | fastapi, `camera`                    |
+| `static/index.html` | The single page                                                                                                                                                                            | nothing                              |
+
 
 Scripts beside the package: `teach.py`, `calibrate.py`, `stroke_bench.py`, `dock_test.py`, `run.py`.
 
@@ -82,6 +88,8 @@ Rules:
 - The hand check runs before every sequence and between strokes. If a hand is present the controller refuses and returns a `blocked` result.
 - Any exception: `stop()`, then the session enters `Paused`. The operator clears it from the page.
 - In Held mode, `pick_marker` and `return_marker` return immediately.
+
+
 
 ## 6. Vision and trigger
 
@@ -175,16 +183,20 @@ Ordering rule: if stage 3 will not pass, continue with the Marker toggle on Held
 
 ## 13. Risks specific to this design
 
-| Risk | Handling |
-|---|---|
-| Planned moves are slow, so dense strokes take too long | Stage 2 measures latency; waypoint spacing and the second-based budget absorb it; strokes stay coarse rather than the loop breaking |
-| The planner's path between two waypoints is not straight enough for legible strokes | Linear constraint with 1 mm tolerance on every pen-down segment; verified visually in stage 2 |
-| Gripper partial-open scale (0 to 850) does not map cleanly to millimeters | Measured once in stage 3 with calipers at three settings; stored in `config.py` |
+
+| Risk                                                                                   | Handling                                                                                                                                                               |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Planned moves are slow, so dense strokes take too long                                 | Stage 2 measures latency; waypoint spacing and the second-based budget absorb it; strokes stay coarse rather than the loop breaking                                    |
+| The planner's path between two waypoints is not straight enough for legible strokes    | Linear constraint with 1 mm tolerance on every pen-down segment; verified visually in stage 2                                                                          |
+| Gripper partial-open scale (0 to 850) does not map cleanly to millimeters              | Measured once in stage 3 with calipers at three settings; stored in `config.py`                                                                                        |
 | The gripper generation (G1 or G2) changes how `grab` and `is_holding_something` behave | `dock_test.py` logs `is_holding_something` after each grab; if it is unreliable on this unit, the pull-up is confirmed by the dot disappearing from the camera instead |
-| Corner tape confused with ink | Corners searched only inside fixed regions; ink diff masked by the inset |
-| Claude latency exceeds 8 s | Fallback grammar answers; stage 5 chooses the model by measurement |
-| The wrist camera's pose is not exactly the look pose | Every capture is taken after `go_look()` completes and re-detects corners; mid-motion frames are for streaming only |
-| A collision stop leaves the arm in an error state | `clear_error` from the page; the session stays Paused until the operator resumes |
+| Corner tape confused with ink                                                          | Corners searched only inside fixed regions; ink diff masked by the inset                                                                                               |
+| Claude latency exceeds 8 s                                                             | Fallback grammar answers; stage 5 chooses the model by measurement                                                                                                     |
+| The wrist camera's pose is not exactly the look pose                                   | Every capture is taken after `go_look()` completes and re-detects corners; mid-motion frames are for streaming only                                                    |
+| A collision stop leaves the arm in an error state                                      | `clear_error` from the page; the session stays Paused until the operator resumes                                                                                       |
+
+
+
 
 ## 14. Items to confirm on the hardware
 
@@ -193,3 +205,4 @@ Ordering rule: if stage 3 will not pass, continue with the Marker toggle on Held
 - Board orientation in the camera frame, landscape or portrait, which sets the board constant (stage 4).
 - Whether the RealSense depth is clean enough over the white board for the hand detector, or whether the color-motion backup must be primary (stage 6).
 - Which model meets the 8-second budget (stage 5).
+
