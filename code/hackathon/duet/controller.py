@@ -216,12 +216,14 @@ class Controller:
             if displacement_mm != (0.0, 0.0):
                 grip = self._apply_board_displacement(grip, displacement_mm)
             approach = self._pose("dock", "approach")
+            entry = shifted(approach, dz=cfg.DOCK_ENTRY_MM)
             hover = self._hover(grip, approach)
             await self.gripper_set(cfg.GRIPPER_OPEN_FOR_PICK)
             await self.set_speed(cfg.SPEED_TRAVEL)
-            await self._move(approach)                 # planned: the one taught way into the dock
+            await self._move(entry)                    # planned: ends well above the tub
             await self.set_speed(cfg.SPEED_DOCK)
-            await self._move(hover, linear=True)       # straight across, above the row
+            await self._move(approach, linear=True)    # straight down into the corridor above the tub
+            await self._move(hover, linear=True)       # across to above the slot (no-op when they coincide)
             self._mark_low(cfg.UNCAP_LIFT_MM)
             await self._move(grip, linear=True)        # straight down onto the barrel
             grabbed = await self.gripper.grab()
@@ -232,6 +234,7 @@ class Controller:
             await self._move(hover, linear=True)
             self._mark_clear()
             await self._move(approach, linear=True)    # back out the way it came in
+            await self._move(entry, linear=True)       # and straight up out of the corridor
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def return_marker(self, slot: str) -> None:
@@ -243,10 +246,12 @@ class Controller:
         async with self._sequence():
             seat = self._pose("seat", slot)
             approach = self._pose("dock", "approach")
+            entry = shifted(approach, dz=cfg.DOCK_ENTRY_MM)
             hover = self._hover(seat, approach)
             await self.set_speed(cfg.SPEED_TRAVEL)
-            await self._move(approach)
+            await self._move(entry)
             await self.set_speed(cfg.SPEED_DOCK)
+            await self._move(approach, linear=True)
             await self._move(hover, linear=True)
             self._mark_low(cfg.UNCAP_LIFT_MM)
             await self._move(shifted(seat, dz=cfg.RELEASE_DROP_MM), linear=True)
@@ -255,6 +260,7 @@ class Controller:
             await self._move(hover, linear=True)
             self._mark_clear()
             await self._move(approach, linear=True)
+            await self._move(entry, linear=True)
             await self.set_speed(cfg.SPEED_TRAVEL)
 
     async def draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float,

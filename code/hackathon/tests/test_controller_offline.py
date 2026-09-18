@@ -322,7 +322,7 @@ def test_recover_waits_for_the_aborted_move_to_unwind():
 def test_dock_abort_recovers_with_the_uncap_height():
     async def scenario():
         c = make_controller()
-        c.motion.refuse_call = 3   # approach and hover succeed, the descent to grip height is refused
+        c.motion.refuse_call = 4   # entry, approach, and hover succeed; the descent to grip height is refused
         with pytest.raises(C.MoveRefused):
             await c.pick_marker("red")
         assert c.needs_lift is True and c._lift_mm == cfg.UNCAP_LIFT_MM
@@ -425,13 +425,16 @@ def test_pick_enters_and_leaves_the_dock_through_the_approach_pose():
         return c
     c = asyncio.run(scenario())
     path = [(d.pose.x, d.pose.y, d.pose.z) for d in c.motion.destinations]
-    assert path[0] == (0, 0, 120)                          # approach, as taught
-    assert path[1] == (50, 50, 120)                        # straight across to above the slot, approach height
-    assert path[2] == (50, 50, 40)                         # straight down to the grip
-    assert path[3] == (50, 50, 40 + cfg.UNCAP_LIFT_MM)     # uncap
-    assert path[4] == (50, 50, 120)                        # back up to hover
-    assert path[5] == (0, 0, 120)                          # back out through approach
-    assert len(path) == 6
+    entry_z = 120 + cfg.DOCK_ENTRY_MM
+    assert path[0] == (0, 0, entry_z)                      # planned move ends above the tub
+    assert path[1] == (0, 0, 120)                          # straight down to the approach
+    assert path[2] == (50, 50, 120)                        # across to above the slot, approach height
+    assert path[3] == (50, 50, 40)                         # straight down to the grip
+    assert path[4] == (50, 50, 40 + cfg.UNCAP_LIFT_MM)     # uncap
+    assert path[5] == (50, 50, 120)                        # back up to hover
+    assert path[6] == (0, 0, 120)                          # back to the approach
+    assert path[7] == (0, 0, entry_z)                      # and straight up out
+    assert len(path) == 8
     assert c.needs_lift is False
 
 
@@ -454,6 +457,8 @@ def test_return_lowers_to_just_above_the_seat_and_lets_go():
         return c
     c = asyncio.run(scenario())
     path = [(d.pose.x, d.pose.y, d.pose.z) for d in c.motion.destinations]
-    assert path == [(0, 0, 120), (50, 50, 120), (50, 50, 30 + cfg.RELEASE_DROP_MM), (50, 50, 120), (0, 0, 120)]
+    e = 120 + cfg.DOCK_ENTRY_MM
+    assert path == [(0, 0, e), (0, 0, 120), (50, 50, 120), (50, 50, 30 + cfg.RELEASE_DROP_MM),
+                    (50, 50, 120), (0, 0, 120), (0, 0, e)]
     assert {"set": float(cfg.GRIPPER_OPEN_FOR_PICK)} in c.gripper.commands
     assert c.needs_lift is False

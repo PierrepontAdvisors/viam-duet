@@ -24,6 +24,7 @@ MARKER = "green"             # the one marker in the dock; the visitor draws wit
 GRIPPER_OPEN_FOR_PICK = 500   # 0 closed .. 850 open; set to barrel width + 15 mm in stage 3
 UNCAP_LIFT_MM = 40.0          # straight-up pull that uncaps the marker
 DOCK_HOVER_MM = 60.0          # safe height above a slot
+DOCK_ENTRY_MM = 60.0          # free planned moves end this far above the approach pose; the rest is vertical
 RELEASE_DROP_MM = 5.0         # on return, open this far above the seat pose so the marker drops into its cap
 
 BUDGET_MM = {"short": 400.0, "medium": 1200.0, "long": 3000.0}
