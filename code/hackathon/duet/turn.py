@@ -127,7 +127,7 @@ async def next_turn() -> None:
             print(f"\nClaude ({result.latency_s:.1f} s):\n  sees: {result.proposal.sees}\n  adds: {result.proposal.adds}\n")
             strokes = map_strokes([s.model_dump() for s in result.proposal.strokes], cal)
             safe = planner.validate(strokes, ink, cfg.BUDGET_MM[length_setting])
-            planned, color = haring.style(safe)
+            planned, color = haring.style(safe, energy=1.0 if length_setting == "long" else 0.5)
             sees, adds = result.proposal.sees, result.proposal.adds
         else:
             print(f"\nClaude unavailable ({result.error}); the Haring fallback answers.\n")

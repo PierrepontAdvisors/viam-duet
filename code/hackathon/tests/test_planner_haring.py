@@ -37,10 +37,11 @@ def test_haring_bolds_and_ticks():
     out, color = haring.style(strokes, energy=1.0)
     assert color == "green"
     assert out[0] == strokes[0]
-    assert len(out[1]) >= 2                   # the second pass
-    tick_count = len(out) - 2
-    assert tick_count == 3                    # 100 mm line, ticks at 25, 50, 75
-    assert all(abs(length(t) - (haring.TICK_BASE_MM + haring.TICK_EXTRA_MM)) < 1e-6 for t in out[2:])
+    passes = len(haring.PASS_OFFSETS_MM)
+    assert all(len(p) >= 2 for p in out[1:1 + passes])   # the extra passes
+    tick_count = len(out) - 1 - passes
+    assert tick_count == int(99.9 // haring.TICK_SPACING_MM)   # 100 mm line, one tick per spacing
+    assert all(abs(length(t) - (haring.TICK_BASE_MM + haring.TICK_EXTRA_MM)) < 1e-6 for t in out[1 + passes:])
 
 
 def test_haring_fallback_outlines_the_human_mark():

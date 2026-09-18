@@ -9,11 +9,11 @@ from shapely.geometry import LineString
 from duet.strokes import Polyline
 
 COLOR = "green"
-SECOND_PASS_MM = 1.5
-TICK_SPACING_MM = 25.0
+PASS_OFFSETS_MM = (1.5, 3.0)   # extra passes beside the stroke: bold, marker-like lines
+TICK_SPACING_MM = 12.0
 TICK_GAP_MM = 3.0
-TICK_BASE_MM = 8.0
-TICK_EXTRA_MM = 7.0
+TICK_BASE_MM = 10.0
+TICK_EXTRA_MM = 10.0
 
 
 def offset_polyline(pl: Polyline, d_mm: float) -> Polyline:
@@ -57,9 +57,10 @@ def style(strokes: list[Polyline], energy: float = 0.5, direction_deg: float = 0
         if len(pl) < 2:
             continue
         out.append(pl)
-        second = offset_polyline(pl, SECOND_PASS_MM)
-        if len(second) >= 2:
-            out.append(second)
+        for d in PASS_OFFSETS_MM:
+            extra = offset_polyline(pl, d)
+            if len(extra) >= 2:
+                out.append(extra)
         out.extend(ticks(pl, energy, direction_deg))
     return out, COLOR
 

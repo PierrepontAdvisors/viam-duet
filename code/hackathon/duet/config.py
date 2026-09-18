@@ -29,8 +29,8 @@ DOCK_HOVER_MM = 60.0          # safe height above a slot
 DOCK_ENTRY_MM = 60.0          # free planned moves end this far above the approach pose; the rest is vertical
 RELEASE_DROP_MM = 5.0         # on return, open this far above the seat pose so the marker drops into its cap
 
-BUDGET_MM = {"short": 400.0, "medium": 1200.0, "long": 3000.0}
-BUDGET_S = {"short": 15.0, "medium": 40.0, "long": 90.0}
+BUDGET_MM = {"short": 400.0, "medium": 1200.0, "long": 4000.0}
+BUDGET_S = {"short": 15.0, "medium": 45.0, "long": 180.0}   # long is the "big scene" setting
 
 MOVE_TIMEOUT_S = 30.0
 LINE_TOLERANCE_MM = 1.0

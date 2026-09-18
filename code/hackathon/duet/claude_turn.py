@@ -66,8 +66,10 @@ Your job each turn: say in one sentence what the drawing is becoming, say in one
 and why, then give the strokes as data. Strokes are polylines, circles, or arcs in board millimeters.
 Keep every stroke inside the drawable area and at least 3 mm away from existing ink, unless a stroke is
 meant to touch or continue existing ink, in which case mark it attached. The total length of all strokes
-must stay within the budget you are given. The artist mode is Keith Haring: bold, simple, continuous
-outlines and figures with clear silhouettes; motion ticks are added for you, so do not draw them.
+must stay within the budget you are given. The artist mode is Keith Haring: thick, simple, continuous outlines; simplified figures and creatures
+with rounded limbs in energetic poses; clear silhouettes; playful symbols; everything reads from across a
+room. Motion ticks radiating from your strokes are added for you, so do not draw them. Be generous:
+use the budget.
 Draw like a marker on a whiteboard: line art only, no fills, no shading. Use the pacing you are given:
 early exchanges add one clear element; the last exchange should complete the piece.
 Respond only through the structured output."""
@@ -121,7 +123,8 @@ def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Poly
     budget = cfg.BUDGET_MM[length_setting]
     asks = {"short": "one small addition: a detail or an accent",
             "medium": "one full element that extends the drawing",
-            "long": "several elements: a setting or a second subject"}[length_setting]
+            "long": "a full scene: six to twelve bold elements, such as figures, creatures, a setting and "
+                    "symbols, each a simple continuous outline, spread across the free space"}[length_setting]
     hist = "\n".join(f"  exchange {i + 1}: saw \"{h['sees']}\"; added \"{h['adds']}\"" for i, h in enumerate(history)) or "  (this is the first exchange)"
     text = (f"Exchange {exchange} of {exchange_total}. Length setting: {length_setting}, so add {asks}. "
             f"Stroke budget: {budget:.0f} mm total. Allowed color: green.\n"
@@ -131,7 +134,7 @@ def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Poly
     try:
         response = client.messages.parse(
             model=MODEL,
-            max_tokens=4000,
+            max_tokens=8000,
             system=[{"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": [
                 {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
