@@ -106,3 +106,49 @@ def warp_to_board(bgr: np.ndarray, quad_board_order: np.ndarray) -> np.ndarray:
 
 def px_to_mm(x_px: float, y_px: float) -> Point:
     return x_px / PX_PER_MM, y_px / PX_PER_MM
+
+
+# ---- new ink and tracing, on warped board images ------------------------------------------------
+
+def drawable_mask() -> np.ndarray:
+    """1 inside the drawable area (the board minus the inset), 0 elsewhere."""
+    w, h = BOARD_PX
+    m = np.zeros((h, w), dtype=np.uint8)
+    i = int(cfg.INSET_MM * PX_PER_MM)
+    m[i:h - i, i:w - i] = 1
+    return m
+
+
+def new_ink(current: np.ndarray, previous: np.ndarray, thresh: int = 40) -> tuple[np.ndarray, float]:
+    """Mask (0/255) of pixels that got darker since the previous turn photo, inside the drawable area,
+    and the fraction of the drawable area that is inked in `current` (for the end-of-session rule)."""
+    cur = cv2.GaussianBlur(cv2.cvtColor(current, cv2.COLOR_BGR2GRAY), (5, 5), 0)
+    prev = cv2.GaussianBlur(cv2.cvtColor(previous, cv2.COLOR_BGR2GRAY), (5, 5), 0)
+    darker = np.clip(prev.astype(np.int16) - cur.astype(np.int16), 0, 255).astype(np.uint8)
+    _, mask = cv2.threshold(darker, thresh, 255, cv2.THRESH_BINARY)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    area = drawable_mask()
+    mask = mask * area
+    ink_now = (cur < 90).astype(np.uint8) * area
+    coverage = float(ink_now.sum()) / float(area.sum())
+    return mask, coverage
+
+
+def trace(mask: np.ndarray, simplify_mm: float = 0.5, min_len_mm: float = 3.0) -> list[list[Point]]:
+    """Skeletonize an ink mask and return its paths as simplified polylines in board millimeters."""
+    from skan import Skeleton
+    from skimage.morphology import skeletonize
+
+    sk = skeletonize(mask > 0)
+    if int(sk.sum()) < 2:
+        return []
+    skel = Skeleton(sk)
+    out: list[list[Point]] = []
+    for i in range(skel.n_paths):
+        coords = skel.path_coordinates(i)                       # (n, 2) rows, cols
+        pts = np.array([[c, r] for r, c in coords], dtype=np.float32).reshape(-1, 1, 2)
+        approx = cv2.approxPolyDP(pts, simplify_mm * PX_PER_MM, closed=False).reshape(-1, 2)
+        pl = [(float(x) / PX_PER_MM, float(y) / PX_PER_MM) for x, y in approx]
+        if len(pl) >= 2 and sum(np.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(pl, pl[1:])) >= min_len_mm:
+            out.append(pl)
+    return out
