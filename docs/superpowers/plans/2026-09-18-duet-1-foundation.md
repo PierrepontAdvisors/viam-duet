@@ -251,6 +251,7 @@ git commit -m "feat: stroke geometry helpers with tests"
 `code/hackathon/tests/test_calib.py`:
 
 ```python
+import pytest
 from viam.proto.common import Pose
 
 from duet.calib import BoardToRobot, dict_to_pose, load_poses, pose_to_dict, save_pose
@@ -304,6 +305,23 @@ def test_from_poses_uses_corner_entries(tmp_path):
     save_pose("corner.bl", down(84, -100, 5), path)
     b = BoardToRobot.from_poses(load_poses(path))
     assert round(b.to_world(279, 216).x, 6) == 84
+
+
+def test_far_corner_is_parallelogram_closure():
+    far = flat_board().to_world(279, 216)
+    assert (round(far.x, 6), round(far.y, 6), far.z) == (84, 179, 5)
+
+
+def test_file_roundtrip_preserves_all_fields(tmp_path):
+    path = tmp_path / "poses.json"
+    original = Pose(x=1.5, y=-2.5, z=3.25, o_x=0.1, o_y=0.2, o_z=-0.97, theta=12.5)
+    save_pose("corner.tl", original, path)
+    assert dict_to_pose(load_poses(path)["corner"]["tl"]) == original
+
+
+def test_from_poses_reports_missing_corners():
+    with pytest.raises(ValueError, match="missing corner touch-offs: tr, bl"):
+        BoardToRobot.from_poses({"corner": {"tl": pose_to_dict(down(0, 0, 0))}})
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -349,7 +367,7 @@ def load_poses(path: Path = cfg.POSES_PATH) -> dict:
 
 
 def save_pose(name: str, pose: Pose, path: Path = cfg.POSES_PATH) -> dict:
-    """Store `pose` under a dotted name such as 'slot.red'; rewrite the file; return the new dict."""
+    """Store `pose` under a dotted name such as 'slot.red'; rewrite the file atomically; return the new dict."""
     poses = load_poses(path)
     node = poses
     *parents, leaf = name.split(".")
@@ -357,7 +375,9 @@ def save_pose(name: str, pose: Pose, path: Path = cfg.POSES_PATH) -> dict:
         node = node.setdefault(key, {})
     node[leaf] = pose_to_dict(pose)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(poses, indent=2, sort_keys=True) + "\n")
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(poses, indent=2, sort_keys=True) + "\n")
+    tmp.replace(path)   # atomic on POSIX: a crash mid-write cannot truncate the taught poses
     return poses
 
 
@@ -380,12 +400,17 @@ class BoardToRobot:
 
     @classmethod
     def from_poses(cls, poses: dict) -> "BoardToRobot":
-        c = poses["corner"]
-        return cls.from_corners(dict_to_pose(c["tl"]), dict_to_pose(c["tr"]), dict_to_pose(c["bl"]),
-                                cfg.BOARD_W_MM, cfg.BOARD_H_MM)
+        corners = poses.get("corner", {})
+        missing = [name for name in ("tl", "tr", "bl") if name not in corners]
+        if missing:
+            raise ValueError(f"missing corner touch-offs: {', '.join(missing)}; "
+                             "run `python -m duet.teach corner <name>` for each")
+        return cls.from_corners(dict_to_pose(corners["tl"]), dict_to_pose(corners["tr"]),
+                                dict_to_pose(corners["bl"]), cfg.BOARD_W_MM, cfg.BOARD_H_MM)
 
     def to_world(self, u: float, v: float, lift: float = 0.0) -> Pose:
-        """Gripper pose that puts the marker tip at board point (u, v), raised by `lift` mm."""
+        """Gripper pose that puts the marker tip at board point (u, v), raised by `lift` mm.
+        `lift` is along world z, not the board normal; the board is assumed to be close to level."""
         o, ex, ey = (np.array(t) for t in (self.origin, self.ex, self.ey))
         p = o + ex * (u / self.width_mm) + ey * (v / self.height_mm)
         ox, oy, oz, th = self.orientation
@@ -395,7 +420,7 @@ class BoardToRobot:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_calib.py -q`
-Expected: `6 passed`
+Expected: `9 passed`
 
 - [ ] **Step 5: Commit**
 
