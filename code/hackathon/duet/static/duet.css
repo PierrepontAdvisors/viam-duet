@@ -17,13 +17,16 @@ body { display: flex; align-items: center; justify-content: center; }
 .ovimg { width: 176px; height: 240px; object-fit: fill; display: block; }
 .defs { position: absolute; }
 .mask { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.stage.clean .base, .stage.clean .ovimg { filter: url(#levels) saturate(1.7) contrast(1.08); }
+/* paint order inside the picture layer: a filtered <img> otherwise paints above its later siblings */
+.base { z-index: 0; } .ovimg { z-index: 1; } .mask { z-index: 2; } svg.ov { z-index: 3; }
+.base, .ovimg { filter: url(#levels) saturate(var(--sat, 1)); }
+.stage.clean { --sat: 1.7; }
 .stage.vector .base, .stage.vector .ovimg { visibility: hidden; }
 .paper { fill: var(--paper); visibility: hidden; }
 .stage.vector .paper { visibility: visible; }
 .ov path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.ov .ink path { stroke: var(--ink); stroke-width: 1.2; }
-.ov .robot path { stroke: var(--stroke); stroke-width: 1.4; }
+.ov .ink path { stroke: var(--ink); stroke-width: var(--ink-w, 1.2); }
+.ov .robot path { stroke: var(--stroke); stroke-width: var(--stroke-w, 1.4); }
 .ov .robot path.queued { stroke-dasharray: 2 1.5; }
 .ov .board rect { fill: none; stroke: var(--yellow); stroke-width: .8; }
 .ov .ghost path { stroke: var(--stroke); stroke-width: 1.4; opacity: .35; }
@@ -88,7 +91,9 @@ body.controls .panel { display: flex; }
 .bar .num { font: 800 1.1cqw/1 var(--panel); color: #fff; min-width: 2.4cqw; text-align: center; }
 .bar .color { font: 700 .8cqw/1 var(--panel); color: #ccc; text-transform: uppercase; letter-spacing: .08em; display: flex; gap: .4cqw; align-items: center; }
 .bar input[type=color] { width: 2.2cqw; height: 1.8cqw; padding: 0; border: .15cqw solid #fff; background: #000; }
-.bar input[type=range] { width: 14cqw; accent-color: var(--yellow); }
+.bar input[type=range] { width: 9cqw; accent-color: var(--yellow); }
+.bar input[type=range].short { width: 6cqw; }
+.bar .lbl2 { font: 700 .8cqw/1 var(--panel); color: #ccc; text-transform: uppercase; letter-spacing: .08em; margin-left: .4cqw; }
 .dial { position: relative; display: inline-flex; align-items: center; gap: .6cqw; }
 .sun { display: inline-block; width: 2.4cqw; text-align: center; color: var(--yellow); font-size: 1.8cqw; transform: rotate(var(--dir, 0deg)); transition: transform .2s; }
 .status { font: .85cqw/1.5 var(--mono); color: #9aa1a8; min-height: 1.3cqw; }

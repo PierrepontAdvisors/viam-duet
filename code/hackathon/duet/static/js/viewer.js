@@ -19,7 +19,7 @@ export function drawPolylines(group, polylines, cls = () => '') {
 
 export class Viewer {
   constructor(el) {
-    this.el = el;                     // { stage, pic, base, photo, ov, fit, mask, maskpath, ink, robot }
+    this.el = el;                     // { stage, pic, base, photo, ov, fit, mask, maskpath, ink, robot, done }
     this.calib = null; this.crop = false; this.live = true; this.streamUrl = null; this.h = null;
     this.onRegister = null;           // called after every registration, for the bubble placement
     el.base.addEventListener('load', () => this.register());
@@ -61,6 +61,9 @@ export class Viewer {
   setCrop(on) { this.crop = on; document.body.classList.toggle('crop', on); this.register(); }
 
   setInk(polylines) { drawPolylines(this.el.ink, polylines); }
+
+  /** Robot strokes from earlier turns of this session, always solid. */
+  setDone(polylines) { drawPolylines(this.el.done, polylines); }
 
   /** Strokes up to and including `done` are drawn solid, the rest dashed. */
   setPlan(polylines, done) { drawPolylines(this.el.robot, polylines, i => (i <= done ? '' : 'queued')); }

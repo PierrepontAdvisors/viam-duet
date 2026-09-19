@@ -1,6 +1,7 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
 import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS } from './story.js';
 import { bubblePosition } from './geometry.js';
+import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -36,6 +37,41 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   const lockedStroke = store.get('color.stroke', null);
   if (lockedStroke) { view.strokeLocked = true; strokeColor.value = lockedStroke; stage.style.setProperty('--stroke', lockedStroke); }
   strokeColor.oninput = () => { view.strokeLocked = true; stage.style.setProperty('--stroke', strokeColor.value); store.set('color.stroke', strokeColor.value); };
+  const inkWidth = $('ink-width'), strokeWidth = $('stroke-width');
+  function applyWidths() {
+    stage.style.setProperty('--ink-w', inkWidth.value / 10); stage.style.setProperty('--stroke-w', strokeWidth.value / 10);
+    store.set('width.ink', +inkWidth.value); store.set('width.stroke', +strokeWidth.value);
+  }
+  inkWidth.value = store.get('width.ink', 12); strokeWidth.value = store.get('width.stroke', 14); applyWidths();
+  inkWidth.oninput = strokeWidth.oninput = applyWidths;
+
+  // ---- picture: brightness, contrast, exposure drive the levels filter on the live frame and the photos ----
+  const feFuncs = document.querySelectorAll('#levels feFuncR, #levels feFuncG, #levels feFuncB');
+  const readPicture = () => ({ brightness: $('brightness').value / 100, contrast: $('contrast').value / 100, exposure: $('exposure').value / 10 });
+  function applyPicture(p) {
+    $('brightness').value = Math.round(p.brightness * 100); $('contrast').value = Math.round(p.contrast * 100); $('exposure').value = Math.round(p.exposure * 10);
+    const { slope, intercept } = levelsFor(p);
+    for (const f of feFuncs) { f.setAttribute('slope', slope.toFixed(4)); f.setAttribute('intercept', intercept.toFixed(4)); }
+    $('brightness-val').textContent = `${p.brightness >= 0 ? '+' : ''}${p.brightness.toFixed(2)}`;
+    $('contrast-val').textContent = p.contrast.toFixed(2);
+    $('exposure-val').textContent = `${p.exposure >= 0 ? '+' : ''}${p.exposure.toFixed(1)}`;
+    store.set('picture', p);
+  }
+  applyPicture({ ...CLEAN_LEVELS, ...store.get('picture', {}) });
+  for (const id of ['brightness', 'contrast', 'exposure']) $(id).oninput = () => applyPicture(readPicture());
+  $('picture-reset').onclick = () => applyPicture({ ...NEUTRAL_LEVELS });
+  $('picture-clean').onclick = () => applyPicture({ ...CLEAN_LEVELS });
+
+  // ---- export: the person's ink and every robot stroke of the piece, as an SVG file ----
+  $('export-svg').onclick = () => {
+    const robot = [...app.robotDone, ...(app.plan ? app.plan.polylines : [])];
+    const svg = svgDocument({ ink: app.human.polylines, robot, inkColor: inkColor.value, strokeColor: strokeColor.value,
+                              inkWidth: inkWidth.value / 10, strokeWidth: strokeWidth.value / 10, paper: true });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    a.download = `duet-${app.session || 'session'}-turn-${app.state ? app.state.turn : 0}.svg`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
 
   // ---- chips ----
   function renderChips() {
@@ -192,6 +228,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
       if (msg.state === 'human_turn' && msg.turn === 0 && view.source !== 'live') showLive();
     }
     if (msg.type === 'error') view.lastError = { message: msg.message, t: Date.now() };
+    if (msg.type === 'plan' && !view.strokeLocked) { stage.style.setProperty('--stroke', msg.color); strokeColor.value = msg.color; }
     renderAll();
   });
   if (new URLSearchParams(location.search).get('view') === 'console') toggleControls(true);

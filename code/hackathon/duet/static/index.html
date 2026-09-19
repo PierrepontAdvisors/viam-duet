@@ -25,6 +25,7 @@
       <g class="board hidden" id="l-board" data-el="layer — board outline"><rect x="0" y="0" width="176" height="240"/><rect x="15" y="15" width="146" height="210" stroke-dasharray="3 2"/></g>
       <g id="fit">
         <g class="ink" id="l-ink" data-el="layer — human ink"></g>
+        <g class="robot" id="l-done" data-el="layer — robot strokes from earlier turns"></g>
         <g class="robot" id="l-robot" data-el="layer — plan strokes"></g>
         <g class="ghost" id="l-ghost" data-el="layer — ghost pen preview"><path id="ghostpath"/><circle id="ghostpen" r="2.2"/></g>
       </g>
@@ -71,6 +72,17 @@
       <button data-layer="vector" data-el="layer toggle — ink only">Ink only</button>
       <label class="color" data-el="ink color">Ink <input type="color" id="ink-color" value="#111111"></label>
       <label class="color" data-el="stroke color">Strokes <input type="color" id="stroke-color" value="#1b8f3a"></label>
+      <label class="color" data-el="ink width">Ink width <input type="range" class="short" id="ink-width" min="4" max="40" value="12"></label>
+      <label class="color" data-el="stroke width">Stroke width <input type="range" class="short" id="stroke-width" min="4" max="40" value="14"></label>
+      <button id="export-svg" data-el="export svg button">Export SVG</button>
+    </div>
+    <div class="bar" data-el="picture bar">
+      <span class="lbl">Picture</span>
+      <span class="lbl2">Bright</span><input type="range" id="brightness" min="-50" max="50" value="7" data-el="brightness slider"><span class="num" id="brightness-val">+0.07</span>
+      <span class="lbl2">Contrast</span><input type="range" id="contrast" min="50" max="300" value="190" data-el="contrast slider"><span class="num" id="contrast-val">1.90</span>
+      <span class="lbl2">Exposure</span><input type="range" id="exposure" min="-20" max="20" value="0" data-el="exposure slider"><span class="num" id="exposure-val">+0.0</span>
+      <button id="picture-reset" data-el="picture neutral button">Neutral</button>
+      <button id="picture-clean" data-el="picture clean preset button">Clean</button>
     </div>
     <div class="bar" data-el="session bar">
       <span class="lbl">Session</span>

@@ -10,7 +10,7 @@ import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometr
 const $ = (id) => document.getElementById(id);
 export const app = {
   book: new TurnBook(),
-  state: null, currentTurn: null, calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
+  state: null, currentTurn: null, session: null, robotDone: [], calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
   ws: null, connected: false,
   viewer: null,
   listeners: [],
@@ -25,13 +25,31 @@ export function send(msg) { if (msg && app.ws && app.ws.readyState === 1) app.ws
 export const sendSet = (changes) => send(setCommand(changes));
 export const sendCommand = (kind) => send(command(kind));
 
+/** The current plan's strokes are done once the next plan arrives or the piece finishes; keep them. */
+function archivePlan() {
+  if (!app.plan) return;
+  app.robotDone = [...app.robotDone, ...app.plan.polylines];
+  app.plan = null; app.progress = -1;
+  app.viewer.setDone(app.robotDone); app.viewer.setPlan([], -1);
+}
+function startSession() {
+  app.robotDone = []; app.plan = null; app.progress = -1; app.book = new TurnBook();
+  app.viewer.setDone([]); app.viewer.setPlan([], -1);
+}
+
 function handle(msg) {
   switch (msg.type) {
     case 'calib': app.calib = msg; app.viewer.setCalib(msg); break;
-    case 'state': app.state = msg; if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop(); break;
+    case 'state':
+      if (msg.session && app.session && msg.session !== app.session) startSession();   // a new piece: forget the last one's strokes
+      if (msg.session) app.session = msg.session;
+      app.state = msg;
+      if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop();
+      if (msg.state === 'finished') archivePlan();                                        // the signature joins the finished vector
+      break;
     case 'human': app.human = msg; app.viewer.setInk(msg.polylines); app.book.note(turnOf(msg), { new: msg.new }); break;
     case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s }); break;
-    case 'plan': app.plan = msg; app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); app.ghost.play(msg.polylines); break;
+    case 'plan': archivePlan(); app.plan = msg; app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); app.ghost.play(msg.polylines); break;
     case 'progress': app.progress = msg.stroke; if (app.plan) app.viewer.setPlan(app.plan.polylines, msg.stroke); turnOf(msg); break;
     case 'shot': {
       const known = app.book.shots.length;
@@ -55,7 +73,7 @@ function connect() {
 
 export function boot() {
   app.viewer = new Viewer({ stage: $('stage'), pic: $('pic'), base: $('base'), photo: $('photo'), ov: $('ov'), fit: $('fit'),
-                            mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot') });
+                            mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot'), done: $('l-done') });
   app.ghost = new GhostPen($('l-ghost'), $('ghostpath'), $('ghostpen'));
   app.viewer.setStream('/stream.mjpg?overlay=0');
   app.ui = initUI(app, { sendSet, sendCommand, on });
