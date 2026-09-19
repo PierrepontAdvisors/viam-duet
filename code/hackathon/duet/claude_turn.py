@@ -18,7 +18,7 @@ from typing import Literal
 import anthropic
 import cv2
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import viam_conn
 from duet import config as cfg
@@ -50,6 +50,8 @@ class Stroke(BaseModel):
 class Proposal(BaseModel):
     sees: str
     adds: str
+    thought: str = Field(description="a few wondering words about what you see, under eight words, storybook tone, no coordinates")
+    quip: str = Field(description="a few warm, encouraging words to the person, under eight words, no coordinates")
     color: str
     strokes: list[Stroke]
 
@@ -63,7 +65,9 @@ is a flat top-down view with a grid every {GRID_MM} mm labelled along the edges,
 off it. Only the area at least {cfg.INSET_MM:.0f} mm inside every edge is drawable.
 
 Your job each turn: say in one sentence what the drawing is becoming, say in one sentence what you will add
-and why, then give the strokes as data. Strokes are polylines, circles, or arcs in board millimeters.
+and why, then give the strokes as data. Also give a thought: a few wondering words about what you see,
+under eight words, in a storybook tone, no coordinates. And a quip: a few warm, encouraging words to the
+person, under eight words, no coordinates. Strokes are polylines, circles, or arcs in board millimeters.
 Keep every stroke inside the drawable area. Never draw on or across ink that is already on the board:
 the person's marks are theirs. Complement them from the free space around them, at least 5 mm away;
 respond to their shapes, echo them, frame them, give them company, but do not touch them. Anything

@@ -316,11 +316,11 @@ def dock_dots(frame_bgr: np.ndarray, slots: dict, homography: np.ndarray,
     for name, slot in slots.items():
         ex, ey = slot["xy"]
         x0, y0 = max(int(ex - roi_px), 0), max(int(ey - roi_px), 0)
-        x1, y1 = min(int(ex + roi_px), w), min(int(ey + roi_px), h)
-        sub = hsv[y0:y1, x0:x1]
-        if sub.size == 0:
+        x1, y1 = max(min(int(ex + roi_px), w), 0), max(min(int(ey + roi_px), h), 0)
+        if x1 <= x0 or y1 <= y0:
             out[name] = DotReading("missing", (0.0, 0.0))
             continue
+        sub = hsv[y0:y1, x0:x1]
         mask = cv2.inRange(sub, np.array(slot["hsv_lo"], np.uint8), np.array(slot["hsv_hi"], np.uint8))
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         n, _, stats, cents = cv2.connectedComponentsWithStats(mask)

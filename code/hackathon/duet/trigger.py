@@ -7,6 +7,9 @@ out of position asks for a reseat instead.
 Held rule: something happened since the last turn (motion or a hand); now the scene is still with
 no hand, and that has held for HELD_QUIET_S. The session then diffs the board and goes back to
 waiting if no new ink is found.
+
+A single noisy poll (a missed hand check, a jittery stillness read) must not restart the quiet
+timer: the scene has to stay unsettled for TRIGGER_GRACE_S before the timer resets.
 """
 from __future__ import annotations
 
@@ -30,25 +33,37 @@ class Event:
 
 
 class Trigger:
-    def __init__(self, handoff: str, quiet_s: float | None = None):
+    def __init__(self, handoff: str, quiet_s: float | None = None, grace_s: float | None = None):
         if handoff not in ("dock", "held"):
             raise ValueError(f"handoff must be 'dock' or 'held', not {handoff!r}")
         self.handoff = handoff
         self.quiet_s = quiet_s if quiet_s is not None else (cfg.STILL_S if handoff == "dock" else cfg.HELD_QUIET_S)
+        if self.quiet_s < 0:
+            raise ValueError("quiet_s must not be negative")
+        self.grace_s = grace_s if grace_s is not None else cfg.TRIGGER_GRACE_S
+        if self.grace_s < 0 or (self.quiet_s > 0 and self.grace_s >= self.quiet_s):
+            raise ValueError("grace_s must be at least 0 and smaller than quiet_s")
         self.reset()
 
     def reset(self) -> None:
         self.armed = False               # something happened since the last turn
         self.quiet_since: float | None = None
         self.reseat = False
+        self.dirty_since: float | None = None
 
     def update(self, r: Reading) -> Event | None:
         settled, event = self._dock(r) if self.handoff == "dock" else self._held(r)
         if event is not None:
             return event
         if not settled:
-            self.quiet_since = None
+            # One noisy poll must not throw away the whole quiet window: the timer only restarts
+            # once the scene has stayed unsettled for grace_s.
+            if self.dirty_since is None:
+                self.dirty_since = r.t
+            if r.t - self.dirty_since >= self.grace_s:
+                self.quiet_since = None
             return None
+        self.dirty_since = None
         if self.quiet_since is None:
             self.quiet_since = r.t
             return None

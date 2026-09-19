@@ -761,6 +761,8 @@ git add duet/trigger.py tests/test_trigger.py
 git commit -m "feat: turn trigger state machine for dock and held handoffs"
 ```
 
+**Amendments after review (applied in a follow-up commit):** `Trigger` gained `grace_s` (default `cfg.TRIGGER_GRACE_S = 0.4`): an unsettled reading only restarts the quiet timer once the scene has stayed unsettled that long, so one noisy hand or stillness poll cannot deadlock the rule; `quiet_s` must not be negative; `cfg.STILL_WINDOW_S` is 1.5 s so two frames fit even at a 1 s camera cadence. Five tests were added (defaults from config, invalid arguments, a noisy poll, dock re-arming after a fire, unknown dot status) and one tautological assertion fixed.
+
 ---
 
 ### Task 3: Recorder
@@ -931,9 +933,11 @@ class Recorder:
         return self.photos[-1] if self.photos else None
 
     def stitch(self, per_frame_s: float = 1.0, hold_last_s: float = 2.0) -> Path | None:
-        """One frame per turn, the last one held. Uses the landscape camera frames when every turn
-        has one, else the warped photos. The concat demuxer only honors the final duration when the
-        last file is listed once more after it."""
+        """One second per photo, the last one held. Uses the landscape camera frames when every
+        photo has one, else the warped photos. ffmpeg 9's concat demuxer overshoots the listed
+        durations by about a second (measured: 4.9 s for a 4.0 s listing), so the output is capped
+        at the exact frame count instead. Never raises: on failure the stills remain and None is
+        returned."""
         sources = self.frames if self.frames and len(self.frames) == len(self.photos) else self.photos
         if not sources:
             return None
@@ -945,9 +949,17 @@ class Recorder:
         lines += [f"file '{last}'", f"duration {hold_last_s}", f"file '{last}'"]
         listing.write_text("\n".join(lines) + "\n")
         out = self.dir / "session.mp4"
-        subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
-                        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p", "-r", "10",
-                        "-c:v", "libx264", "-movflags", "+faststart", str(out)], check=True)
+        fps = 10
+        total_frames = round((per_frame_s * (len(sources) - 1) + hold_last_s) * fps)
+        try:
+            subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
+                            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p", "-r", str(fps),
+                            "-frames:v", str(total_frames), "-c:v", "libx264", "-movflags", "+faststart", str(out)],
+                           check=True, capture_output=True, text=True)
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+            print(f"stitch failed, keeping the stills: {(getattr(exc, 'stderr', '') or str(exc)).strip()[:400]}")
+            return None
+        listing.unlink(missing_ok=True)
         return out
 
 
@@ -968,7 +980,7 @@ def video_size(path: Path) -> tuple[int, int]:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_recorder.py -q`
-Expected: `4 passed`. If the duration is off by a whole second, ffmpeg 9's concat handling changed: try dropping the repeated last-file line and re-measure; keep whichever gives 4 s.
+Expected: `4 passed`. (Measured on ffmpeg 9.0.1 during execution: the concat listing alone gives 4.9 s and dropping the repeated last file gives 2.8 s; the `-frames:v` cap gives exactly 4.0 s and 5.0 s, which is why the code above caps the frame count. A review follow-up added: stitch never raises, write failures raise `OSError`, `shutil.which` for the binaries, no history entry for turn 0, and `current.json` is only written by the session that owns it.)
 
 - [ ] **Step 5: Commit**
 
@@ -1129,6 +1141,26 @@ def test_held_trigger_fires_from_the_frames_alone(tmp_path, look_frame, exchange
     assert "capture" in s.states_seen
 
 
+def test_a_hand_over_the_board_blocks_the_capture_until_it_leaves(tmp_path, look_frame, exchange_start, exchange_human, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        frames.show_board(exchange_human)
+        frames.show_hand(True)
+        s.pass_turn()                                   # the operator passes while a hand is still over the board
+        await until_seen(s, "human_turn", count=2)      # capture refused, back to the human turn
+        assert not any(c[0] == "draw" for c in ctl.calls)
+        frames.show_hand(False)
+        s.pass_turn()
+        await until_seen(s, "interpret")                # now the capture went through
+        await cancel(task)
+        return s, drain(q)
+    s, events = asyncio.run(scenario())
+    assert any(e["type"] == "error" and "hand" in e["message"] for e in events)
+    assert s.states_seen.count("capture") == 2
+
+
 def test_pause_and_resume_recover_the_arm(tmp_path, look_frame, exchange_start, calibration):
     async def scenario():
         s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
@@ -1176,7 +1208,14 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
         s.update_settings(length="huge")
     with pytest.raises(ValueError):
         s.update_settings(exchanges=21)
-    assert s.update_settings(length="medium", exchanges=4).exchanges == 4
+    with pytest.raises(ValueError):
+        s.update_settings(direction=400)
+    with pytest.raises(ValueError):
+        s.update_settings(energy=1.5)
+    new = s.update_settings(length="medium", exchanges=4, energy=0.8, direction=45)
+    assert (new.exchanges, new.energy, new.direction) == (4, 0.8, 45)
+    state = s.bus.last["state"]
+    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring"]
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -1263,11 +1302,19 @@ class FakeFrames:
     def jitter(self, seconds: float) -> None:
         self.jitter_until = monotonic() + seconds
 
+    def show_hand(self, present: bool) -> None:
+        """A hand-sized patch of medium skin over the board center, on the camera image only."""
+        self.hand = present
+
     def _frame(self) -> Frame:
         img = self.image
+        if getattr(self, "hand", False):
+            img = self.image.copy()
+            cx, cy = int(self.mask.nonzero()[1].mean()), int(self.mask.nonzero()[0].mean())
+            cv2.ellipse(img, (cx, cy), (100, 75), 20, 0, 360, (90, 120, 170), -1)
         if monotonic() < self.jitter_until:
             self.n += 1
-            img = cv2.add(self.image, np.full_like(self.image, 12 if self.n % 2 else 0))
+            img = cv2.add(img, np.full_like(img, 12 if self.n % 2 else 0))
         return Frame(img, self.depth, monotonic())
 
     def latest(self) -> Frame:
@@ -1402,6 +1449,8 @@ class Settings:
     exchanges: int = 5
     mode: str = "duet"
     handoff: str = "held" if cfg.HELD_MODE else "dock"
+    energy: float = 0.5          # tick count and length in the styler, 0 to 1 (the page's light chooser sets it)
+    direction: float = 0.0       # tick tilt in degrees, 0 to 359
 
     def check(self) -> "Settings":
         if self.artist not in ARTISTS:
@@ -1414,6 +1463,10 @@ class Settings:
             raise ValueError("only duet mode exists yet")
         if self.handoff not in ("held", "dock"):
             raise ValueError("handoff must be 'held' or 'dock'")
+        if not isinstance(self.energy, (int, float)) or not 0.0 <= self.energy <= 1.0:
+            raise ValueError("energy must be a number from 0 to 1")
+        if not isinstance(self.direction, (int, float)) or not 0.0 <= self.direction < 360.0:
+            raise ValueError("direction must be degrees from 0 to 359")
         return self
 
     def record(self) -> dict:
@@ -1559,7 +1612,7 @@ class Session:
         guard = "off" if self.guard is None else f"{self.guard.mode} at the look pose"
         self.bus.emit("state", state=self.state, turn=self.turn, coverage=round(self.coverage, 3),
                       error=self.last_error, at_look=self.at_look, hand_guard=guard, session=self.rec.id,
-                      **asdict(self.settings))
+                      artists=list(ARTISTS), **asdict(self.settings))
 
     def _set(self, state: str) -> None:
         self.state = state
@@ -1639,6 +1692,9 @@ class Session:
     async def _state_human_turn(self) -> str:
         trig = Trigger(self.settings.handoff)
         self._pass.clear()
+        if self.settings.handoff == "dock" and not self.cal.get("dots"):
+            self.bus.emit("error", message="dock handoff has no calibrated marker dots, so the turn cannot end by itself: "
+                                           "use Pass, or switch the marker setting to Held")
         while True:
             if not self._running.is_set():
                 return "human_turn"
@@ -1673,6 +1729,11 @@ class Session:
         return float(self.cal.get("mm_per_px") or vision.mm_per_px(np.array(self.cal["marks_image"], np.float32)))
 
     async def _state_capture(self) -> str:
+        # The trigger's debounce can fire one poll after a hand was last seen; never photograph a
+        # hand (it would be traced as ink and become the hand check's reference).
+        if self.guard is not None and await self.guard():
+            self.bus.emit("error", message="a hand is still over the board; still your turn")
+            return "human_turn"
         photo, frame = await self._capture_board()
         mask, coverage = vision.new_ink(photo, self.previous_photo)
         new_cam = vision.trace(mask)
@@ -1706,7 +1767,7 @@ class Session:
         if r is not None and r.proposal is not None:
             strokes = map_strokes([s.model_dump() for s in r.proposal.strokes], self.cal)
             styled, self.color = haring.style(planner.validate(strokes, ink, budget),
-                                              energy=1.0 if self.settings.length == "long" else 0.5)
+                                              energy=self.settings.energy, direction_deg=self.settings.direction)
             sees, adds, source = r.proposal.sees, r.proposal.adds, r.source
         else:
             styled, self.color = haring.fallback(self.human_new)
@@ -1794,14 +1855,17 @@ class Session:
         self._emit_shot("final")
         self.rec.write()
         video = await asyncio.to_thread(self.rec.stitch)
-        self.bus.emit("video", url=f"/sessions/{self.rec.id}/session.mp4", path=str(video))
+        if video is not None:
+            self.bus.emit("video", url=f"/sessions/{self.rec.id}/session.mp4", path=str(video))
+        else:
+            self.bus.emit("error", message="the video could not be stitched; the turn photos are in the session folder")
         return "finished"
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_session.py -q`
-Expected: `6 passed`. The full-exchange test runs the real trace and ffmpeg and takes several seconds. If the traced x-range assertion misses by a couple of millimeters, print `human["new"]` and adjust the bounds; large offsets mean `FakeFrames._compose` or the `cam_to_robot` step is wrong, not the bounds.
+Expected: `7 passed`. The full-exchange test runs the real trace and ffmpeg and takes several seconds. If the traced x-range assertion misses by a couple of millimeters, print `human["new"]` and adjust the bounds; large offsets mean `FakeFrames._compose` or the `cam_to_robot` step is wrong, not the bounds.
 
 - [ ] **Step 6: Commit**
 
@@ -1883,13 +1947,16 @@ def test_ws_sends_the_snapshot_then_takes_commands(tmp_path):
             first, second = ws.receive_json(), ws.receive_json()
             assert [first["type"], second["type"]] == ["state", "plan"]
             ws.send_json({"type": "set", "length": "medium", "exchanges": "4"})
+            ws.send_json({"type": "set", "direction": "45", "energy": "0.7"})
             ws.send_json({"type": "pass"})
             ws.send_json({"type": "set", "length": "bogus"})
             err = ws.receive_json()
             assert err["type"] == "error" and "length" in err["message"]
+            ws.send_json({"type": "set", "direction": "east"})
+            assert "setting refused" in ws.receive_json()["message"]
             ws.send_json({"type": "nonsense"})
             assert ws.receive_json()["type"] == "error"
-    assert stub.changes == [{"length": "medium", "exchanges": 4}]
+    assert stub.changes == [{"length": "medium", "exchanges": 4}, {"direction": 45.0, "energy": 0.7}]
     assert stub.actions == ["pass"]
 
 
@@ -1906,6 +1973,7 @@ def test_session_files_and_health_are_served(tmp_path):
     with TestClient(app) as client:
         assert client.get("/sessions/s1/turn-01-human.jpg").status_code == 200
         assert client.get("/health").json()["state"] == "human_turn"
+        assert client.get("/static/index.html").status_code == 200      # the static mount serves the page's own files
 
 
 def test_calibration_is_served_and_leads_the_snapshot(tmp_path, calibration):
@@ -1949,7 +2017,7 @@ from duet import config as cfg
 from duet import vision
 
 STATIC = cfg.PACKAGE_DIR / "static"
-ALLOWED_SETTINGS = ("artist", "length", "exchanges", "mode", "handoff")
+ALLOWED_SETTINGS = ("artist", "length", "exchanges", "mode", "handoff", "energy", "direction")
 STREAM_PERIOD_S = 0.2
 IMAGE_SIZE = (1280, 720)       # the RealSense color stream the calibration was made on
 
@@ -1972,6 +2040,7 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
     app = FastAPI(title="Duet")
     sessions_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/sessions", StaticFiles(directory=str(sessions_dir)), name="sessions")
+    app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")   # the page's css and js, once it splits them out
     h_inv = None
     calib: dict = {}
     if calibration and "marks_image" in calibration:
@@ -2002,6 +2071,9 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
             try:
                 if "exchanges" in changes:
                     changes["exchanges"] = int(changes["exchanges"])
+                for key in ("energy", "direction"):
+                    if key in changes:
+                        changes[key] = float(changes[key])
                 session.update_settings(**changes)
             except (ValueError, TypeError) as exc:
                 return {"type": "error", "message": f"setting refused: {exc}"}
@@ -2611,13 +2683,20 @@ Everything below needs the machine. Order matters; each line is a few minutes. E
 - [ ] `python -m duet.teach show`, then `python -m duet.teach verify`: every taught pose still reached.
 - [ ] Wipe the board. `python -m duet.calibrate --check` at the look pose: marks re-found, drift small. If the board moved: `python -m duet.calibrate --tl D`, draw the two squares with `stroke_bench 20 --at 15 15` and `--at 120 180`, then `calibrate --check` and `--fit 15,15,20 120,180,20`.
 
-## Hand check (10 min)
-- [ ] With the arm at the look pose, run `python explore.py` (it saves the depth frame as `captures/depth.dep`), then `python -m duet.calibrate --dock x0 y0 x1 y1` with the tub's rectangle read off `captures/calib_frame.jpg`, then `python -m duet.calibrate --plane captures/depth.dep`. The page's header then says `hand check: depth at the look pose`. Without this step the color backup runs, which is fine for the demo.
+## Hand check and camera cadence (10 min)
+- [ ] With the arm at the look pose, run `python explore.py` (it saves the depth frame as `captures/depth.dep`), then `python -m duet.calibrate --dock x0 y0 x1 y1` with the tub's rectangle read off `captures/calib_frame.jpg`, then `python -m duet.calibrate --plane captures/depth.dep`. Read its two warnings: the plane height should be near 450 mm and the empty-board check must not see a hand. The page's header then says `hand check: depth at the look pose`. Without this step the color backup runs, which is fine for the demo.
+- [ ] Measure the real frame cadence once (the trigger's stillness window assumes at least two frames per 1.5 s): `python -c "import asyncio,viam_conn;from viam.components.camera import Camera;from duet.camera import FrameSource
+async def m():
+    async with await viam_conn.connect() as r:
+        s=FrameSource(Camera.from_robot(r,viam_conn.CAMERA));await s.start();await asyncio.sleep(10);f=list(s.frames);await s.stop()
+        print(len(f),'frames in',round(f[-1].t-f[0].t,1),'s; gap',round((f[-1].t-f[0].t)/max(1,len(f)-1),2),'s; errors',s.errors)
+asyncio.run(m())"`. If the gap is over 0.7 s, raise `STILL_WINDOW_S` in `config.py` to three gaps.
 - [ ] `python -m duet.run --handoff held`, open http://localhost:8000. Hold a hand over the board: the terminal must not fire a turn while it is there. Draw a mark, take the hand away: the turn fires after 2 s. That is the stage 6 exit.
 
 ## One full exchange from the page (20 min)
 - [ ] Held mode first (`teach load` if the pen is not in the gripper). `python -m duet.run --exchanges 3 --length short`. Draw, step back, watch: capture, Claude's sentence, the plan preview, the arm drawing, the look pose, "human turn" again. The stage 8 exit is one exchange without touching the terminal.
 - [ ] If a move is refused or the arm faults: the page shows paused; fix the cause, Clear arm error, Resume.
+- [ ] If a turn does not end within about 10 s of the person stepping back, that is the stillness or hand reading, not the trigger: press Pass, then check the cadence line above and whether the header says the hand check is on depth or color.
 - [ ] Dock mode only if there is time: record the green dot with `"dots": {"green": {"xy": [x, y], "hsv_lo": [40, 60, 60], "hsv_hi": [85, 255, 255]}}` in `calibration.json` (pixel position from `captures/calib_frame.jpg` with the marker capped in the tub), then `--handoff dock`.
 
 ## Rest of the morning
@@ -2635,4 +2714,206 @@ Expected: all green.
 ```bash
 git add code/hackathon/README.md notes/hackathon/04-plan.md notes/hackathon/05-morning-checklist.md
 git commit -m "docs: overnight results, run instructions, and the morning hardware checklist"
+```
+
+---
+
+### Task 8 (optional, only after Tasks 1 to 7 are done and reviewed): Mondrian and Van Gogh stylers
+
+**Files:**
+- Create: `code/hackathon/duet/styles/mondrian.py`, `code/hackathon/duet/styles/vangogh.py`
+- Modify: `code/hackathon/duet/session.py` (`ARTISTS` and the styler lookup only)
+- Test: `code/hackathon/tests/test_styles.py`
+
+The PRD's two P1 artists, with exactly Haring's signature so the session can switch on the `artist` setting: `style(strokes, energy=0.5, direction_deg=0.0) -> (polylines, color)` and `fallback(human_ink) -> (polylines, color)`. Line art only; no fills or hatching.
+
+- [ ] **Step 1: Write the failing tests**
+
+`code/hackathon/tests/test_styles.py`:
+
+```python
+import math
+
+from duet.strokes import length
+from duet.styles import haring, mondrian, vangogh
+
+LINE = [[(40.0, 60.0), (120.0, 100.0)]]
+
+
+def test_every_styler_has_the_same_signature_and_returns_polylines_and_a_color():
+    for mod in (haring, mondrian, vangogh):
+        out, color = mod.style(LINE, energy=0.5, direction_deg=0.0)
+        assert color == "green" and out and all(len(pl) >= 2 for pl in out)
+        fb, color = mod.fallback(LINE)
+        assert color == "green" and fb and all(len(pl) >= 2 for pl in fb)
+
+
+def test_mondrian_snaps_to_horizontal_and_vertical_lines():
+    out, _ = mondrian.style(LINE, energy=0.5)
+    for pl in out:
+        for a, b in zip(pl, pl[1:]):
+            assert abs(a[0] - b[0]) < 1e-6 or abs(a[1] - b[1]) < 1e-6      # every segment is axis-aligned
+    assert len(mondrian.style(LINE, energy=1.0)[0]) > len(mondrian.style(LINE, energy=0.0)[0])
+
+
+def test_vangogh_draws_short_curved_dashes_along_the_flow():
+    out, _ = vangogh.style(LINE, energy=0.5, direction_deg=0.0)
+    assert len(out) >= 6
+    assert all(5.0 <= length(pl) <= 30.0 for pl in out)                    # dashes, not long lines
+    tilted, _ = vangogh.style(LINE, energy=0.5, direction_deg=90.0)
+    a, b = out[0], tilted[0]
+    da = math.atan2(a[-1][1] - a[0][1], a[-1][0] - a[0][0])
+    db = math.atan2(b[-1][1] - b[0][1], b[-1][0] - b[0][0])
+    assert abs((da - db + math.pi) % (2 * math.pi) - math.pi) > 0.5        # direction bends the current
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `python -m pytest tests/test_styles.py -q`
+Expected: `ImportError: cannot import name 'mondrian'`
+
+- [ ] **Step 3: Write the two stylers**
+
+`code/hackathon/duet/styles/mondrian.py`:
+
+```python
+"""Piet Mondrian's grammar: straight horizontal and vertical lines. Each stroke's bounding box is
+snapped to a grid and drawn as a rectangle; `energy` adds subdivisions; `direction` picks which
+side the extra lines grow from. Line art only. Same signature as `styles.haring`."""
+from __future__ import annotations
+
+import math
+
+from duet import config as cfg
+from duet.strokes import Polyline
+
+COLOR = "green"
+GRID_MM = 10.0
+
+
+def _snap(v: float) -> float:
+    return round(v / GRID_MM) * GRID_MM
+
+
+def _box(pl: Polyline) -> tuple[float, float, float, float]:
+    xs, ys = [x for x, _ in pl], [y for _, y in pl]
+    x0, y0, x1, y1 = _snap(min(xs)), _snap(min(ys)), _snap(max(xs)), _snap(max(ys))
+    if x1 - x0 < GRID_MM:
+        x1 = x0 + GRID_MM
+    if y1 - y0 < GRID_MM:
+        y1 = y0 + GRID_MM
+    return x0, y0, x1, y1
+
+
+def _rect(x0: float, y0: float, x1: float, y1: float) -> Polyline:
+    return [(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)]
+
+
+def style(strokes: list[Polyline], energy: float = 0.5, direction_deg: float = 0.0) -> tuple[list[Polyline], str]:
+    out: list[Polyline] = []
+    splits = int(round(max(0.0, min(1.0, energy)) * 3))          # 0 to 3 subdivisions per stroke
+    grow_right = math.cos(math.radians(direction_deg)) >= 0
+    for pl in strokes:
+        if len(pl) < 2:
+            continue
+        x0, y0, x1, y1 = _box(pl)
+        out.append(_rect(x0, y0, x1, y1))
+        for k in range(1, splits + 1):
+            t = k / (splits + 1)
+            xs = x0 + (x1 - x0) * (t if grow_right else 1 - t)
+            out.append([(xs, y0), (xs, y1)])                     # vertical subdivision
+            if k % 2 == 0:
+                ys = y0 + (y1 - y0) * t
+                out.append([(x0, ys), (x1, ys)])                 # every second one also horizontal
+    return out, COLOR
+
+
+def fallback(human_ink: list[Polyline]) -> tuple[list[Polyline], str]:
+    """Extend the mark's bounding box edges to the drawable edges: the human's mark becomes a cell."""
+    out: list[Polyline] = []
+    lo, hi_x, hi_y = cfg.INSET_MM, cfg.BOARD_W_MM - cfg.INSET_MM, cfg.BOARD_H_MM - cfg.INSET_MM
+    for pl in human_ink:
+        if len(pl) < 2:
+            continue
+        x0, y0, x1, y1 = _box(pl)
+        out += [[(lo, y0), (hi_x, y0)], [(lo, y1), (hi_x, y1)], [(x0, lo), (x0, hi_y)], [(x1, lo), (x1, hi_y)]]
+    return out, COLOR
+```
+
+`code/hackathon/duet/styles/vangogh.py`:
+
+```python
+"""Vincent van Gogh's grammar: short curved dashes laid along a flow that streams around the
+stroke. `energy` sets dash length and density; `direction` bends the current. Line art only.
+Same signature as `styles.haring`."""
+from __future__ import annotations
+
+import math
+
+from shapely.geometry import LineString
+
+from duet.strokes import Polyline
+
+COLOR = "green"
+DASH_MIN_MM = 8.0
+DASH_MAX_MM = 18.0
+ROWS = (4.0, 9.0, 14.0)         # offsets of the dash rows on each side of the stroke, mm
+CURL = 0.35                     # radians of bend along each dash
+
+
+def _dash(p: tuple[float, float], angle: float, size: float) -> Polyline:
+    """A gently curved dash centered on p, heading `angle`."""
+    pts: Polyline = []
+    for k in range(5):
+        t = k / 4 - 0.5
+        a = angle + CURL * t
+        pts.append((p[0] + math.cos(a) * size * t, p[1] + math.sin(a) * size * t))
+    return pts
+
+
+def style(strokes: list[Polyline], energy: float = 0.5, direction_deg: float = 0.0) -> tuple[list[Polyline], str]:
+    e = max(0.0, min(1.0, energy))
+    size = DASH_MIN_MM + (DASH_MAX_MM - DASH_MIN_MM) * e
+    spacing = size * (1.6 - 0.6 * e)
+    bend = math.radians(direction_deg)
+    out: list[Polyline] = []
+    for pl in strokes:
+        if len(pl) < 2:
+            continue
+        line = LineString(pl)
+        for side in (1.0, -1.0):
+            for row, offset in enumerate(ROWS):
+                curve = line.offset_curve(side * offset)
+                if curve.is_empty:
+                    continue
+                if curve.geom_type != "LineString":
+                    curve = max(curve.geoms, key=lambda g: g.length)
+                s = spacing / 2 + row * spacing / 3
+                while s < curve.length:
+                    p, q = curve.interpolate(s), curve.interpolate(min(s + 1.0, curve.length))
+                    angle = math.atan2(q.y - p.y, q.x - p.x) + bend * 0.5 + side * CURL * (row + 1) / 3
+                    out.append(_dash((p.x, p.y), angle, size))
+                    s += spacing
+    return out, COLOR
+
+
+def fallback(human_ink: list[Polyline]) -> tuple[list[Polyline], str]:
+    """The current streams around the mark: the same dashes at half energy."""
+    return style(human_ink, energy=0.5)
+```
+
+- [ ] **Step 4: Wire the artist setting**
+
+In `code/hackathon/duet/session.py` change `ARTISTS = ("haring",)` to `ARTISTS = ("haring", "mondrian", "vangogh")`, add `from duet.styles import haring, mondrian, vangogh` (replacing the haring-only import), add `STYLERS = {"haring": haring, "mondrian": mondrian, "vangogh": vangogh}`, and in `_state_plan` replace the two `haring.` calls with `STYLERS[self.settings.artist].style(...)` and `STYLERS[self.settings.artist].fallback(...)`. The `test_settings_are_validated_at_the_boundary` assertion on `state["artists"]` becomes `== ["haring", "mondrian", "vangogh"]`.
+
+- [ ] **Step 5: Run the tests to verify they pass**
+
+Run: `python -m pytest tests/test_styles.py tests/test_session.py -q`
+Expected: all pass. Then the full suite.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add duet/styles/mondrian.py duet/styles/vangogh.py duet/session.py tests/test_styles.py tests/test_session.py
+git commit -m "feat: Mondrian and Van Gogh stylers behind the artist setting"
 ```

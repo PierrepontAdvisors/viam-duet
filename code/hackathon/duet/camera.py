@@ -111,11 +111,21 @@ class FrameSource:
                 self.last_error = str(exc)
             await asyncio.sleep(self.period)
 
-    def latest(self, max_age_s: float = 1.0) -> Frame | None:
+    @property
+    def stale_after_s(self) -> float:
+        """Default staleness bound for `latest()`: five poll periods plus one grab timeout (floored
+        at 1.0 s), because the loop's real cadence is grab time plus `period` and a slow camera link
+        (0.3 to 0.9 s per grab over Viam's relay, at low fps) can otherwise push a fresh frame past a
+        fixed 1.0 s bound, making every `latest()` call return None and the hand guard read that as a
+        permanent hand."""
+        return max(1.0, 5 * self.period + self.grab_timeout_s)
+
+    def latest(self, max_age_s: float | None = None) -> Frame | None:
         if not self.frames:
             return None
         frame = self.frames[-1]
-        if monotonic() - frame.t > max_age_s:
+        age_limit = self.stale_after_s if max_age_s is None else max_age_s
+        if monotonic() - frame.t > age_limit:
             return None
         return frame
 
