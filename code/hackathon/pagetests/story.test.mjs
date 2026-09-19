@@ -83,7 +83,7 @@ test('welcomeButton: ready only at your turn or after the end; waiting after Sta
 
 test('welcomeReturns: a fresh state after a finished or running session, never at first load or between fresh states', () => {
   assert.equal(welcomeReturns('finished', 'idle'), true);
-  assert.equal(welcomeReturns('human_turn', 'look'), true);
+  assert.equal(welcomeReturns('human_turn', 'look'), false);      // look follows every robot turn, it is not a new session
   assert.equal(welcomeReturns(null, 'idle'), false);
   assert.equal(welcomeReturns('idle', 'look'), false);
   assert.equal(welcomeReturns('finished', 'human_turn'), false);
