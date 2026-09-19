@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duet</title>
-<link rel="stylesheet" href="/static/fredoka.css?v=ds5">
-<link rel="stylesheet" href="/static/tokens.css?v=ds5">
-<link rel="stylesheet" href="/static/duet.css?v=ds5">
+<link rel="stylesheet" href="/static/fredoka.css?v=ds6">
+<link rel="stylesheet" href="/static/tokens.css?v=ds6">
+<link rel="stylesheet" href="/static/duet.css?v=ds6">
 </head>
 <body>
 <!-- Live stream: /stream.mjpg?overlay=0 (set by app.js); state over the WebSocket at /ws. -->
@@ -45,6 +45,7 @@
     <span class="chip white" id="state" data-el="chip — state">Connecting…</span>
   </div>
   <div class="tr" data-el="chips — top right">
+    <span class="chip red hidden" id="cam" data-el="chip — camera reconnecting">camera reconnecting…</span>
     <span class="chip black" id="count" data-el="chip — exchange counter">Exchange <b>0</b> of 5</span>
     <button class="chip black" id="sound" title="Sound on or off" data-el="chip — sound toggle">Sound off</button>
   </div>
@@ -103,14 +104,19 @@
     <div class="g s2 count" data-el="exchanges"><button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button></div>
     <div class="g s2 seg" id="handoff-seg" data-el="handoff setting"><button data-v="held" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></div>
     <div class="g s3 seg" id="artist-seg" data-el="artist setting"><button data-v="abstract" data-el="artist — abstract">Abstract</button><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" disabled data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" disabled data-el="artist — van gogh">Van Gogh</button></div>
+    <div class="g s2"></div>
+
+    <span class="lbl">Run</span>
     <div class="g s2"><button id="pause" data-el="pause / resume button">Pause</button><button id="pass" data-el="pass turn button">Pass turn</button></div>
+    <div class="g s2"><button id="end" data-el="end session button">End session</button></div>
+    <div class="g s4"></div>
+    <div class="g s2"><button class="danger" id="reset-arm" title="Stop the arm, clear its error, lift, and return to the look pose" data-el="reset arm button">Reset arm</button></div>
+    <div class="g s2"><button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button></div>
 
     <span class="lbl">Light</span>
     <div class="g s3 slider dial" data-el="light direction dial"><span class="sun" id="sun">☀</span><input type="range" id="direction" min="0" max="359" value="0" data-el="light direction slider"><span class="num" id="direction-val" data-el="light direction value">0°</span></div>
     <div class="g s3 slider" data-el="energy"><span class="lbl2">Energy</span><input type="range" id="energy" min="0" max="100" value="50" data-el="energy slider"><span class="num" id="energy-val" data-el="energy value">0.50</span></div>
-    <div class="g s2"></div>
-    <div class="g s2"><button class="danger" id="reset-arm" title="Stop the arm, clear its error, lift, and return to the look pose" data-el="reset arm button">Reset arm</button></div>
-    <div class="g s2"><button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button></div>
+    <div class="g s6"></div>
 
     <div class="status" id="status1" data-el="status line — session"></div>
     <div class="status" id="status2" data-el="status line — claude"></div>
@@ -122,6 +128,6 @@
   <div class="dev-label" id="devLabel"></div>
   <div class="dev-toast" id="devToast"></div>
 </div>
-<script type="module" src="/static/js/app.js?v=ds5"></script>
+<script type="module" src="/static/js/app.js?v=ds6"></script>
 </body>
 </html>

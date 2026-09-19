@@ -1,7 +1,7 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, welcomeButton, welcomeReturns } from './story.js?v=ds4';
-import { bubblePosition } from './geometry.js?v=ds4';
-import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds4';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns } from './story.js?v=ds6';
+import { bubblePosition } from './geometry.js?v=ds6';
+import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds6';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -13,7 +13,7 @@ const LAYER_NODES = { ink: 'l-ink', board: 'l-board' };
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 export function initUI(app, { sendSet, sendCommand, on }) {
-  const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null };
+  const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null, shownSession: null };
   const stage = $('stage'), viewer = app.viewer;
 
   // ---- layers and colors ----
@@ -77,6 +77,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   // ---- chips ----
   function renderChips() {
     $('badge').classList.toggle('off', !app.connected);
+    $('cam').classList.toggle('hidden', !(app.feed && app.feed.source === 'stale'));   // the rig, not the piece: shown with or without a state
     const st = app.state;
     if (!st) { $('state').textContent = app.connected ? 'Getting ready…' : 'Connecting…'; $('state').className = 'chip white'; return; }
     const c = chipFor(st.state);
@@ -129,6 +130,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     view.source = 'shot'; view.index = ((i % n) + n) % n; viewer.showShot(app.book.shots[view.index]); renderAll();
   }
   function step(i) {
+    if (!app.book.shots.length) { showLive(); return; }   // a new piece emptied the book under the loop
     showShot(i);
     const wait = app.book.loopSchedule()[view.index] || 1000;
     view.timer = setTimeout(() => step(view.index + 1), wait);
@@ -159,6 +161,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   $('pass').onclick = () => sendCommand('pass'); $('go').onclick = () => sendCommand('pass');
   $('clear').onclick = () => sendCommand('clear_error');
   $('reset-arm').onclick = () => sendCommand('reset_arm');
+  $('end').onclick = () => sendCommand('end');
   const dir = $('direction'), energy = $('energy');
   const showDir = () => { $('direction-val').textContent = `${dir.value}°`; $('sun').style.setProperty('--dir', `${dir.value}deg`); };
   const showEnergy = () => { $('energy-val').textContent = (energy.value / 100).toFixed(2); };
@@ -171,7 +174,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     $('crop-seg').children[0].classList.toggle('on', !viewer.crop); $('crop-seg').children[1].classList.toggle('on', viewer.crop);
     $('b-live').classList.toggle('on', view.source === 'live');
     const shot = view.source === 'shot' ? app.book.shots[view.index] : null;
-    $('pos').textContent = shot ? (shot.who === 'start' ? 'start · blank board' : `turn ${String(shot.turn).padStart(2, '0')} · ${shot.who}`) : 'live · wrist camera';
+    $('pos').textContent = shot ? (shot.who === 'start' ? 'start · blank board' : `turn ${String(shot.turn).padStart(2, '0')} · ${shot.who}`) : feedLabel(app.feed ? app.feed.source : 'live');
     $('b-prev').disabled = $('b-next').disabled = !app.book.shots.length;
     $('b-play').textContent = view.playing ? '■ Stop' : '▶ Play loop'; $('b-play').classList.toggle('on', view.playing);
     $('b-video').classList.toggle('hidden', !app.video); if (app.video) $('b-video').href = app.video.url;
@@ -180,6 +183,8 @@ export function initUI(app, { sendSet, sendCommand, on }) {
       for (const b of $('artist-seg').children) b.disabled = !st.artists.includes(b.dataset.v);
       $('ex').textContent = st.exchanges;
       $('pause').textContent = st.state === 'paused' ? 'Resume' : 'Pause'; $('pause').classList.toggle('on', st.state === 'paused');
+      const ending = st.ending && st.state !== 'finished';                                 // "Ending…": pressed, the piece signs at the next safe point
+      $('end').disabled = st.state === 'finished' || st.ending; $('end').textContent = ending ? 'Ending…' : 'End session'; $('end').classList.toggle('on', ending);
       if (document.activeElement !== dir) { dir.value = Math.round(st.direction); showDir(); }
       if (document.activeElement !== energy) { energy.value = Math.round(st.energy * 100); showEnergy(); }
     }
@@ -256,6 +261,8 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   // ---- messages ----
   on((msg) => {
     if (msg.type === 'state') {
+      if (msg.session && view.shownSession && msg.session !== view.shownSession) showLive();   // a new piece: stop the loop, back to the camera
+      if (msg.session) view.shownSession = msg.session;
       if (msg.state === 'capture') view.thinkingSince = Date.now();
       if (msg.state === 'finished' && view.autoplayed !== msg.session) { view.autoplayed = msg.session; setTimeout(() => { if (view.source === 'live') play(); }, 3000); }
       if (msg.state === 'human_turn' && msg.turn === 0 && view.source !== 'live') showLive();

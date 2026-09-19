@@ -78,3 +78,15 @@ test('shot urls round-trip', () => {
   assert.deepEqual(parseShotUrl('/sessions/s1/turn-04-human-frame.jpg'), { session: 's1', turn: 4, who: 'human', frame: true });
   assert.equal(parseShotUrl('/sessions/s1/session.mp4'), null);
 });
+
+test('feed carries a known source and state carries ending', () => {
+  assert.equal(parseMessage(JSON.stringify({ type: 'feed', source: 'held' })).source, 'held');
+  assert.equal(parseMessage(JSON.stringify({ type: 'feed', source: 'stale' })).source, 'stale');
+  assert.equal(parseMessage(JSON.stringify({ type: 'feed', source: 'frozen' })).source, 'live');
+  assert.equal(parseMessage(JSON.stringify({ type: 'state', state: 'human_turn', turn: 0, ending: true })).ending, true);
+  assert.equal(parseMessage(JSON.stringify({ type: 'state', state: 'human_turn', turn: 0 })).ending, false);
+});
+
+test('end is a command', () => {
+  assert.deepEqual(command('end'), { type: 'end' });
+});

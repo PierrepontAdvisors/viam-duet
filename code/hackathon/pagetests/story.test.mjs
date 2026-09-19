@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { welcomeButton, welcomeReturns, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor } from '../duet/static/js/story.js';
+import { welcomeButton, welcomeReturns, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor, feedLabel } from '../duet/static/js/story.js';
 
 test('chipFor gives the storybook words and tone per state, and a readable fallback', () => {
   assert.deepEqual(chipFor('human_turn'), { text: 'Your turn!', tone: 'green' });
@@ -94,4 +94,11 @@ test('welcomeReturns: look after a robot turn is not a fresh session', () => {
   assert.equal(welcomeReturns('robot_draw', 'look'), false);
   assert.equal(welcomeReturns('finished', 'start'), true);
   assert.equal(welcomeReturns('finished', 'idle'), true);
+});
+
+test('feedLabel names the picture source', () => {
+  assert.equal(feedLabel('live'), 'live · wrist camera');
+  assert.equal(feedLabel('held'), 'still · the robot is drawing');
+  assert.equal(feedLabel('stale'), 'camera reconnecting…');
+  assert.equal(feedLabel(undefined), 'live · wrist camera');
 });

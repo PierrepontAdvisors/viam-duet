@@ -1,17 +1,18 @@
 /** Boot: the WebSocket with snapshot and reconnect, message dispatch, and the modules. */
-import { parseMessage, setCommand, command } from './protocol.js?v=ds4';
-import { TurnBook } from './story.js?v=ds4';
-import { Viewer } from './viewer.js?v=ds4';
-import { initUI } from './ui.js?v=ds4';
-import { GhostPen } from './preview.js?v=ds4';
-import { Sound } from './audio.js?v=ds4';
-import { polylinesFromSvg } from './picture.js?v=ds4';
-import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds4';
+import { parseMessage, setCommand, command } from './protocol.js?v=ds6';
+import { TurnBook } from './story.js?v=ds6';
+import { Viewer } from './viewer.js?v=ds6';
+import { initUI } from './ui.js?v=ds6';
+import { GhostPen } from './preview.js?v=ds6';
+import { Sound } from './audio.js?v=ds6';
+import { polylinesFromSvg } from './picture.js?v=ds6';
+import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds6';
 
 const $ = (id) => document.getElementById(id);
 export const app = {
   book: new TurnBook(),
   state: null, currentTurn: null, session: null, robotDone: [], calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
+  feed: null,
   ws: null, connected: false,
   viewer: null,
   listeners: [],
@@ -35,7 +36,8 @@ function archivePlan() {
 }
 function startSession() {
   app.robotDone = []; app.plan = null; app.progress = -1; app.book = new TurnBook(); app.backfilled = new Set();
-  app.viewer.setDone([]); app.viewer.setPlan([], -1);
+  app.video = null; app.human = { polylines: [], new: [] }; app.interpretation = null;   // feed stays: it is about the rig, not the piece
+  app.viewer.setInk([]); app.viewer.setDone([]); app.viewer.setPlan([], -1);
 }
 
 /** A page that joins mid-session only gets the latest plan in the snapshot. The recorder saved every
@@ -79,6 +81,7 @@ function handle(msg) {
       app.book.addShot(msg); break;
     }
     case 'video': app.video = msg; break;
+    case 'feed': app.feed = msg; break;
     case 'dock': app.dock = msg; break;
     case 'error': break;
   }

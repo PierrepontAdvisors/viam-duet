@@ -34,7 +34,7 @@ const PARSERS = {
       artist: str(m.artist, 'haring'), mode: str(m.mode, 'duet'), handoff: oneOf(m.handoff, ['held', 'dock'], 'held'),
       coverage: num(m.coverage, 0), error: strOrNull(m.error), at_look: bool(m.at_look), hand_guard: str(m.hand_guard, ''),
       session: strOrNull(m.session), artists: Array.isArray(m.artists) && m.artists.every(a => typeof a === 'string') && m.artists.length ? m.artists : ['haring'],
-      direction: num(m.direction, 0), energy: num(m.energy, 0.5),
+      direction: num(m.direction, 0), energy: num(m.energy, 0.5), ending: bool(m.ending),
     };
   },
   calib(m) {
@@ -60,6 +60,7 @@ const PARSERS = {
     return { url: m.url, frame_url: strOrNull(m.frame_url), turn: int(m.turn, p.turn ?? 0), who, session: p.session || null };
   },
   video: (m) => (typeof m.url === 'string' ? { url: m.url } : null),
+  feed: (m) => ({ source: oneOf(m.source, ['live', 'held', 'stale'], 'live') }),
   dock: (m) => ({ slots: m.slots && typeof m.slots === 'object' ? m.slots : {}, reseat: Array.isArray(m.reseat) ? m.reseat.filter(s => typeof s === 'string') : [] }),
   error: (m) => (typeof m.message === 'string' ? { message: m.message } : null),
 };
@@ -76,7 +77,7 @@ export function parseMessage(text) {
 }
 
 export const SETTINGS = ['artist', 'length', 'exchanges', 'mode', 'handoff', 'energy', 'direction'];
-const COMMANDS = ['pause', 'resume', 'pass', 'clear_error', 'restart', 'reset_arm'];   // restart: start a new session in place (the backend may not know it yet)
+const COMMANDS = ['pause', 'resume', 'pass', 'clear_error', 'restart', 'reset_arm', 'end'];   // restart: start a new session in place; end: sign the piece at the next safe point
 
 export function setCommand(changes) {
   const out = { type: 'set' };

@@ -92,6 +92,7 @@ body.controls .panel { display: grid; }
                           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: center; }
 .panel button.on { background: var(--yellow); color: var(--ink); }
 .panel button:disabled { opacity: .35; cursor: default; }
+#end.on:disabled { opacity: 1; }   /* "Ending…" is disabled but must stay readable */
 .panel button.danger { background: var(--red); color: #fff; }
 .panel button.hide { background: transparent; }
 .g.pos { justify-content: center; font: 700 .95cqw/1 var(--story); letter-spacing: .04em; text-transform: uppercase; color: var(--ink); border: .2cqw solid var(--ink); border-radius: 999px; }
