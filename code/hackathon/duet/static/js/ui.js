@@ -1,5 +1,5 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS } from './story.js';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, welcomeButton, welcomeReturns, WELCOME_RETURN_MS } from './story.js';
 import { bubblePosition } from './geometry.js';
 import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js';
 
@@ -198,7 +198,32 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (view.lastError && Date.now() - view.lastError.t < 5000) parts.push(`<span class="err">${esc(view.lastError.message)}</span>`);
     $('status3').innerHTML = parts.join(' · ');
   }
-  const renderAll = () => { renderChips(); renderBubble(); renderPanel(); };
+  // ---- welcome page: shown at load, hidden by Start, back when a session ends or a fresh one begins ----
+  const welcome = { shown: true, waiting: false, pressed: false, timer: null, prev: null };
+  function showWelcome(onOff) {
+    welcome.shown = onOff; $('welcome').classList.toggle('hidden', !onOff);
+    if (welcome.timer) { clearTimeout(welcome.timer); welcome.timer = null; }
+  }
+  function renderWelcome() {
+    const state = app.state ? app.state.state : null;
+    if (welcome.waiting && state && state !== 'finished') welcome.waiting = false;                 // a new session arrived
+    if (!welcome.shown && welcomeReturns(welcome.prev, state)) showWelcome(true);
+    if (state === 'finished' && !welcome.shown && !welcome.timer) {
+      welcome.timer = setTimeout(() => { welcome.timer = null; showWelcome(true); }, WELCOME_RETURN_MS);
+    } else if (state !== 'finished' && welcome.timer) { clearTimeout(welcome.timer); welcome.timer = null; }
+    if (welcome.shown && welcome.pressed && state === 'human_turn') { welcome.pressed = false; showWelcome(false); }
+    const b = welcomeButton(state, welcome.waiting);
+    const btn = $('start');
+    if (btn.textContent !== b.label) { btn.textContent = b.label; if (b.enabled) popIt(btn); }
+    btn.disabled = !b.enabled;
+    welcome.prev = state;
+  }
+  $('start').onclick = () => {
+    const state = app.state ? app.state.state : null;
+    if (state === 'finished') { welcome.waiting = true; welcome.pressed = true; sendCommand('restart'); renderWelcome(); return; }
+    welcome.pressed = false; showWelcome(false);
+  };
+  const renderAll = () => { renderChips(); renderBubble(); renderPanel(); renderWelcome(); };
 
   // ---- keys and developer mode ----
   document.addEventListener('keydown', (e) => {

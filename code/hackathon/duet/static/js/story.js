@@ -99,3 +99,19 @@ export function anchorFor(kind, record) {
   if (kind === 'speech') return centroid((record && record.plan) || []);
   return [...BOARD_CENTER];
 }
+
+/* ---- welcome page ---- */
+export const FRESH_STATES = ['idle', 'look', 'start'];
+export const WELCOME_RETURN_MS = 8000;
+/** The welcome page's button for a state: its label and whether it can be pressed. `waiting` is set after
+ *  Start was pressed on a finished session, until a new session's state arrives. */
+export function welcomeButton(state, waiting = false) {
+  if (waiting) return { label: 'Starting soon…', enabled: false };
+  if (state === 'human_turn' || state === 'finished') return { label: 'Start', enabled: true };
+  return { label: 'Getting ready…', enabled: false };
+}
+/** The welcome returns when a fresh session begins after a session that was under way or finished:
+ *  a restarted process or a reconnect looks like idle/look/start arriving after anything else. */
+export function welcomeReturns(prev, next) {
+  return FRESH_STATES.includes(next) && prev != null && !FRESH_STATES.includes(prev);
+}
