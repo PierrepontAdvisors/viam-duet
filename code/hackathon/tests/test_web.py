@@ -1,7 +1,7 @@
 import numpy as np
 from starlette.testclient import TestClient
 
-from duet import web
+from duet import vision, web
 from duet.camera import Frame
 from duet.session import EventBus
 
@@ -11,6 +11,7 @@ class StubSession:
 
     def __init__(self):
         self.changes, self.actions = [], []
+        self.raise_on_clear = False
 
     def update_settings(self, **changes):
         if changes.get("length") == "bogus":
@@ -27,6 +28,8 @@ class StubSession:
         self.actions.append("pass")
 
     async def clear_error(self):
+        if self.raise_on_clear:
+            raise RuntimeError("arm offline")
         self.actions.append("clear_error")
 
 
@@ -57,6 +60,9 @@ def test_ws_sends_the_snapshot_then_takes_commands(tmp_path):
             ws.send_json({"type": "set", "length": "medium", "exchanges": "4"})
             ws.send_json({"type": "set", "direction": "45", "energy": "0.7"})
             ws.send_json({"type": "pass"})
+            ws.send_json({"type": "pause"})
+            ws.send_json({"type": "resume"})
+            ws.send_json({"type": "clear_error"})
             ws.send_json({"type": "set", "length": "bogus"})
             err = ws.receive_json()
             assert err["type"] == "error" and "length" in err["message"]
@@ -65,7 +71,41 @@ def test_ws_sends_the_snapshot_then_takes_commands(tmp_path):
             ws.send_json({"type": "nonsense"})
             assert ws.receive_json()["type"] == "error"
     assert stub.changes == [{"length": "medium", "exchanges": 4}, {"direction": 45.0, "energy": 0.7}]
+    assert stub.actions == ["pass", "pause", "resume", "clear_error"]
+
+
+def test_a_failing_command_answers_with_an_error_and_the_socket_lives(tmp_path):
+    stub = StubSession()
+    stub.raise_on_clear = True
+    app = web.make_app(stub, StubFrames(), EventBus(), sessions_dir=tmp_path)
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws") as ws:
+            ws.send_json({"type": "clear_error"})
+            err = ws.receive_json()
+            assert err["type"] == "error" and "arm offline" in err["message"]
+            ws.send_json({"type": "pass"})                    # the socket still answers afterwards
+            ws.send_json({"type": "nonsense"})
+            assert ws.receive_json()["type"] == "error"
     assert stub.actions == ["pass"]
+
+
+def test_two_clients_get_the_same_snapshot_and_both_unsubscribe(tmp_path):
+    bus = EventBus()
+    bus.emit("state", state="human_turn", turn=1)
+    app = web.make_app(StubSession(), StubFrames(), bus, sessions_dir=tmp_path)
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws") as a, client.websocket_connect("/ws") as b:
+            assert a.receive_json() == b.receive_json() == {"type": "state", "state": "human_turn", "turn": 1}
+    assert len(bus.subs) == 0
+
+
+def test_overlay_maps_robot_mm_back_through_the_calibration(look_frame, calibration):
+    quad = vision.board_quad(np.array(calibration["marks_image"], np.float32), calibration["board_tl_index"])
+    h_inv = np.linalg.inv(vision.board_homography(quad))
+    plan = [[(30, 30), (150, 30)], [(88, 40), (88, 200)]]
+    out = web.overlay(look_frame, plan, h_inv, (0, 0, 255), calibration.get("cam_to_robot"))
+    assert out.shape == look_frame.shape and not np.array_equal(out, look_frame)
+    assert np.array_equal(web.overlay(look_frame, [], h_inv, (0, 0, 255), calibration.get("cam_to_robot")), look_frame)
 
 
 def test_mjpeg_part_is_a_multipart_jpeg_chunk():

@@ -212,6 +212,7 @@
     }
   }
 
+  $('stream').onerror = () => setTimeout(() => { $('stream').src = '/stream.mjpg?t=' + Date.now(); }, 1500);
   $('artist').onchange = () => send({ type: 'set', artist: $('artist').value });
   $('exchanges').onchange = () => send({ type: 'set', exchanges: parseInt($('exchanges').value, 10) });
   $('lengths').onclick = (e) => { const v = e.target.dataset.v; if (v) send({ type: 'set', length: v }); };
