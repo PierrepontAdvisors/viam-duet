@@ -36,7 +36,7 @@ This is a real turn from last night. Someone drew this.
 
 Claude looked at it and said:
 
-"A big bold amoeba-like creature with loops and eye-holes sprawls across the board. I'll add a small green spiral accent inside the lower loop body to give the creature a pulsing core."
+"A crowded world of creatures, flowers and dancing figures. A small green dancing figure in the open lower-right space to balance the crowd."
 
 Eight seconds to look and decide. And then the arm drew this.
 
@@ -44,7 +44,7 @@ Eight seconds to look and decide. And then the arm drew this.
 
 ## 4 · Co-creation
 
-Six exchanges later, this is what came out.
+Ten exchanges later, this is what came out.
 
 Two artists, and one of them was a robot.
 

@@ -4,13 +4,13 @@
   --ink: #111; --paper: #fff; --robot: #1b8f3a; --human: #c62828;
   --story: "Fredoka", "Chalkboard SE", "Comic Sans MS", "Segoe Print", sans-serif;
   /* type: the only four sizes in the deck */
-  --display: 6.4cqw; --headline: 4cqw; --body: 2.1cqw; --caption: 1.3cqw;
+  --display: 8cqw; --headline: 5.4cqw; --body: 3.1cqw; --caption: 1.9cqw;
   /* space */
   --s1: 1cqw; --s2: 2cqw; --s3: 3cqw; --s4: 4cqw;
   /* paper */
   --paper-radius: 1.2cqw; --paper-border: .35cqw; --paper-pad: 1.6cqw;
   /* grid and master page */
-  --gutter: 1.2cqw; --pad-x: 8cqw; --pad-y: 4.5cqw; --frame-inset: 3cqw; --frame-stroke: .45cqw;
+  --gutter: 1.2cqw; --pad-x: 7cqw; --pad-y: 4cqw; --frame-inset: 3cqw; --frame-stroke: .45cqw;
   --tile: 160px;
 }
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
@@ -94,29 +94,33 @@ ul, ol { padding: 0; list-style: none; }
         background: var(--paper); color: var(--ink); font-size: var(--caption); font-weight: 700; line-height: 1.2; text-align: center; }
 
 /* template: split (words in cols 1-7, figure in cols 9-12) */
-.split .words { grid-column: 1 / 8; min-width: 0; display: flex; flex-direction: column; gap: var(--s2); }
-.split .figure { grid-column: 9 / 13; min-width: 0; }
+.split .words { grid-column: 1 / 10; min-width: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.split .figure { grid-column: 10 / 13; min-width: 0; }
+.cocreate .words { grid-column: 1 / 7; }  .cocreate .figure { grid-column: 7 / 13; }
+.build .words { grid-column: 1 / 9; }     .build .figure { grid-column: 9 / 13; }
+.what .words { grid-column: 1 / 7; }      .what .figure { grid-column: 7 / 13; display: flex; justify-content: center; }
+.what .hero img { width: 34cqw; height: 34cqw; }
 .hero img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: calc(var(--paper-radius) - .4cqw); }
-.thesis .words { gap: var(--s3); }
-.thesis .line { opacity: 0; transform: translateY(1cqw); transition: opacity .4s ease, transform .4s ease; }
+.thesis .words { gap: var(--s2); }
+.thesis .line { opacity: 0; transform: translateY(1cqw); transition: opacity calc(.4s / var(--speed, 1)) ease, transform calc(.4s / var(--speed, 1)) ease; }
 .card[data-build="1"] .line:nth-child(-n+1),
 .card[data-build="2"] .line:nth-child(-n+2),
 .card[data-build="3"] .line:nth-child(-n+3) { opacity: 1; transform: none; }
 .beats { display: flex; flex-direction: column; gap: .4cqw; }
 .chips { display: flex; gap: var(--gutter); }
 .chip { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s1); padding: var(--s1) var(--s1); }
-.chip .sample { width: 5cqw; height: 3cqw; flex: none; }
+.chip .sample { width: 7cqw; height: 4.2cqw; flex: none; }
 .flipwrap { display: flex; flex-direction: column; align-items: center; gap: var(--s1); }
-.flip img { display: block; height: 30cqw; width: auto; max-width: 100%; object-fit: contain; border-radius: calc(var(--paper-radius) - .4cqw); }
+.flip img { display: block; height: 31cqw; width: auto; max-width: 100%; object-fit: contain; border-radius: calc(var(--paper-radius) - .4cqw); }
 .credit { opacity: .85; }
 .cta { color: var(--yellow); margin-top: var(--s1); }
 
 /* template: triptych (three modules of four columns) */
-.triptych .m1 { grid-column: 1 / 5; }
-.triptych .m2 { grid-column: 5 / 9; }
-.triptych .m3 { grid-column: 9 / 13; }
+.triptych .m1 { grid-column: 1 / 4; }
+.triptych .m2 { grid-column: 4 / 10; }
+.triptych .m3 { grid-column: 10 / 13; }
 .module { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: .6cqw; }
-.photo img { display: block; height: 30cqw; width: auto; max-width: 100%; object-fit: contain; border-radius: calc(var(--paper-radius) - .4cqw); }
+.photo img { display: block; height: 28cqw; width: auto; max-width: 100%; object-fit: contain; border-radius: calc(var(--paper-radius) - .4cqw); }
 .cap { color: #fff; text-align: center; }
 .bubble { position: relative; width: 100%; background: var(--yellow); padding: var(--s2); display: flex; flex-direction: column; gap: var(--s1); text-align: center; }
 .bubble .adds { color: var(--robot); }
@@ -135,12 +139,13 @@ ul, ol { padding: 0; list-style: none; }
 .mods.four  { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .mod { min-width: 0; display: flex; flex-direction: column; gap: .6cqw; }
 .mod .sample { width: 9cqw; height: 5.4cqw; }
+.build .photo img { height: 31cqw; }
 .closing { font-weight: 700; }
 
 /* module head: drawing or icon beside the name; steps on card 6 carry a Viam line under the box */
 .mod-head { display: flex; align-items: center; gap: var(--s1); min-width: 0; }
-.mod-head .sample { width: 6cqw; height: 3.6cqw; flex: none; }
-.icon { width: 4cqw; height: 4cqw; flex: none; display: block; }
+.mod-head .sample { width: 8cqw; height: 4.8cqw; flex: none; }
+.icon { width: 5cqw; height: 5cqw; flex: none; display: block; }
 .mods.four .mod .body { line-height: 1.25; }
 .mod.own { position: relative; }
 .pill.next { position: absolute; top: calc(-1 * var(--s1)); right: var(--s2); padding: .2cqw .8cqw; background: var(--yellow); }
@@ -151,7 +156,9 @@ ul, ol { padding: 0; list-style: none; }
 /* entrance: everything inside the frame pops in, in reading order, when a card becomes active */
 @keyframes pop { from { opacity: 0; transform: translateY(1cqw) scale(.92); } 70% { opacity: 1; transform: translateY(0) scale(1.02); } to { opacity: 1; transform: none; } }
 .card.active :is(.kicker, .wordmark, .split .words > :not(.line), .split .figure, .triptych .module, .modules .lead, .modules .mods > *, .modules .closing, .foot > *) {
-  animation: pop .45s cubic-bezier(.2, .7, .3, 1) both; animation-delay: calc(var(--i, 2) * 80ms); }
+  animation: pop calc(.45s / var(--speed, 1)) cubic-bezier(.2, .7, .3, 1) both;
+  animation-delay: calc(var(--i, 2) * var(--stagger, 80ms) / var(--speed, 1)); }
+.stage.playing { --stagger: 320ms; }   /* autoplay reveals the objects one by one */
 .card.active .kicker { --i: 0; }
 .card.active .wordmark { --i: 1; }
 .card.active :is(.split .words > :nth-child(1), .triptych .m1, .modules .lead) { --i: 2; }
@@ -162,6 +169,14 @@ ul, ol { padding: 0; list-style: none; }
 .card.active .modules .viams > * { --i: 7; }
 .card.active :is(.modules .closing, .foot > *) { --i: 7; }
 @media (prefers-reduced-motion: reduce) { .card.active * { animation: none !important; } }
+
+/* playbar: Play and speed, a pill pair straddling the frame's bottom-right corner (P also toggles play) */
+.playbar { position: absolute; right: calc(var(--frame-inset) + 1cqw); bottom: calc(var(--frame-inset) - 1.4cqw); z-index: 5;
+           display: flex; align-items: center; gap: .6cqw; opacity: .6; transition: opacity .2s; }
+.playbar:hover, .stage.playing .playbar { opacity: 1; }
+.playbar .pill { padding: 0 .9cqw; line-height: 1.35; cursor: pointer; white-space: nowrap; }
+.playbar button { font-family: inherit; font-weight: inherit; }
+.playbar select { font: inherit; border: 0; background: transparent; color: inherit; cursor: pointer; }
 
 /* developer mode (press D), from ~/.claude/rules/common/preview-dev-mode.md */
 body.dev [data-el]{outline:1px dashed rgba(39,67,227,.4);outline-offset:-1px;}

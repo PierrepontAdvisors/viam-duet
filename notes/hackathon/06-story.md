@@ -31,13 +31,13 @@ No deck change needed. The story is spoken.
 
 > This is a real turn from last night. Someone drew this. Claude looked at it and said:
 >
-> *[read the bubble, or let them read it]* "A big bold amoeba-like creature with loops and eye-holes sprawls across the board. I'll add a small green spiral accent inside the lower loop body to give the creature a pulsing core."
+> *[read the bubble, or let them read it]* "A crowded world of creatures, flowers and dancing figures. A small green dancing figure in the open lower-right space to balance the crowd."
 >
 > Eight seconds to look and decide, and then the arm drew this.
 
 **Card 4. Co-creation.**
 
-> Six exchanges later, this is what came out. Two artists, and one of them was a robot. Everyone who sits down leaves with a piece they made with a partner.
+> Ten exchanges later, this is what came out. Two artists, and one of them was a robot. Everyone who sits down leaves with a piece they made with a partner.
 
 **Card 5. Learning.**
 

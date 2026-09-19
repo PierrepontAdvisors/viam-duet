@@ -8,6 +8,8 @@ Open it (offline is fine; the font is embedded):
 
 Keys: Right, space, or a click on the right two thirds advances; Left or a click on the left third goes back;
 1 to 7 jump; Home and End; F fullscreen; D developer mode (hover shows an element's name, click copies it).
+P, or the Play pill at the bottom right, loops the deck on its own (every reveal, then every card, 6 s a card at 1x,
+12 s on the flipbook); the Speed dropdown runs it at 0.5x to 2x and paces the pop-in of each object to match.
 Card 1 reveals three lines before it advances. Card 7 stays on screen during the demo.
 
 Images: `python3 docs/duet/pitch/gen_images.py` regenerates any missing plate or hero with Nano Banana 2
