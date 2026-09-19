@@ -159,7 +159,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
 
   // ---- keys and developer mode ----
   document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea, select')) return;
+    if (e.target instanceof Element && e.target.matches('input, textarea, select')) return;
     if (e.key === 'ArrowLeft') { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); }
     else if (e.key === 'ArrowRight') { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); }
     else if (e.key === ' ') { e.preventDefault(); togglePlay(); }

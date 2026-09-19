@@ -5,6 +5,7 @@ import { Viewer } from './viewer.js';
 import { initUI } from './ui.js';
 import { GhostPen } from './preview.js';
 import { Sound } from './audio.js';
+import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js';
 
 const $ = (id) => document.getElementById(id);
 export const app = {
@@ -83,3 +84,19 @@ export function boot() {
 }
 
 boot();
+
+/** `?selftest=1`: the geometry against the served calibration, reported in the console. */
+async function selftest() {
+  const ok = (name, pass) => console.log(`%c${pass ? 'PASS' : 'FAIL'}%c ${name}`, `color:${pass ? '#1b8f3a' : '#c62828'};font-weight:700`, '');
+  const calib = await (await fetch('/calibration.json')).json();
+  const quad = boardOrder(calib.marks_image, calib.board_tl_index);
+  const corners = [[0, 0], [BOARD_MM[0], 0], [BOARD_MM[0], BOARD_MM[1]], [0, BOARD_MM[1]]];
+  const h = homography(corners, quad);
+  ok('calibration corners map to the SVG corners within 0.5 px',
+     corners.every((c, i) => { const q = applyH(h, c); return Math.hypot(q[0] - quad[i][0], q[1] - quad[i][1]) < 0.5; }));
+  const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  ok('board order: tr is the nearer neighbor of tl (the short edge)', d(quad[0], quad[1]) <= d(quad[0], quad[3]));
+  ok('contain rect is exact for a 16:9 stage', JSON.stringify(containRect(1600, 900, 1280, 720)) === JSON.stringify({ s: 1.25, ox: 0, oy: 0 }));
+  ok('contain rect is exact for a 4:3 stage', JSON.stringify(containRect(1280, 960, 1280, 720)) === JSON.stringify({ s: 1, ox: 0, oy: 120 }));
+}
+if (new URLSearchParams(location.search).get('selftest') === '1') selftest();

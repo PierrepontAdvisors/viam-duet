@@ -1,6 +1,6 @@
 # Duet page: design
 
-Date: 2026-09-18 (evening of day 1). Status: approved in brainstorming with the visual companion, ready for an implementation plan. Branch `feat/duet-page`, worked in the linked worktree `.worktrees/duet-page`. Parent spec: `docs/superpowers/specs/2026-09-18-duet-design.md`, sections 9 and 15. This document replaces plan 3's page markup (task 3, step 4) and keeps its protocol. The interactive mockup that was approved is reproducible from `docs/duet/mockups/` (see section 12).
+Date: 2026-09-18 (evening of day 1). Status: approved in brainstorming with the visual companion; implemented on `feat/duet-page` (plan 5); awaiting integration with the backend's `web.py`. Branch `feat/duet-page`, worked in the linked worktree `.worktrees/duet-page`. Parent spec: `docs/superpowers/specs/2026-09-18-duet-design.md`, sections 9 and 15. This document replaces plan 3's page markup (task 3, step 4) and keeps its protocol. The interactive mockup that was approved is reproducible from `docs/duet/mockups/` (see section 12).
 
 ## 1. Summary and decisions
 
