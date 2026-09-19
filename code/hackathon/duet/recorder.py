@@ -27,6 +27,7 @@ class Recorder:
         self.photos: list[Path] = []
         self.frames: list[Path] = []
         self.latest_frame: Path | None = None
+        self._claimed = False
         self.meta: dict = {"id": self.id, "started": self.id, "turn": 0, "last_photo": None,
                            "history": [], "turns": [], **(settings or {})}
 
@@ -80,8 +81,9 @@ class Recorder:
             owner = json.loads(current.read_text())["id"]
         except (OSError, ValueError, KeyError):
             owner = None
-        if owner is None or owner == self.id:
+        if not self._claimed or owner in (None, self.id):
             current.write_text(text)
+            self._claimed = True
         return path
 
     @property
@@ -112,7 +114,7 @@ class Recorder:
                             "-frames:v", str(total_frames),
                             "-c:v", "libx264", "-movflags", "+faststart", str(out)],
                            check=True, capture_output=True, text=True)
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+        except (subprocess.CalledProcessError, OSError) as exc:
             print(f"stitch failed, keeping the stills: {(getattr(exc, 'stderr', '') or str(exc)).strip()[:400]}")
             return None
         listing.unlink(missing_ok=True)

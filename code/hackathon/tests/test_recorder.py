@@ -1,4 +1,5 @@
 import json
+import os
 
 import numpy as np
 import pytest
@@ -78,12 +79,15 @@ def test_stitch_honors_custom_frame_and_hold_durations(tmp_path):
     assert abs(video_duration_s(out) - 2.5) < 0.15
 
 
-def test_stitch_failure_is_swallowed_and_a_write_failure_raises(tmp_path, monkeypatch):
+def test_stitch_failure_is_swallowed(tmp_path, monkeypatch):
     rec = Recorder("boom", root=tmp_path)
     rec.save_photo(0, "start", frame(240))
     monkeypatch.setattr(recorder, "FFMPEG", "/nonexistent/ffmpeg")
     assert rec.stitch() is None
 
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores the mode")
+def test_save_photo_into_a_read_only_dir_raises(tmp_path):
     ro = Recorder("ro", root=tmp_path)
     ro.dir.chmod(0o500)
     try:
@@ -91,3 +95,12 @@ def test_stitch_failure_is_swallowed_and_a_write_failure_raises(tmp_path, monkey
             ro.save_photo(0, "start", frame(240))
     finally:
         ro.dir.chmod(0o700)
+
+
+def test_current_json_follows_the_newest_session(tmp_path):
+    a = Recorder("a", root=tmp_path)
+    a.write()
+    b = Recorder("b", root=tmp_path)
+    b.write()
+    a.write()  # a's finally, after b has taken over
+    assert json.loads((tmp_path / "current.json").read_text())["id"] == "b"
