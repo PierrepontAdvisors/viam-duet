@@ -22,6 +22,7 @@ ARTISTS = ("abstract", "haring", "mondrian", "vangogh")
 STYLERS = {"abstract": abstract, "haring": haring, "mondrian": mondrian, "vangogh": vangogh}
 # Where Resume picks up after a fault. `interpret` and `plan` retry themselves: the visitor's strokes
 # are already consumed, so sending them back to `human_turn` would ask for the mark to be drawn again.
+RECOVER_TIMEOUT_S = 45.0      # a recover that hangs on a dropped connection must not hold the loop forever
 RETRY_AFTER_FAULT = {"start": "start", "look": "look", "human_turn": "human_turn", "capture": "human_turn",
                      "interpret": "interpret", "plan": "plan", "robot_draw": "look", "finish": "finish"}
 HAND_WAIT_S = 30
@@ -241,7 +242,12 @@ class Session:
                         self._set("paused")
                     await self._running.wait()
                     try:
-                        await self.ctl.recover()
+                        await asyncio.wait_for(self.ctl.recover(), RECOVER_TIMEOUT_S)
+                    except asyncio.TimeoutError:
+                        self.last_error = "recover timed out: the machine connection may have dropped; press Resume again"
+                        self.bus.emit("error", message=self.last_error)
+                        self._running.clear()
+                        continue
                     except Exception as exc:
                         self.last_error = f"recover failed: {type(exc).__name__}: {exc}"
                         self.bus.emit("error", message=self.last_error)

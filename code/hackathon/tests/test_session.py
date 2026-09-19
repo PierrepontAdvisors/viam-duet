@@ -245,3 +245,28 @@ def test_a_hand_in_the_capture_does_not_become_the_reference(tmp_path, look_fram
         return s, drain(q)
     s, events = asyncio.run(scenario())
     assert any(e["type"] == "error" and "reference" in e["message"] for e in events)
+
+
+def test_a_hung_recover_times_out_and_stays_paused(tmp_path, look_frame, exchange_start, calibration, monkeypatch):
+    from duet import session as session_mod
+    monkeypatch.setattr(session_mod, "RECOVER_TIMEOUT_S", 0.2)
+
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+
+        async def hang():
+            ctl.calls.append(("recover",))
+            await asyncio.sleep(10)
+        ctl.recover = hang
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        await s.pause()
+        await until_state(s, "paused")
+        s.resume()
+        await asyncio.sleep(0.6)
+        state, err = s.state, s.last_error
+        await cancel(task)
+        return state, err, drain(q)
+    state, err, events = asyncio.run(scenario())
+    assert state == "paused" and "recover timed out" in err
+    assert any(e["type"] == "error" and "recover timed out" in e["message"] for e in events)
