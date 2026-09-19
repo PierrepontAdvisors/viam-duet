@@ -780,10 +780,16 @@ import json
 
 import numpy as np
 
-from duet.recorder import Recorder, video_duration_s
+from duet.recorder import Recorder, video_duration_s, video_size
 
 
 def frame(shade):
+    """A portrait board photo, like the warped 704 x 960 boards."""
+    return np.full((128, 96, 3), shade, np.uint8)
+
+
+def raw(shade):
+    """A landscape camera frame, like the 1280 x 720 look-pose frames."""
     return np.full((96, 128, 3), shade, np.uint8)
 
 
@@ -818,6 +824,19 @@ def test_stitch_makes_a_video_one_second_per_turn_with_the_last_held(tmp_path):
 
 def test_stitch_with_no_photos_is_none(tmp_path):
     assert Recorder("empty", root=tmp_path).stitch() is None
+
+
+def test_camera_frames_are_saved_beside_the_photos_and_make_a_landscape_video(tmp_path):
+    rec = Recorder("fr", root=tmp_path)
+    for i, shade in enumerate((240, 200, 160)):
+        rec.save_photo(i, "robot", frame(shade), frame=raw(shade))
+    assert (tmp_path / "fr" / "turn-01-robot-frame.jpg").exists()
+    assert rec.latest_frame.name == "turn-02-robot-frame.jpg" and rec.latest_photo.name == "turn-02-robot.jpg"
+    out = rec.stitch()
+    assert video_size(out) == (128, 96)                    # the landscape frames, not the portrait photos
+    assert abs(video_duration_s(out) - 4.0) < 0.35
+    rec.save_photo(3, "final", frame(120))                  # a turn without a frame: the stitch falls back to photos
+    assert rec.latest_frame is None and video_size(rec.stitch()) == (96, 128)
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -856,14 +875,24 @@ class Recorder:
         self.dir = root / self.id
         self.dir.mkdir(parents=True, exist_ok=True)
         self.photos: list[Path] = []
+        self.frames: list[Path] = []
+        self.latest_frame: Path | None = None
         self.meta: dict = {"id": self.id, "started": self.id, "turn": 0, "last_photo": None,
                            "history": [], "turns": [], **(settings or {})}
 
-    def save_photo(self, turn: int, who: str, bgr: np.ndarray) -> Path:
+    def save_photo(self, turn: int, who: str, bgr: np.ndarray, frame: np.ndarray | None = None) -> Path:
+        """The warped board photo and, when given, the raw landscape camera frame beside it as
+        `turn-NN-<who>-frame.jpg`. The page and the video prefer the frame: it has no seam at the board edge."""
         path = self.dir / f"turn-{turn:02d}-{who}.jpg"
         cv2.imwrite(str(path), bgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
         self.photos.append(path)
         self.meta["last_photo"] = path.name
+        self.latest_frame = None
+        if frame is not None:
+            fpath = self.dir / f"turn-{turn:02d}-{who}-frame.jpg"
+            cv2.imwrite(str(fpath), frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            self.frames.append(fpath)
+            self.latest_frame = fpath
         return path
 
     def save_svg(self, turn: int, svg_text: str) -> Path:
@@ -902,15 +931,17 @@ class Recorder:
         return self.photos[-1] if self.photos else None
 
     def stitch(self, per_frame_s: float = 1.0, hold_last_s: float = 2.0) -> Path | None:
-        """One frame per turn photo, the last one held. The concat demuxer only honors the final
-        duration when the last file is listed once more after it."""
-        if not self.photos:
+        """One frame per turn, the last one held. Uses the landscape camera frames when every turn
+        has one, else the warped photos. The concat demuxer only honors the final duration when the
+        last file is listed once more after it."""
+        sources = self.frames if self.frames and len(self.frames) == len(self.photos) else self.photos
+        if not sources:
             return None
         listing = self.dir / "frames.txt"
         lines: list[str] = []
-        for p in self.photos[:-1]:
+        for p in sources[:-1]:
             lines += [f"file '{p.resolve()}'", f"duration {per_frame_s}"]
-        last = self.photos[-1].resolve()
+        last = sources[-1].resolve()
         lines += [f"file '{last}'", f"duration {hold_last_s}", f"file '{last}'"]
         listing.write_text("\n".join(lines) + "\n")
         out = self.dir / "session.mp4"
@@ -924,12 +955,20 @@ def video_duration_s(path: Path) -> float:
     out = subprocess.run([FFPROBE, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
                          check=True, capture_output=True, text=True)
     return float(out.stdout.strip())
+
+
+def video_size(path: Path) -> tuple[int, int]:
+    """(width, height) of the first video stream."""
+    out = subprocess.run([FFPROBE, "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+                          "-of", "csv=p=0", str(path)], check=True, capture_output=True, text=True)
+    w, h = out.stdout.strip().split(",")[:2]
+    return int(w), int(h)
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_recorder.py -q`
-Expected: `3 passed`. If the duration is off by a whole second, ffmpeg 9's concat handling changed: try dropping the repeated last-file line and re-measure; keep whichever gives 4 s.
+Expected: `4 passed`. If the duration is off by a whole second, ffmpeg 9's concat handling changed: try dropping the repeated last-file line and re-measure; keep whichever gives 4 s.
 
 - [ ] **Step 5: Commit**
 
@@ -943,9 +982,26 @@ git commit -m "feat: session recorder in turn.py's layout with an ffmpeg stitch"
 ### Task 4: Fakes and the session loop
 
 **Files:**
+- Modify: `code/hackathon/duet/claude_turn.py` (one field on `Proposal`, one sentence in the prompt; nothing else)
 - Create: `code/hackathon/duet/fakes.py`
 - Create: `code/hackathon/duet/session.py`
 - Test: `code/hackathon/tests/test_session.py`
+
+- [ ] **Step 0: Give the proposal a `quip`**
+
+The page's visitor view shows Claude's few words in a speech bubble; the full `sees`/`adds` stay on the operator view. In `code/hackathon/duet/claude_turn.py` change the import `from pydantic import BaseModel` to `from pydantic import BaseModel, Field`, and add one field to `Proposal` after `adds`:
+
+```python
+    quip: str = Field(description="a few warm, encouraging words to the person, under eight words, no coordinates")
+```
+
+and append this sentence to the `SYSTEM` prompt's paragraph that begins "Your job each turn" (right after "then give the strokes as data."):
+
+```
+Also give a quip: a few warm, encouraging words to the person, under eight words, no coordinates.
+```
+
+`python -m pytest tests/test_planner_haring.py -q` must still pass (it does not build a Proposal). The `turn.py` terminal loop ignores the field. `Proposal(...)` constructions in the fakes below include `quip`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1016,14 +1072,19 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
     assert s.states_seen == ["look", "human_turn", "capture", "interpret", "plan", "robot_draw", "look", "finish", "finished"]
     kinds = [c[0] for c in ctl.calls]
     assert kinds[0] == "go_look" and kinds.count("draw") == 2       # the plan, then the signature
-    for name in ("turn-00-start.jpg", "turn-01-human.jpg", "turn-01-robot.jpg", "turn-01-final.jpg", "plan-01.svg", "session.mp4"):
+    for name in ("turn-00-start.jpg", "turn-00-start-frame.jpg", "turn-01-human.jpg", "turn-01-human-frame.jpg",
+                 "turn-01-robot.jpg", "turn-01-final.jpg", "turn-01-final-frame.jpg", "plan-01.svg", "session.mp4"):
         assert (rec.dir / name).exists(), name
+    shot = next(e for e in events if e["type"] == "shot")
+    assert shot["who"] == "start" and shot["frame_url"].endswith("turn-00-start-frame.jpg")
     meta = json.loads((rec.dir / "session.json").read_text())
     assert meta["turn"] == 1 and meta["exchanges"] == 1 and meta["history"][0]["source"] == "claude"
     assert meta["history"][0]["sees"].startswith("A creature")
     types = [e["type"] for e in events]
     for t in ("state", "human", "interpretation", "plan", "progress", "shot", "video"):
         assert t in types, t
+    interp = next(e for e in events if e["type"] == "interpretation")
+    assert interp["quip"] == "What a creature! Here comes the sun." and interp["source"] == "claude"
     human = next(e for e in events if e["type"] == "human")
     assert 10 <= len(human["new"]) <= 16
     xs = [x for pl in human["new"] for x, _ in pl]
@@ -1287,11 +1348,12 @@ class FakeBrain:
         lo, hi_x, hi_y = cfg.INSET_MM + 10, cfg.BOARD_W_MM - cfg.INSET_MM - 10, cfg.BOARD_H_MM - cfg.INSET_MM - 10
         if self.n % 2:
             p = Proposal(sees="A creature sprawls across the board, looking up.", adds="A sun above it, to give the scene a sky.",
-                         color="green", strokes=[_stroke(kind="circle", cx=min(max(cx, lo + 14), hi_x - 14),
-                                                          cy=max(lo + 14, top - 32), r=12.0)])
+                         quip="What a creature! Here comes the sun.", color="green",
+                         strokes=[_stroke(kind="circle", cx=min(max(cx, lo + 14), hi_x - 14), cy=max(lo + 14, top - 32), r=12.0)])
         else:
             y = min(hi_y, bottom + 25)
-            p = Proposal(sees="The scene has a sun now.", adds="A ground line under the creature.", color="green",
+            p = Proposal(sees="The scene has a sun now.", adds="A ground line under the creature.",
+                         quip="Let's give it ground to stand on.", color="green",
                          strokes=[_stroke(kind="polyline", points=[Pt(x=lo, y=y), Pt(x=hi_x, y=y)])])
         return TurnResult(p, "claude", self.latency_s, None)
 ```
@@ -1325,6 +1387,7 @@ RETRY_AFTER_FAULT = {"look": "look", "human_turn": "human_turn", "capture": "hum
                      "plan": "human_turn", "robot_draw": "look", "finish": "look"}
 HAND_WAIT_S = 30
 SETTLE_AFTER_LOOK_S = 0.8      # the camera image settles after the arm stops, as in duet.turn
+FALLBACK_QUIP = "Lost my words. Drawing anyway!"   # the speech bubble when Claude did not answer
 
 
 @dataclass(frozen=True)
@@ -1499,10 +1562,13 @@ class Session:
         self.emit_state()
 
     def _emit_shot(self, who: str) -> None:
-        """`who` is "start", "human", "robot" or "final", so the page can label thumbnails without parsing the URL."""
+        """`who` is "start", "human", "robot" or "final", so the page can label thumbnails without parsing
+        the URL. `frame_url` is the raw landscape camera frame of the same capture, when one was saved."""
         p = self.rec.latest_photo
         if p is not None:
-            self.bus.emit("shot", url=f"/sessions/{self.rec.id}/{p.name}", turn=self.turn, who=who)
+            f = self.rec.latest_frame
+            self.bus.emit("shot", url=f"/sessions/{self.rec.id}/{p.name}", turn=self.turn, who=who,
+                          frame_url=f"/sessions/{self.rec.id}/{f.name}" if f is not None else None)
 
     def _set_look(self, value: bool) -> None:
         self.at_look = value
@@ -1515,8 +1581,8 @@ class Session:
             self._set("look")
             await self.ctl.go_look()
             self._set_look(True)
-            self.previous_photo = await self._capture_board()
-            self.rec.save_photo(0, "start", self.previous_photo)
+            self.previous_photo, frame = await self._capture_board()
+            self.rec.save_photo(0, "start", self.previous_photo, frame)
             self._emit_shot("start")
             self._set("human_turn")
             while self.state != "finished":
@@ -1585,9 +1651,9 @@ class Session:
                 return "capture"
             self.bus.emit("dock", slots=self.dock_status, reseat=list(event.slots) if event.kind == "reseat" else [])
 
-    async def _capture_board(self) -> np.ndarray:
-        """A median capture at the look pose, warped to the board. Also refreshes the hand guard's
-        reference frame, since the arm is at the look pose and nobody is drawing."""
+    async def _capture_board(self) -> tuple[np.ndarray, np.ndarray]:
+        """A median capture at the look pose: the warped board and the raw frame it came from. Also
+        refreshes the hand guard's reference frame, since the arm is at the look pose and nobody is drawing."""
         await asyncio.sleep(SETTLE_AFTER_LOOK_S if self.poll_s >= 0.1 else 0.0)
         frame = await self.frames.capture_median()
         quad = vision.find_corner_marks(frame, expected=self.cal["marks_image"])
@@ -1596,13 +1662,13 @@ class Session:
             self.bus.emit("error", message=f"board shifted {drift * self._mm_per_px():.0f} mm since calibration; re-run calibrate")
         if self.guard is not None:
             self.guard.reference = frame
-        return vision.warp_to_board(frame, vision.board_quad(quad, self.cal["board_tl_index"]))
+        return vision.warp_to_board(frame, vision.board_quad(quad, self.cal["board_tl_index"])), frame
 
     def _mm_per_px(self) -> float:
         return float(self.cal.get("mm_per_px") or vision.mm_per_px(np.array(self.cal["marks_image"], np.float32)))
 
     async def _state_capture(self) -> str:
-        photo = await self._capture_board()
+        photo, frame = await self._capture_board()
         mask, coverage = vision.new_ink(photo, self.previous_photo)
         new_cam = vision.trace(mask)
         if not new_cam:
@@ -1613,7 +1679,7 @@ class Session:
         self.human_ink = self.human_ink + self.human_new
         self.coverage = coverage
         self.previous_photo = photo
-        self.rec.save_photo(self.turn + 1, "human", photo)
+        self.rec.save_photo(self.turn + 1, "human", photo, frame)
         self._emit_shot("human")
         self.bus.emit("human", polylines=self.human_ink, new=self.human_new, found=True)
         return "interpret"
@@ -1623,6 +1689,7 @@ class Session:
                                                self.settings.length, self.turn + 1, self.settings.exchanges)
         p = self.result.proposal
         self.bus.emit("interpretation", sees=p.sees if p else "", adds=p.adds if p else "",
+                      quip=(getattr(p, "quip", "") or FALLBACK_QUIP) if p else FALLBACK_QUIP,
                       source=self.result.source, latency_s=round(self.result.latency_s, 2), error=self.result.error)
         return "plan"
 
@@ -1695,10 +1762,10 @@ class Session:
         await self.ctl.go_look()
         self._set_look(True)
         self.turn += 1
-        photo = await self._capture_board()
+        photo, frame = await self._capture_board()
         _, self.coverage = vision.new_ink(photo, self.previous_photo)
         self.previous_photo = photo
-        self.rec.save_photo(self.turn, "robot", photo)
+        self.rec.save_photo(self.turn, "robot", photo, frame)
         self._emit_shot("robot")
         self.rec.record_turn(self.turn, coverage=round(self.coverage, 3))
         self.rec.set_turn(self.turn)
@@ -1715,9 +1782,9 @@ class Session:
         self.robot_ink = self.robot_ink + signature
         await self.ctl.go_look()
         self._set_look(True)
-        photo = await self._capture_board()
+        photo, frame = await self._capture_board()
         self.previous_photo = photo
-        self.rec.save_photo(self.turn, "final", photo)
+        self.rec.save_photo(self.turn, "final", photo, frame)
         self._emit_shot("final")
         self.rec.write()
         video = await asyncio.to_thread(self.rec.stitch)
@@ -2026,6 +2093,7 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
   section { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
   section h2 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: #666; }
   img, video, svg { display: block; width: 100%; border-radius: 8px; background: #eee; }
+  .quip { font-size: 15px; font-style: italic; color: var(--green); margin: 0 0 8px; }
   .sees { font-size: 20px; font-weight: 600; margin: 0 0 6px; }
   .adds { font-size: 17px; margin: 0; }
   .source { margin-top: 8px; font-size: 12px; color: #666; }
@@ -2066,6 +2134,7 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
   </section>
   <section data-el="interpretation panel">
     <h2>Claude</h2>
+    <p class="quip" id="quip" data-el="quip bubble"></p>
     <p class="sees" id="sees" data-el="sees sentence">Waiting for the first mark.</p>
     <p class="adds" id="adds" data-el="adds sentence"></p>
     <div class="source" id="source" data-el="interpretation source"></div>
@@ -2192,6 +2261,7 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
         S.progress = m.stroke; drawPlan();
         break;
       case 'interpretation':
+        $('quip').textContent = m.quip || '';
         $('sees').textContent = m.sees || (m.source === 'fallback' ? 'Claude was unavailable this turn.' : '');
         $('adds').textContent = m.adds || '';
         $('source').textContent = m.source === 'claude' ? ('Claude, ' + m.latency_s + ' s') : ('Fallback grammar: ' + (m.error || ''));
