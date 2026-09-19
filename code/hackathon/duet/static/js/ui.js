@@ -135,7 +135,6 @@ export function initUI(app, { sendSet, sendCommand, on }) {
       for (const b of $('artist-seg').children) b.disabled = !st.artists.includes(b.dataset.v);
       $('ex').textContent = st.exchanges;
       $('pause').textContent = st.state === 'paused' ? 'Resume' : 'Pause'; $('pause').classList.toggle('on', st.state === 'paused');
-      $('pass').classList.toggle('hidden', st.handoff !== 'held');
       if (document.activeElement !== dir) { dir.value = Math.round(st.direction); showDir(); }
       if (document.activeElement !== energy) { energy.value = Math.round(st.energy * 100); showEnergy(); }
     }
