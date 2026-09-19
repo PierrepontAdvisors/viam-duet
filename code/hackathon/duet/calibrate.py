@@ -166,12 +166,14 @@ def main(argv: list[str]) -> None:
     if letter not in LABELS:
         raise SystemExit("--tl needs A, B, C, or D")
     k = LABELS.index(letter)
-    save_calibration({
+    cal = load_calibration()        # a merge: cam_to_robot, plane, the regions and the dots survive a re-detection
+    cal.update({
         "marks_image": [[float(x), float(y)] for x, y in quad],
         "board_tl_index": k,
         "px_per_mm": vision.PX_PER_MM,
         "board_mm": [cfg.BOARD_W_MM, cfg.BOARD_H_MM],
     })
+    save_calibration(cal)
     board = vision.warp_to_board(frame, vision.board_quad(quad, k))
     cv2.imwrite(str(CAPTURES / "calib_board.jpg"), board)
     print(f"calibration saved to {cfg.CALIBRATION_PATH}; warped board in captures/calib_board.jpg")

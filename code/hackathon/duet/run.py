@@ -21,10 +21,12 @@ import re
 from pathlib import Path
 
 import cv2
+import numpy as np
 import uvicorn
 
 from duet import claude_turn
 from duet import config as cfg
+from duet import vision
 from duet.recorder import Recorder
 from duet.session import EventBus, HandGuard, Session, Settings
 from duet.web import make_app
@@ -37,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--replay", default="20260918-190258", help="with --fake: the session folder whose boards are replayed")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--host", default="127.0.0.1", help="the page accepts arm commands from any client, so stay on loopback unless a second screen needs it")
+    p.add_argument("--artist", choices=("haring", "mondrian", "vangogh"), default="haring")
     p.add_argument("--length", choices=tuple(cfg.BUDGET_MM), default="short")
     p.add_argument("--exchanges", type=int, default=5)
     p.add_argument("--handoff", choices=("held", "dock"), default="held" if cfg.HELD_MODE else "dock")
@@ -61,8 +64,9 @@ class ClaudeBrain:
     def __init__(self):
         self.client = claude_turn.make_client()
 
-    async def propose(self, board, human_cam, history, length, exchange, total):
-        return await asyncio.to_thread(claude_turn.propose, self.client, board, human_cam, history, length, exchange, total)
+    async def propose(self, board, human_cam, history, length, exchange, total, artist="haring"):
+        return await asyncio.to_thread(claude_turn.propose, self.client, board, human_cam, history, length,
+                                       exchange, total, artist)
 
 
 class QuietShutdownCancels(logging.Filter):
@@ -131,7 +135,7 @@ async def fake_visitor(bus: EventBus, frames, humans: list[Path]) -> None:
 
 async def main(args: argparse.Namespace) -> None:
     cal = json.loads(cfg.CALIBRATION_PATH.read_text())
-    settings = Settings(length=args.length, exchanges=args.exchanges, handoff=args.handoff)
+    settings = Settings(artist=args.artist, length=args.length, exchanges=args.exchanges, handoff=args.handoff)
     bus = EventBus()
     rec = Recorder(settings=settings.record())
     machine = frames = ctl = None
@@ -159,6 +163,7 @@ async def main(args: argparse.Namespace) -> None:
         await frames.start()
         ctl = Controller(machine, poses, board)
         ctl.held_mode = args.handoff == "held"
+    vision.trace(np.zeros((8, 8), np.uint8))   # skan's first import costs 1.5 s; pay it before the first exchange
     guard = HandGuard(frames, cal)
     session = Session(settings, frames, ctl, brain, rec, bus, cal, guard=guard)
     app = make_app(session, frames, bus, calibration=cal)

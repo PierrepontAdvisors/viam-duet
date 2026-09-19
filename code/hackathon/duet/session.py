@@ -26,6 +26,7 @@ STYLERS = {"haring": haring, "mondrian": mondrian, "vangogh": vangogh}
 RETRY_AFTER_FAULT = {"start": "start", "look": "look", "human_turn": "human_turn", "capture": "human_turn",
                      "interpret": "interpret", "plan": "plan", "robot_draw": "look", "finish": "finish"}
 HAND_WAIT_S = 30
+HAND_WAIT_MESSAGE_S = 5        # how often the "still waiting" line is repeated while the arm is held back
 SETTLE_AFTER_LOOK_S = 0.8      # the camera image settles after the arm stops, as in duet.turn
 FALLBACK_QUIP = "Lost my words. Drawing anyway!"   # the speech bubble when Claude did not answer
 FALLBACK_THOUGHT = "Hmm... my words got lost."       # the thought cloud when Claude did not answer
@@ -178,6 +179,7 @@ class Session:
     # ---- controls, called from the page ------------------------------------------------------
     def update_settings(self, **changes) -> Settings:
         self.settings = replace(self.settings, **changes).check()
+        self.ctl.held_mode = self.settings.handoff == "held"    # the arm must not reach for a dock it is not using
         self.rec.update(**self.settings.record())
         self.emit_state()
         return self.settings
@@ -203,7 +205,8 @@ class Session:
         guard = "off" if self.guard is None else f"{self.guard.mode} at the look pose"
         self.bus.emit("state", state=self.state, turn=self.turn, coverage=round(self.coverage, 3),
                       error=self.last_error, at_look=self.at_look, hand_guard=guard, session=self.rec.id,
-                      artists=list(ARTISTS), **asdict(self.settings))
+                      artists=list(ARTISTS), camera_errors=getattr(self.frames, "errors", 0),
+                      camera_error=getattr(self.frames, "last_error", None), **asdict(self.settings))
 
     def _set(self, state: str) -> None:
         self.state = state
@@ -355,7 +358,8 @@ class Session:
 
     async def _state_interpret(self) -> str:
         self.result = await self.brain.propose(self.previous_photo, self.human_new_cam, self.history,
-                                               self.settings.length, self.turn + 1, self.settings.exchanges)
+                                               self.settings.length, self.turn + 1, self.settings.exchanges,
+                                               artist=self.settings.artist)
         p = self.result.proposal
         self.bus.emit("interpretation", sees=p.sees if p else "", adds=p.adds if p else "",
                       thought=(getattr(p, "thought", "") or FALLBACK_THOUGHT) if p else FALLBACK_THOUGHT,
@@ -400,10 +404,13 @@ class Session:
         """Right before the arm leaves the look pose: wait for the hand to go, then mark the guard
         blind until the next go_look (the wrist camera no longer sees the board it was checked against)."""
         if self.guard is not None:
-            for _ in range(HAND_WAIT_S):
-                if not await self.guard():
+            for second in range(HAND_WAIT_S):
+                blind = self.frames.latest() is None       # no frame at all reads as a hand; say which it is
+                if not blind and not await self.guard():
                     break
-                self.bus.emit("error", message="hand over the board or dock: waiting before the arm moves")
+                if second % HAND_WAIT_MESSAGE_S == 0:      # the same line every second is noise on the page
+                    self.bus.emit("error", message="no camera frame for the hand check; waiting" if blind else
+                                  "hand over the board or dock: waiting before the arm moves")
                 await asyncio.sleep(1.0)
             else:
                 raise Blocked("hand over the board or dock for 30 s")

@@ -86,7 +86,8 @@ def validate(strokes: list[dict], existing_ink: list[Polyline], budget_mm: float
 
 def finalize(styled: list[Polyline], existing_ink: list[Polyline], budget_mm: float,
              clearance_mm: float = cfg.CLEARANCE_MM, min_piece_mm: float = 3.0) -> list[Polyline]:
-    """The last gate before the arm: styling adds passes and ticks, so clear them from existing ink
-    again, drop crumbs, and cut to the budget."""
-    clear = [p for p in keep_clear(styled, existing_ink, clearance_mm) if length(p) >= min_piece_mm]
+    """The last gate before the arm: styling adds passes and ticks after `validate` clipped, so clip
+    to the drawable area again first, then clear them from existing ink, drop crumbs, and cut to the budget."""
+    clipped = [p for pl in styled for p in clip_to(pl, drawable_area())]
+    clear = [p for p in keep_clear(clipped, existing_ink, clearance_mm) if length(p) >= min_piece_mm]
     return cut_to_budget(clear, budget_mm)

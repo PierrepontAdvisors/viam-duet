@@ -161,7 +161,7 @@ def test_pause_and_resume_recover_the_arm(tmp_path, look_frame, exchange_start, 
 
 def test_a_fault_in_the_brain_pauses_with_the_error_on_the_bus(tmp_path, look_frame, exchange_start, exchange_human, calibration):
     class BrokenBrain:
-        async def propose(self, board, human_cam, history, length, exchange, total):
+        async def propose(self, board, human_cam, history, length, exchange, total, artist="haring"):
             raise RuntimeError("no network")
 
     async def scenario():
@@ -185,7 +185,7 @@ def test_a_fault_in_the_brain_pauses_with_the_error_on_the_bus(tmp_path, look_fr
 
 
 def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_start, calibration):
-    s, *_ = build(tmp_path, look_frame, exchange_start, calibration)
+    s, frames, ctl, *_ = build(tmp_path, look_frame, exchange_start, calibration)
     with pytest.raises(ValueError):
         s.update_settings(length="huge")
     with pytest.raises(ValueError):
@@ -198,6 +198,10 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
     assert (new.exchanges, new.energy, new.direction) == (4, 0.8, 45)
     state = s.bus.last["state"]
     assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring", "mondrian", "vangogh"]
+    s.update_settings(handoff="dock")                     # the arm's held flag follows the page's Marker toggle
+    assert ctl.held_mode is False
+    s.update_settings(handoff="held")
+    assert ctl.held_mode is True
 
 
 def test_pause_during_the_robot_turn_stops_the_arm_and_resume_finishes(tmp_path, look_frame, exchange_start, exchange_human, calibration):

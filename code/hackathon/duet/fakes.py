@@ -163,13 +163,13 @@ def _stroke(**fields) -> Stroke:
 
 class FakeBrain:
     """Canned proposals that read the mark's position: a sun above it, then a ground line under it.
-    Same call shape as the real brain: propose(board, human_cam, history, length, exchange, total)."""
+    Same call shape as the real brain: propose(board, human_cam, history, length, exchange, total, artist)."""
 
     def __init__(self, latency_s: float = 0.02):
         self.latency_s = latency_s
         self.n = 0
 
-    async def propose(self, board, human_cam, history, length, exchange, total) -> TurnResult:
+    async def propose(self, board, human_cam, history, length, exchange, total, artist="haring") -> TurnResult:
         await asyncio.sleep(self.latency_s)
         self.n += 1
         xs = [x for pl in human_cam for x, _ in pl] or [cfg.BOARD_W_MM / 2]

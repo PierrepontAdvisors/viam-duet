@@ -45,6 +45,7 @@ def test_page_serves_with_dev_mode_and_data_el_names(tmp_path):
         assert r.status_code == 200 and "<title>Duet" in r.text
         assert 'data-el="' in r.text and "dev-badge" in r.text
         assert "/stream.mjpg" in r.text and "/ws" in r.text
+        assert "m.handoff !== 'held'" not in r.text      # Pass is the operator's escape in both handoff modes
 
 
 def test_ws_sends_the_snapshot_then_takes_commands(tmp_path):
