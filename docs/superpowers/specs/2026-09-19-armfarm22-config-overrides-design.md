@@ -56,7 +56,7 @@ One new component appended to the machine's `components` list, in the same edit 
   },
   "frame": {
     "parent": "world",
-    "translation": { "x": 389, "y": -261.5, "z": -13 },
+    "translation": { "x": 392.5, "y": -260.5, "z": -13 },
     "orientation": { "type": "ov_degrees", "value": { "x": 0, "y": 0, "z": 1, "th": 0 } }
   },
   "ui_folder": { "name": "obstacles" }
@@ -65,12 +65,13 @@ One new component appended to the machine's `components` list, in the same edit 
 
 Where the numbers come from:
 
-- **Position and size** from the three taught corners in `duet/data/poses.json` (`corner.bl`, `corner.tl`, `corner.tr`, gripper-origin poses at pen contact). Center is the midpoint of `bl` and `tr`: x 389.2, y -261.5. The long edge `bl` to `tl` is 239.4 mm at 0.19° from world x; the short edge `tl` to `tr` is 175.7 mm. The box is therefore axis-aligned, 240 by 176 (the nominal `BOARD_H_MM` by `BOARD_W_MM`), rotation 0.
+- **Position** from the three taught corners in `duet/data/poses.json` (`corner.bl`, `corner.tl`, `corner.tr`: gripper-origin poses with the pen tip on the inner corner marks, which sit `INSET_MM` 15 mm inside the board edges). Center is the midpoint of `bl` and `tr`; rotation is the direction of the `bl` to `tl` edge. With the poses on disk at 12:00 on 2026-09-19 (the backend session is re-teaching them, so the file is ahead of git): center x 392.5, y -260.6, edge 208 by 144 mm at -0.14°, so the box is axis-aligned, rotation 0. The committed poses gave x 389, y -261.5 and edges 239 by 176 (taught at the physical corners on day 1); the center barely moves, which is the point of using the midpoint.
+- **Size** is the nominal board, `BOARD_H_MM` 240 along world x by `BOARD_W_MM` 176 along y, not the measured edges: the marks are inset symmetrically, so the center is right either way and the nominal size draws the whole board. The script checks the measured edges against both 240 by 176 and 210 by 146 (nominal minus twice the inset) and warns when neither matches within 10 mm; it still prints the JSON.
 - **Height** is an assumption, not a measurement: the box sits on the configured table top (z -23, the table obstacle's -123 plus half its 200 mm thickness) and is 20 mm thick, so it spans z -23 to -3 and its center is z -13. The two saved depth frames could not confirm this (`captures/depth.dep` was taken at another pose; `captures/look.dep` reads 720 mm through glare on the whiteboard). A centimeter of error changes the picture, not planning.
 - **Planner safety**: the gripper reports two boxes (`case-gripper` 50x100x100 centered 50 mm behind the origin, `claws` 40x170x105 centered 2.5 mm behind it), so the lowest gripper geometry is 50 mm past the gripper origin. At pen contact the origin is at z about 125, which leaves at least 75 mm above world zero and about 78 mm above the board's top. The pen is not modelled, so drawing moves are unaffected. Obstacles do not collide with each other, so the board resting on the table slab is fine.
 - **Module**: `erh:vmodutils` is already on the machine through the obstacles fragment; a machine-level component may use it.
 
-The JSON is produced by a script, not typed: `python -m duet.board_obstacle` reads `duet/data/poses.json` and prints the component above. `duet/config.py` gains two constants, `TABLE_TOP_Z_MM = -23.0` and `BOARD_THICKNESS_MM = 20.0`, next to the board size. The script rounds the translation to 0.5 mm and the box to whole millimeters, and takes the box's rotation from the long edge only when it exceeds 1°, otherwise 0. One unit test in `tests/test_board_obstacle.py` feeds it three synthetic corners and checks center, dims, rotation and the JSON shape. If the board is re-taught, rerun the script and paste again.
+The JSON is produced by a script, not typed: `python -m duet.board_obstacle` reads `duet/data/poses.json` and prints the component above. `duet/config.py` gains two constants, `TABLE_TOP_Z_MM = -23.0` and `BOARD_THICKNESS_MM = 20.0`, next to the board size. The script rounds the translation to 0.5 mm, uses the nominal box, and takes the box's rotation from the `bl` to `tl` edge only when it exceeds 1°, otherwise 0. One unit test in `tests/test_board_obstacle.py` feeds it three synthetic corners and checks center, dims, rotation, the edge warning and the JSON shape. The script runs at execution time, against whatever poses are on disk then; the numbers above are illustrative. If the board is re-taught later, rerun it and paste again.
 
 ## 3. Pre-flight
 
