@@ -462,3 +462,12 @@ def test_return_lowers_to_just_above_the_seat_and_lets_go():
                     (50, 50, 120), (0, 0, 120), (0, 0, e)]
     assert {"set": float(cfg.GRIPPER_OPEN_FOR_PICK)} in c.gripper.commands
     assert c.needs_lift is False
+
+
+def test_needs_lift_when_the_tip_sits_near_or_below_the_board():
+    from duet.controller import needs_lift_z
+    corners = [125.5, 127.4, 128.3, 128.0]
+    assert needs_lift_z(130.0, corners, 25.0)          # 2 mm above the highest corner: a stroke in progress
+    assert needs_lift_z(120.0, corners, 25.0)          # below it (touching, or a plane error)
+    assert not needs_lift_z(366.9, corners, 25.0)      # the look pose is far above
+    assert not needs_lift_z(153.4, corners, 25.0)      # exactly at the margin is high enough

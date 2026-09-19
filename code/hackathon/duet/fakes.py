@@ -111,6 +111,10 @@ class FakeController:
         self.last_error: str | None = None
         self.needs_lift = False
 
+    async def lift_if_low(self) -> bool:
+        self.calls.append(("lift_if_low",))
+        return False
+
     async def go_look(self) -> None:
         self.calls.append(("go_look",))
         if self.fail_go_look_once:
