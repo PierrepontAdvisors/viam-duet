@@ -59,3 +59,14 @@ Three templates on the grid. Columns are numbered 1 to 12; "cols a–b" means gr
 ## 6. Out of scope
 
 New copy, new images, new cards, animation beyond the existing reveal and slow plate motion, and any change under `code/hackathon/duet/`.
+
+## 7. Amendments while building (2026-09-19 afternoon)
+
+Measured on the grid (column 5.9cqw, content area about 39cqw tall between the bands), these values in sections 2 to 4 did not fit and were changed:
+
+- The header wordmark is body size, not headline size; the header band is then as tall as the kicker pill and every card keeps 2cqw more content height.
+- Card 1's three lines and card 7's headline and closing line are headline size. At display size they wrap past the content area in a seven-column words block. Display size is used once, for card 2's wordmark.
+- The artist chips are horizontal pills (drawing 5 by 3cqw beside the name) so three fit in cols 1–7; "Keith Haring" wraps to two lines inside its chip.
+- The number cards on card 6 use 1cqw vertical padding (the paper token's 1.6cqw elsewhere), and card 6's content rows use the 1cqw gap, so the nodes, numbers and a two-line footer strip fit together.
+- Headlines, the display line and body text use `text-wrap: balance`, so a key phrase such as "answering back" is never split across lines and no line ends on a lone word.
+- The heading wrapper inside the modules template is `.lead`, not `.head`, because `.head` is the header band's class.
