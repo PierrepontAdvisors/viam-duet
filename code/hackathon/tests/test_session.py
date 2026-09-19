@@ -197,7 +197,7 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
     new = s.update_settings(length="medium", exchanges=4, energy=0.8, direction=45)
     assert (new.exchanges, new.energy, new.direction) == (4, 0.8, 45)
     state = s.bus.last["state"]
-    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring"]
+    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring", "mondrian", "vangogh"]
 
 
 def test_pause_during_the_robot_turn_stops_the_arm_and_resume_finishes(tmp_path, look_frame, exchange_start, exchange_human, calibration):

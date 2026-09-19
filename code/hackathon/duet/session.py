@@ -15,11 +15,12 @@ from duet.camera import Frame
 from duet.claude_turn import TurnResult
 from duet.controller import Blocked
 from duet.strokes import Polyline, length
-from duet.styles import haring
+from duet.styles import haring, mondrian, vangogh
 from duet.trigger import Reading, Trigger
 from duet.turn import all_ink, map_strokes
 
-ARTISTS = ("haring",)
+ARTISTS = ("haring", "mondrian", "vangogh")
+STYLERS = {"haring": haring, "mondrian": mondrian, "vangogh": vangogh}
 # Where Resume picks up after a fault. `interpret` and `plan` retry themselves: the visitor's strokes
 # are already consumed, so sending them back to `human_turn` would ask for the mark to be drawn again.
 RETRY_AFTER_FAULT = {"start": "start", "look": "look", "human_turn": "human_turn", "capture": "human_turn",
@@ -369,16 +370,17 @@ class Session:
         r = self.result
         if r is not None and r.proposal is not None:
             strokes = map_strokes([s.model_dump() for s in r.proposal.strokes], self.cal)
-            styled, self.color = haring.style(planner.validate(strokes, ink, budget),
-                                              energy=self.settings.energy, direction_deg=self.settings.direction)
+            styled, self.color = STYLERS[self.settings.artist].style(
+                planner.validate(strokes, ink, budget),
+                energy=self.settings.energy, direction_deg=self.settings.direction)
             sees, adds, source = r.proposal.sees, r.proposal.adds, r.source
         else:
-            styled, self.color = haring.fallback(self.human_new)
+            styled, self.color = STYLERS[self.settings.artist].fallback(self.human_new)
             sees, adds, source = "(fallback)", "outline and ticks around your mark", "fallback"
         self.plan = planner.finalize(styled, ink, budget)
         if not self.plan and r is not None and r.proposal is not None:
             # every stroke Claude proposed sat inside the 5 mm clearance: answer the visitor's mark instead
-            styled, self.color = haring.fallback(self.human_new)
+            styled, self.color = STYLERS[self.settings.artist].fallback(self.human_new)
             self.plan = planner.finalize(styled, ink, budget)
             source = "fallback"
         if not self.plan:
