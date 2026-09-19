@@ -93,3 +93,9 @@ def test_stipple_widens_the_grid_to_respect_the_dot_cap():
     board = [(0.0, 0.0), (176.0, 0.0), (176.0, 240.0), (0.0, 240.0)]
     dots = op.stipple(board, seed=1)
     assert 30 <= len(dots) <= cfg.DOTS_MAX
+
+
+def test_is_dot_recognizes_stipple_dots_only():
+    assert op.is_dot([(5.0, 5.0), (6.5, 5.0)])
+    assert not op.is_dot([(5.0, 5.0), (6.0, 5.0)])           # a clipped leftover
+    assert not op.is_dot([(5.0, 5.0), (6.5, 5.0), (7.0, 5.0)])
