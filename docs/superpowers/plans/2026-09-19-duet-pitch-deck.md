@@ -977,3 +977,297 @@ cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/p
 **Placeholders.** None; every code step carries the file's full content.
 
 **Consistency.** `window.Deck` exposes `CARDS`, `BUILDS`, `FLIPBOOK`, `advance`, `back`, `jump`, `parseHash`, `flipLabel`, `flipDelay`, `nextFlip`, and the tests in Task 2 call exactly those. The markup uses `#flip`, `#flipLabel`, `#counter`, `.stage`, `.card[data-card]`, and `data-build`, which is what `deck.js` looks up and `deck.css` styles. The plate classes in the markup match the seven in `deck.css` and the Task 3 test. The `.cocreate .words` wrapper in the CSS matches the markup on card 4.
+
+---
+
+## Amendment, 2026-09-19 late morning: generated plates and heroes
+
+Nicholas asked for images made with Nano Banana 2 through the Gemini API. The spec's sections 1, 3, 5 and 6 were amended. This adds Task 7 (the generator, run first because it takes a few minutes) and changes Tasks 3 and 4 as written below. The Node test gains one more check. The key is `GEMINI_API_KEY` in `code/hackathon/.env` (gitignored, already written); it is never put in a URL, a tracked file, or a command line.
+
+### Task 7: gen_images.py, the generator (run before Task 3)
+
+**Files:**
+- Create: `docs/duet/pitch/gen_images.py`
+- Modify: `code/hackathon/pagetests/pitch.test.mjs` (append)
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `code/hackathon/pagetests/pitch.test.mjs`:
+
+```js
+const PLATES = [1, 2, 3, 4, 5, 6, 7].map((n) => `plate-${n}.jpg`);
+const HEROES = ['hero-thesis.jpg', 'hero-duet.jpg', 'hero-build.jpg'];
+
+test('the generator exists, keeps the key out of the repo, and never names the artist', () => {
+  const py = read('gen_images.py');
+  assert.match(py, /GEMINI_API_KEY/);
+  assert.ok(!/AQ\.[A-Za-z0-9_-]{20,}/.test(py), 'no key literal in the script');
+  assert.ok(!/Haring/.test(py), 'prompts describe the grammar, they do not name the artist');
+  assert.match(py, /gemini-3\.1-flash-image/);
+  for (const n of [...PLATES, ...HEROES]) assert.ok(py.includes(n.replace('.jpg', '')), `job ${n} missing`);
+});
+
+test('the seven plates and three heroes were generated', () => {
+  for (const f of [...PLATES, ...HEROES]) assert.ok(existsSync(DIR + 'img/' + f), `missing img/${f}`);
+});
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+```bash
+cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^# (pass|fail)"
+```
+
+Expected: the two new tests fail (`ENOENT ... gen_images.py`, then missing images).
+
+- [ ] **Step 3: Write the generator**
+
+Create `docs/duet/pitch/gen_images.py`:
+
+```python
+"""Generate the deck's plate textures and hero illustrations with Nano Banana 2.
+
+Reads GEMINI_API_KEY from code/hackathon/.env (gitignored), sends it in a header, writes JPEGs
+into img/ beside this file. Skips images that already exist unless --force is given.
+
+    python3 docs/duet/pitch/gen_images.py                # everything missing
+    python3 docs/duet/pitch/gen_images.py plate-3        # one image
+    python3 docs/duet/pitch/gen_images.py --force hero-duet
+"""
+import base64
+import json
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+IMG = HERE / "img"
+ENV = HERE.parents[2] / "code" / "hackathon" / ".env"
+MODEL = "gemini-3.1-flash-image"
+URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
+JPEG_QUALITY = "88"
+
+GRAMMAR = (
+    "1980s New York subway-chalk street-art style: thick uniform black outlines, flat bright colours, "
+    "no shading, no gradients, short radiating motion ticks around anything that moves, playful and bold. "
+    "No text, no letters, no logos, no watermark."
+)
+PLATE = (
+    "An all-over pattern of hand-drawn black marks on a pure white background, spread evenly edge to edge "
+    "with no focal point and no empty areas: wavy squiggles, zigzags, short radiating tick clusters, dots, "
+    "small open arcs{extra}. Thick round-capped marker strokes, all the same weight. Black on white only, "
+    "no colour, no figures, no text."
+)
+PLATES = {
+    "plate-1": PLATE.format(extra=", a few small spirals"),
+    "plate-2": PLATE.format(extra=", a few tiny hearts drawn in one line"),
+    "plate-3": PLATE.format(extra=", a few small stars drawn in one line"),
+    "plate-4": PLATE.format(extra=", a few short dashed curves"),
+    "plate-5": PLATE.format(extra=", a few small lightning bolts"),
+    "plate-6": PLATE.format(extra=", a few small crosses"),
+    "plate-7": (
+        "An all-over pattern of hand-drawn marks on a pure black background, spread evenly edge to edge with "
+        "no focal point: wavy squiggles, zigzags, short radiating tick clusters, dots and small open arcs, each "
+        "mark in one of five flat colours: yellow #ffd400, red #e5322d, blue #1f4fd6, green #17a34a, orange "
+        "#ff7a00. Thick round-capped marker strokes, all the same weight. No figures, no text."
+    ),
+}
+HEROES = {
+    "hero-thesis": (
+        "One simple outlined figure standing, holding an open book in one hand and a fat marker in the other, "
+        "radiating ticks around the head as if lit up by an idea. Yellow figure on a pure white background. " + GRAMMAR
+    ),
+    "hero-duet": (
+        "A simple outlined person and a simple outlined six-jointed robot arm drawing together on the same small "
+        "whiteboard lying flat on a table, each holding a marker, motion ticks around both hands, one continuous "
+        "loopy line on the board joining their two marks. Red person, green robot arm, pure white background. " + GRAMMAR
+    ),
+    "hero-build": (
+        "A simple outlined figure dancing with both arms up beside a simple outlined robot arm holding a marker, "
+        "radiating ticks around both, a few confetti dots. Yellow figure, green arm, pure white background. " + GRAMMAR
+    ),
+}
+JOBS = {**{k: (v, "16:9") for k, v in PLATES.items()}, **{k: (v, "1:1") for k, v in HEROES.items()}}
+
+
+def api_key() -> str:
+    for line in ENV.read_text().splitlines():
+        if line.startswith("GEMINI_API_KEY="):
+            return line.split("=", 1)[1].strip()
+    sys.exit(f"GEMINI_API_KEY not found in {ENV}")
+
+
+def generate(prompt: str, aspect: str, key: str) -> tuple[bytes, str]:
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseModalities": ["IMAGE"],
+            "imageConfig": {"aspectRatio": aspect, "imageSize": "2K"},
+        },
+    }
+    req = urllib.request.Request(
+        URL, data=json.dumps(body).encode(), method="POST",
+        headers={"Content-Type": "application/json", "x-goog-api-key": key},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=240) as r:
+            d = json.load(r)
+    except urllib.error.HTTPError as e:
+        sys.exit(f"{MODEL} HTTP {e.code}: {e.read().decode(errors='replace')[:600]}")
+    for part in d.get("candidates", [{}])[0].get("content", {}).get("parts", []):
+        if "inlineData" in part:
+            return base64.b64decode(part["inlineData"]["data"]), part["inlineData"]["mimeType"]
+    sys.exit(f"no image in the response: {json.dumps(d)[:600]}")
+
+
+def to_jpeg(src: Path, dst: Path) -> None:
+    subprocess.run(
+        ["sips", "-s", "format", "jpeg", "-s", "formatOptions", JPEG_QUALITY, str(src), "--out", str(dst)],
+        check=True, capture_output=True,
+    )
+    src.unlink()
+
+
+def main(argv: list[str]) -> None:
+    force = "--force" in argv
+    names = [a for a in argv if not a.startswith("--")] or list(JOBS)
+    unknown = [n for n in names if n not in JOBS]
+    if unknown:
+        sys.exit(f"unknown job(s): {unknown}; choose from {list(JOBS)}")
+    key = api_key()
+    IMG.mkdir(exist_ok=True)
+    for name in names:
+        prompt, aspect = JOBS[name]
+        out = IMG / f"{name}.jpg"
+        if out.exists() and not force:
+            print(f"keep  {out.name}")
+            continue
+        data, mime = generate(prompt, aspect, key)
+        tmp = IMG / f"{name}.{'png' if 'png' in mime else 'bin'}"
+        tmp.write_bytes(data)
+        to_jpeg(tmp, out)
+        print(f"wrote {out.name} ({out.stat().st_size // 1024} KB)")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
+```
+
+- [ ] **Step 4: Generate everything (a few minutes; each call is about 10 to 20 seconds)**
+
+```bash
+cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && python3 docs/duet/pitch/gen_images.py
+```
+
+Expected: ten `wrote ...` lines. If a call fails with HTTP 400 mentioning `imageSize`, remove `"imageSize": "2K"` from `generate()` and run again. Look at each image (the Read tool shows them): a plate must be evenly covered with no big blank area, no figures and no letters; a hero must be one clear subject on white with no text. Re-roll a poor one with `--force <name>`; two re-rolls is the budget, after that the SVG fallback or no hero is the answer.
+
+- [ ] **Step 5: Run the tests to verify they pass**
+
+```bash
+cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^# (pass|fail)"
+```
+
+Expected: `fail 0` for the two generator tests (the rest depend on the tasks already done).
+
+- [ ] **Step 6: Commit**
+
+```bash
+cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/gen_images.py docs/duet/pitch/img/plate-*.jpg docs/duet/pitch/img/hero-*.jpg code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): Nano Banana 2 plate textures and hero illustrations, generator kept in the repo"
+```
+
+### Changes to Task 3 (deck.css)
+
+Add these rules to `deck.css` when writing it. The plate image multiplies over the CSS colour so the colour stays exact; the SVG pattern hides once the image has loaded.
+
+```css
+/* generated plate texture over the colour; the SVG pattern below it is the fallback */
+.plate-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; opacity: .14;
+             pointer-events: none; animation: breathe 30s ease-in-out infinite alternate; }
+.plate-cream .plate-img { opacity: .10; }
+.plate-black .plate-img { mix-blend-mode: normal; opacity: 1; }
+.card.plated .pattern { display: none; }
+@keyframes breathe { to { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .plate-img { animation: none; } }
+
+/* heroes on paper, right column of cards 1, 2 and 7 */
+.hero { flex: none; padding: .8cqw; }
+.hero img { display: block; width: 26cqw; height: 26cqw; object-fit: cover; border-radius: .8cqw; }
+.words { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2cqw; }
+```
+
+and replace these three card rules:
+
+```css
+/* card 1, thesis: lines left, hero right */
+.thesis { flex-direction: row; align-items: center; gap: 4cqw; }
+.thesis .words { gap: 2.4cqw; }
+.thesis .line { font-size: 4.8cqw; font-weight: 700; line-height: 1.15; opacity: 0; transform: translateY(1cqw);
+                transition: opacity .4s ease, transform .4s ease; }
+.card[data-build="1"] .line:nth-child(-n+1),
+.card[data-build="2"] .line:nth-child(-n+2),
+.card[data-build="3"] .line:nth-child(-n+3) { opacity: 1; transform: none; }
+
+/* card 2, what Duet is: words left, hero right; beats stacked */
+.what { flex-direction: row; align-items: center; gap: 4cqw; }
+.what .words { gap: 1.4cqw; }
+.wordmark { font-size: 10cqw; font-weight: 700; line-height: 1; }
+.what .sub { font-size: 3.6cqw; font-weight: 600; }
+.beats { display: flex; flex-direction: column; gap: .3cqw; font-size: 2.3cqw; font-weight: 600; }
+.what .hero img { width: 30cqw; height: 30cqw; }
+
+/* card 7, the build: words left, hero right */
+.build { flex-direction: row; align-items: center; gap: 4cqw; }
+.build h2 { font-size: 5.6cqw; font-weight: 700; line-height: 1.05; }
+.credit { font-size: 2cqw; font-weight: 600; opacity: .85; }
+.cta { margin-top: 3cqw; font-size: 4cqw; font-weight: 700; color: var(--yellow); }
+```
+
+Add `.plate-img` to the Task 3 test's expectations:
+
+```js
+  assert.ok(css.includes('.plate-img') && css.includes('.card.plated .pattern'), 'plate image layer with SVG fallback');
+```
+
+### Changes to Task 4 (index.html)
+
+Directly after every card's `<svg class="pattern" ...>` line add the plate image, numbered by card (1 to 7):
+
+```html
+    <img class="plate-img" src="img/plate-1.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+```
+
+Replace card 1's content with:
+
+```html
+    <div class="content thesis">
+      <div class="words">
+        <p class="line" data-el="card 1 line 1">Anyone can now study with the greatest minds in history.</p>
+        <p class="line" data-el="card 1 line 2">Nobody could make art with them.</p>
+        <p class="line" data-el="card 1 line 3">Until <span class="key">today</span>.</p>
+      </div>
+      <figure class="paper hero" data-el="card 1 hero — figure with a book and a marker"><img src="img/hero-thesis.jpg" alt=""></figure>
+    </div>
+```
+
+Wrap card 2's wordmark, subtitle, beats and chips in `<div class="words"> ... </div>` and add after it:
+
+```html
+      <figure class="paper hero" data-el="card 2 hero — person and robot arm drawing together"><img src="img/hero-duet.jpg" alt=""></figure>
+```
+
+Wrap card 7's headline, credit and cta in `<div class="words"> ... </div>` and add after it:
+
+```html
+      <figure class="paper hero" data-el="card 7 hero — dancing figure beside the arm"><img src="img/hero-build.jpg" alt=""></figure>
+```
+
+Add to the Task 4 reference test:
+
+```js
+  for (let n = 1; n <= 7; n++) assert.ok(refs.includes(`img/plate-${n}.jpg`), `plate ${n} not referenced`);
+  for (const h of ['hero-thesis', 'hero-duet', 'hero-build']) assert.ok(refs.includes(`img/${h}.jpg`), `${h} not referenced`);
+```
+
+The Task 5 browser pass adds: every plate shows its texture at the intended opacity with no SVG doubling once loaded; type stays legible over each plate (lower `.plate-img` opacity, never the type); the three heroes sit on paper cards without overflowing at 1280 × 720. Task 6's spec section 5 paragraph already lists the new files.

@@ -17,6 +17,7 @@ Decisions made during brainstorming:
 - **The close is the build itself** ("One person. Two days. Claude and Viam."), with the rig instruction as its footer so it stays on screen during the demo. "One person" is accurate.
 - **One self-contained HTML file**, no framework, no CDN, no build step.
 - **The look is bright Haring plates**, not the page's black stage: each card sits on a saturated colour plate covered in a repeating squiggle pattern in Keith Haring's style, with bold black type. Added after the first spec read.
+- **Generated images do two jobs** (added 2026-09-19 late morning): seven background plate textures and three hero illustrations, made with Nano Banana 2 (`gemini-3.1-flash-image`) through the Gemini API. The inline SVG squiggle pattern stays underneath every plate as the fallback, so the deck works if a generation is missing or poor. Prompts describe the stroke grammar and never name the artist, the same rule the PRD sets for the robot.
 
 ## 2. The cards
 
@@ -59,7 +60,8 @@ Bright Haring plates. Every card is a saturated colour plate covered edge to edg
 
 - **Stage.** The same 16:9 stage as the live page, letterboxed in black in any window (`width: min(100vw, 177.78vh)`, `aspect-ratio: 16/9`). Inside it, the plate fills the whole card.
 - **Plates, one colour per card.** 1 Thesis: yellow. 2 What Duet is: red. 3 One turn: blue. 4 Co-creation: green. 5 Learning: orange. 6 How it works: cream (a light plate so the diagram reads). 7 The build: black with the pattern in all the bright colours at once, white type. Tokens: yellow `#ffd400`, red `#e5322d`, blue `#1f4fd6`, green `#17a34a`, orange `#ff7a00`, cream `#fff4d6`, ink `#111`, paper `#fff`. The page's `#1b8f3a` green and `#c62828` red still mark the robot's ink and the visitor's ink where the copy refers to them.
-- **Pattern.** An inline SVG `<pattern>` tile, about 160 px square, drawn once and reused on every plate: wavy squiggles, zigzags, short radiating ticks (motion lines), dots, and small open arcs, in a thick round-capped stroke. On colour plates the pattern is black at 12 to 16 percent opacity so type stays legible; on the cream plate it is black at 10 percent; on the black plate it is the five bright colours at full opacity. The pattern drifts very slowly (about 6 px per second, one direction) for life, and stops under `prefers-reduced-motion`. It never sits behind a photo or a speech bubble.
+- **Plates.** Each card's background is a generated 16:9 texture, `img/plate-N.jpg`: hand-drawn black marks on white (wavy squiggles, zigzags, radiating tick clusters, dots, open arcs, plus one small extra motif per card) spread evenly edge to edge. It is laid over the CSS plate colour with `mix-blend-mode: multiply` at 14 percent opacity (10 percent on cream), so the colour stays exact and the marks read as ink; card 7's texture is the five bright colours on black at full opacity. A very slow 4 percent zoom over 30 seconds, alternating, gives the plate life; it stops under `prefers-reduced-motion`. The inline SVG `<pattern>` tile (about 160 px, the same motifs, drifting one period) sits under the image and is hidden once the image has loaded. Neither layer sits behind a photo, a hero, or a speech bubble.
+- **Heroes.** Three generated square illustrations on white, each on a paper card: card 1, a figure holding an open book and a marker with ticks around the head; card 2, a person and a six-jointed robot arm drawing on the same board with one loopy line joining their marks; card 7, a figure dancing beside the arm. Thick uniform black outlines, flat colour, no text. Cards 1, 2 and 7 become two columns, words left and hero right.
 - **Type.** Fredoka from a local font file in `fonts/`, falling back to Chalkboard SE, Comic Sans MS, then sans-serif. Headlines heavy (600 to 700), black, large; the one word that matters on each card is set in white with a black outline (a Haring-style keyline via `paint-order: stroke` or a text shadow stack) rather than in a second colour. Sizes scale with the stage using container units.
 - **Paper.** Photos, the speech bubble, the artist chips, the four numbers on card 6, and the diagram nodes sit on white paper cards with a thick black outline (about 4 px at full size) and rounded corners, the way Haring's figures are outlined. No soft shadows; the outline does the work.
 - **Artist chips.** Inline SVG paths, no images: a swirl of short dashes (Van Gogh, blue), a small grid with one red hatched cell (Mondrian, blue lines), a bold outline with ticks (Haring, green). Each on its own paper card.
@@ -90,17 +92,20 @@ docs/duet/pitch/
   index.html          the deck: markup, CSS, and script in one file
   img/turn-00-start.jpg
   img/turn-01-human.jpg ... img/turn-06-robot.jpg   (13 photos, longest side about 1200 px)
+  img/plate-1.jpg ... img/plate-7.jpg             generated plate textures, 2K 16:9, JPEG
+  img/hero-thesis.jpg, img/hero-duet.jpg, img/hero-build.jpg   generated heroes, 2K square, JPEG
+  gen_images.py                                   the generator: prompts, one call per missing image, JPEG conversion with sips
   fonts/Fredoka.woff2                             fetched once while online (a .ttf only if no woff2 is available)
 ```
 
 - The photos are copies of `code/hackathon/sessions/20260918-190258/turn-*.jpg`, downscaled with a one-line script or `sips` so the deck stays a few megabytes and opens instantly from disk. Originals are untouched.
 - The font is fetched once while online and committed; without it the fallback stack renders, which is acceptable but not the plan.
-- No API keys, machine credentials, or session JSON are copied into the deck folder. Claude's two sentences are typed into the HTML.
+- No API keys, machine credentials, or session JSON are copied into the deck folder. Claude's two sentences are typed into the HTML. The Gemini key lives only in `code/hackathon/.env` as `GEMINI_API_KEY`; `gen_images.py` reads it from there and sends it in a header, never in a URL or a tracked file.
 - Opening the deck: `open docs/duet/pitch/index.html`. No server is needed; every reference is relative and works over `file://`.
 
 ## 6. Verification
 
-- **Node test** `code/hackathon/pagetests/pitch.test.mjs`, run with the existing `node --test 'pagetests/*.test.mjs'`: reads `docs/duet/pitch/index.html`, asserts seven cards in order with the expected headline text, asserts every `src`, `href` and `url()` that points into `img/` or `fonts/` names a file that exists, asserts the 13 flipbook filenames are listed, and asserts the developer-mode badge, label, and toast elements are present.
+- **Node test** `code/hackathon/pagetests/pitch.test.mjs`, run with the existing `node --test 'pagetests/*.test.mjs'`: reads `docs/duet/pitch/index.html`, asserts seven cards in order with the expected headline text, asserts every `src`, `href` and `url()` that points into `img/` or `fonts/` names a file that exists, asserts the 13 flipbook filenames are listed, asserts the seven plates and three heroes are referenced and exist, asserts `gen_images.py` never names the artist, and asserts the developer-mode badge, label, and toast elements are present.
 - **Browser pass** with the built-in browser: open the file, step through all seven cards with the keyboard, take one screenshot per card into `code/hackathon/captures/pitch-N.png`, confirm the card-1 reveals, the flipbook cycling, the hash updating, fullscreen, and developer mode copying a name. Screenshots are shown to Nicholas for review before 3:30.
 - **Legibility check** during the browser pass: on each plate, the headline and body type are read at arm's length from a laptop and at the back of a room from a projector-sized window; if the pattern competes with the type, its opacity comes down, never the type size.
 - **Offline check**: the browser pass is repeated once with the network off (or with Google Fonts blocked) to confirm the local font loads and nothing else is fetched.
