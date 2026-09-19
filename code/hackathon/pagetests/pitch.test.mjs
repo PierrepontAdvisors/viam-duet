@@ -171,3 +171,30 @@ test('developer mode is wired: badge, label, toast, and unique data-el names on 
   assert.match(dev, /keydown/);
   assert.match(dev, /classList\.toggle\('dev'\)/);
 });
+
+test('every card carries the master page: frame, kicker, wordmark, footer with a counter', () => {
+  const h = read('index.html');
+  const kickers = ['01 · Thesis', '02 · What Duet is', '03 · One turn', '04 · Co-creation', '05 · Learning', '06 · How it works', '07 · The build'];
+  const sections = h.split(/<section class="card /).slice(1);
+  assert.equal(sections.length, 7);
+  sections.forEach((s, i) => {
+    assert.ok(s.includes('class="kicker"') && s.includes(kickers[i]), `card ${i + 1} kicker "${kickers[i]}"`);
+    assert.equal((s.match(/class="wordmark"/g) || []).length, 1, `card ${i + 1} has one wordmark`);
+    assert.ok(/class="band foot"/.test(s) && /class="counter"/.test(s), `card ${i + 1} footer with counter`);
+    assert.ok(/class="frame"/.test(s), `card ${i + 1} frame`);
+    assert.ok(/class="card (split|triptych|modules) /.test('class="card ' + s.slice(0, 40)), `card ${i + 1} uses a template class`);
+  });
+  assert.ok(sections[5].includes('viam-server owns the arm'), 'card 6 footer carries the Viam strip');
+  assert.ok(!/id="counter"/.test(h), 'the stage-level counter is gone');
+});
+
+test('deck.css is built on the tokens: four type sizes, three templates, no stray font sizes', () => {
+  const css = read('deck.css');
+  for (const t of ['--display', '--headline', '--body', '--caption', '--s1', '--s4', '--paper-radius', '--paper-border', '--paper-pad', '--gutter', '--frame-inset']) {
+    assert.ok(css.includes(t + ':'), `token ${t} is defined`);
+  }
+  for (const c of ['.split', '.triptych', '.modules', '.frame', '.kicker', '.wordmark', '.band']) assert.ok(css.includes(c), `rule ${c}`);
+  const sizes = [...css.matchAll(/font-size:\s*([^;}]+)/g)].map((m) => m[1].trim());
+  assert.ok(sizes.length >= 8, 'font sizes are set through the tokens');
+  for (const v of sizes) assert.match(v, /^var\(--(display|headline|body|caption)\)$/, `font-size "${v}" is not a token`);
+});
