@@ -55,3 +55,15 @@ test('assets are versioned ds6 so open pages fetch the new scripts', () => {
   assert.ok(!h.includes('?v=ds5'), 'no ds5 left');
   assert.match(h, /src="\/static\/js\/app\.js\?v=ds6"/);
 });
+
+test('diagview redraws the table only on entries, ticks once a second only while open, and escapes every cell', () => {
+  const js = read('js/diagview.js');
+  assert.match(js, /export function initDiagView\(\{ light, summary, svg, tbody \}\)/);
+  assert.match(js, /return \{ setOpen, setConnected, blink, onEntry \};/);
+  assert.match(js, /setInterval\(tick, 1000\)/);
+  assert.ok(!/setInterval\(renderTable/.test(js), 'the table is not on the clock');
+  assert.match(js, /light\.classList\.toggle\('on', onOff\)/);
+  assert.match(js, /light\.classList\.add\('blink'\)/);
+  assert.match(js, /esc\(summarize\(e\)\)/);
+  assert.match(js, /esc\(JSON\.stringify\(fold\(e\.raw\), null, 2\)\)/);
+});
