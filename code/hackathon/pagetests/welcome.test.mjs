@@ -28,5 +28,5 @@ test('ui.js wires the welcome: renderWelcome in renderAll, Start sends restart o
   const js = read('js/ui.js');
   assert.match(js, /const renderAll = \(\) => \{ renderChips\(\); renderBubble\(\); renderPanel\(\); renderWelcome\(\); \}/);
   assert.ok(js.includes("sendCommand('restart')"), 'restart command');
-  assert.ok(js.includes('welcomeButton(') && js.includes('welcomeReturns(') && js.includes('WELCOME_RETURN_MS'), 'uses the pure rules');
+  assert.ok(js.includes('welcomeButton(') && js.includes('welcomeReturns(') && js.includes("$('home')"), 'uses the pure rules');
 });

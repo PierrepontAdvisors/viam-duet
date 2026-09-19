@@ -1,5 +1,5 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, welcomeButton, welcomeReturns, WELCOME_RETURN_MS } from './story.js?v=ds3';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, welcomeButton, welcomeReturns } from './story.js?v=ds3';
 import { bubblePosition } from './geometry.js?v=ds3';
 import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds3';
 
@@ -198,7 +198,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (view.lastError && Date.now() - view.lastError.t < 5000) parts.push(`<span class="err">${esc(view.lastError.message)}</span>`);
     $('status3').innerHTML = parts.join(' · ');
   }
-  // ---- welcome page: shown at load, hidden by Start, back when a session ends or a fresh one begins ----
+  // ---- welcome page: shown at load, hidden by Start, back when Return to home is pressed on a finished piece or a fresh session begins ----
   const welcome = { shown: true, waiting: false, pressed: false, timer: null, prev: null };
   function showWelcome(onOff) {
     welcome.shown = onOff; $('welcome').classList.toggle('hidden', !onOff);
@@ -208,9 +208,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     const state = app.state ? app.state.state : null;
     if (welcome.waiting && state && state !== 'finished') welcome.waiting = false;                 // a new session arrived
     if (!welcome.shown && welcomeReturns(welcome.prev, state)) showWelcome(true);
-    if (state === 'finished' && !welcome.shown && !welcome.timer) {
-      welcome.timer = setTimeout(() => { welcome.timer = null; showWelcome(true); }, WELCOME_RETURN_MS);
-    } else if (state !== 'finished' && welcome.timer) { clearTimeout(welcome.timer); welcome.timer = null; }
+    $('home').classList.toggle('hidden', !(state === 'finished' && !welcome.shown));   // the piece stays up until someone chooses to leave it
     if (welcome.shown && welcome.pressed && state === 'human_turn') { welcome.pressed = false; showWelcome(false); }
     const b = welcomeButton(state, welcome.waiting);
     const btn = $('start');
@@ -218,6 +216,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     btn.disabled = !b.enabled;
     welcome.prev = state;
   }
+  $('home').onclick = () => showWelcome(true);
   $('start').onclick = () => {
     const state = app.state ? app.state.state : null;
     if (state === 'finished') { welcome.waiting = true; welcome.pressed = true; sendCommand('restart'); renderWelcome(); return; }

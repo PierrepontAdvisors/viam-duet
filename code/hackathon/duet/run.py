@@ -181,7 +181,7 @@ async def main(args: argparse.Namespace) -> None:
           f"brain={type(brain).__name__} hand_check={guard.mode} session={rec.dir}", flush=True)
     # the logger first: it subscribes before the loop's first emit, so `start` is printed too
     tasks += [watch(asyncio.create_task(log_events(bus), name="log")),
-              watch(asyncio.create_task(session.run(), name="session"))]
+              watch(asyncio.create_task(session.run_forever(), name="session"))]
     try:
         await server.serve()
     finally:

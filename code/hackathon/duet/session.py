@@ -10,6 +10,7 @@ from time import monotonic
 import numpy as np
 
 from duet import config as cfg
+from duet.recorder import Recorder
 from duet import planner, svg, vision
 from duet.camera import Frame
 from duet.claude_turn import TurnResult
@@ -173,6 +174,7 @@ class Session:
         self._running = asyncio.Event()
         self._running.set()
         self._pass = asyncio.Event()
+        self._restart = asyncio.Event()
         self._resume_to = "human_turn"
         self._homography: np.ndarray | None = None
 
@@ -196,6 +198,28 @@ class Session:
 
     def pass_turn(self) -> None:
         self._pass.set()
+
+    def restart(self) -> None:
+        """After a piece is finished: begin a new one in place (the page's Start on the welcome)."""
+        self._restart.set()
+
+    def reset(self) -> None:
+        """Forget the finished piece: a new session folder, a blank board history, and no stale
+        per-piece messages in the snapshot. Settings, calibration, and the hand guard carry over."""
+        self.rec = Recorder(root=self.rec.dir.parent, settings=self.settings.record())
+        self.state, self.turn, self.at_look, self.previous_photo, self.coverage = "idle", 0, False, None, 0.0
+        self.human_ink, self.robot_ink, self.human_new_cam, self.human_new = [], [], [], []
+        self.history, self.plan, self.result, self.last_error, self._signed = [], [], None, None, False
+        self._pass.clear(); self._restart.clear(); self._running.set()
+        for kind in ("human", "interpretation", "plan", "progress", "shot", "video", "error", "dock"):
+            self.bus.last.pop(kind, None)
+
+    async def run_forever(self) -> None:
+        """Piece after piece: run to `finished`, wait for a restart, reset, run again."""
+        while True:
+            await self.run()
+            await self._restart.wait()
+            self.reset()
 
     async def clear_error(self) -> None:
         await self.ctl.clear_error()

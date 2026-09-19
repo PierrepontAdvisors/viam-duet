@@ -270,3 +270,26 @@ def test_a_hung_recover_times_out_and_stays_paused(tmp_path, look_frame, exchang
     state, err, events = asyncio.run(scenario())
     assert state == "paused" and "recover timed out" in err
     assert any(e["type"] == "error" and "recover timed out" in e["message"] for e in events)
+
+
+def test_restart_after_finished_begins_a_new_piece_in_place(tmp_path, look_frame, exchange_start, exchange_human, exchange_robot, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        frames.robot_boards = [exchange_robot, exchange_robot]
+        task = asyncio.create_task(s.run_forever())
+        await until_state(s, "human_turn")
+        frames.show_board(exchange_human)
+        s.pass_turn()
+        await until_state(s, "finished")
+        first_dir = s.rec.dir
+        s.restart()
+        await until_seen(s, "start", count=2)
+        await until_seen(s, "human_turn", count=2)
+        drain(q)
+        snapshot = [m["type"] for m in s.bus.snapshot()]
+        await cancel(task)
+        return s, first_dir, snapshot
+    s, first_dir, snapshot = asyncio.run(scenario())
+    assert s.rec.dir != first_dir and s.turn == 0 and s.history == [] and s.human_ink == []
+    assert "plan" not in snapshot and "interpretation" not in snapshot           # the finished piece left the snapshot
+    assert "state" in snapshot and "shot" in snapshot                             # the new start photo is there

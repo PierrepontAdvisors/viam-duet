@@ -141,6 +141,7 @@ button.chip:active { transform: translate(.15cqw, .15cqw); box-shadow: 0 0 0 var
 .gear { box-shadow: .2cqw .2cqw 0 var(--ink); }
 .gear:hover { transform: translate(-.12cqw, -.12cqw) rotate(-1deg); box-shadow: .35cqw .35cqw 0 var(--ink); }
 .gear:active { transform: translate(.1cqw, .1cqw); box-shadow: 0 0 0 var(--ink); }
+.go.home { background: var(--yellow); color: var(--ink); }
 .go:hover, .welcome-start:not(:disabled):hover { transform: translate(-.2cqw, -.2cqw) rotate(-1.5deg); box-shadow: .7cqw .7cqw 0 var(--ink); }
 .go:active, .welcome-start:not(:disabled):active { transform: translate(.3cqw, .3cqw); box-shadow: .1cqw .1cqw 0 var(--ink); }
 /* the two big ones wiggle once after they pop in */

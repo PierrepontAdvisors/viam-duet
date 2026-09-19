@@ -123,6 +123,8 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
             session.pass_turn()
         elif kind == "clear_error":
             await session.clear_error()
+        elif kind == "restart":
+            session.restart()
         else:
             return {"type": "error", "message": f"unknown command {kind!r}"}
         return None
