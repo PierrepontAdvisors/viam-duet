@@ -47,7 +47,7 @@
 
   /* ---- wiring ---- */
   var state = { card: 1, build: 0 };
-  var stage, counter, flipImg, flipLabelEl, cards;
+  var stage, counters, flipImg, flipLabelEl, cards;
 
   function render() {
     cards.forEach(function (el) {
@@ -56,7 +56,7 @@
       el.classList.toggle('active', active);
       if (active) el.setAttribute('data-build', String(state.build));
     });
-    counter.textContent = state.card + ' / ' + CARDS;
+    counters.forEach(function (el) { el.textContent = state.card + ' / ' + CARDS; });
     if (parseHash(location.hash) !== state.card) history.replaceState(null, '', '#' + state.card);
   }
   function set(next) {
@@ -105,7 +105,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     stage = document.querySelector('.stage');
-    counter = document.getElementById('counter');
+    counters = Array.prototype.slice.call(document.querySelectorAll('.counter'));
     flipImg = document.getElementById('flip');
     flipLabelEl = document.getElementById('flipLabel');
     cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
