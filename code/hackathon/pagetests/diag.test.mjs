@@ -138,8 +138,15 @@ test('bands: no socket events means the whole window takes the current state', (
   assert.deepEqual(timeline([inn({ type: 'progress', stroke: 1 })], 100, 100, false).bands, [{ x0: 0, x1: 1, connected: false }]);
 });
 
-test('bands: a close then an open inside the window reads green, red, green', () => {
+test('bands: a close then an open inside the window reads red, green; nothing is drawn before the first event of a complete log', () => {
   const entries = [at(150, socketEntry('close', 1006, 0, 1)), at(175, socketEntry('open', null, 0, 2))];
+  assert.deepEqual(timeline(entries, 200, 100, true).bands, [{ x0: 0.5, x1: 0.75, connected: false }, { x0: 0.75, x1: 1, connected: true }]);
+});
+
+test('bands: once the log has hit its cap, the state before the first kept event is the opposite of that event', () => {
+  const filler = Array.from({ length: CAP - 2 }, (_, i) => at(100 + i * 0.1, inn({ type: 'progress', stroke: i })));
+  const entries = [...filler, at(150, socketEntry('close', 1006, 0, 1)), at(175, socketEntry('open', null, 0, 2))];
+  assert.equal(entries.length, CAP);
   assert.deepEqual(timeline(entries, 200, 100, true).bands, [
     { x0: 0, x1: 0.5, connected: true }, { x0: 0.5, x1: 0.75, connected: false }, { x0: 0.75, x1: 1, connected: true },
   ]);

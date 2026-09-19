@@ -89,17 +89,18 @@ export function header(entries, now, connected) {
            sent: entries.filter(e => e.dir === 'out').length, reconnects: Math.max(0, opens - 1), dropped: ins.filter(e => !e.ok).length };
 }
 
-/** Connected and disconnected stretches across the window, from the socket events in time order. The state
- *  before the first known event is the opposite of that event; with no events the window takes `connected`. */
+/** Connected and disconnected stretches across the window, from the socket events in time order. With no
+ *  events the window takes `connected`. Before the first known event nothing is drawn, unless the log has hit
+ *  its cap (older events fell off), when the state is taken to be the opposite of that event. */
 function socketBands(entries, now, windowMs, connected) {
   const events = entries.filter(e => e.dir === 'ws' && e.t <= now).map(e => ({ t: e.t, connected: e.type === 'open' }));
   if (!events.length) return [{ x0: 0, x1: 1, connected }];
   const start = now - windowMs, frac = (t) => (t - start) / windowMs;
-  let state = !events[0].connected, from = start;
+  let state = entries.length >= CAP ? !events[0].connected : null, from = start;
   const out = [];
   for (const ev of events) {
     if (ev.t <= start) { state = ev.connected; continue; }
-    out.push({ x0: frac(from), x1: frac(ev.t), connected: state });
+    if (state !== null) out.push({ x0: frac(from), x1: frac(ev.t), connected: state });
     from = ev.t; state = ev.connected;
   }
   out.push({ x0: frac(from), x1: 1, connected: state });
