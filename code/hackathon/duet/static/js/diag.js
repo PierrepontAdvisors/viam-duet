@@ -33,3 +33,49 @@ export function append(entries, entry) {
   const out = [...entries, entry];
   return out.length > CAP ? out.slice(out.length - CAP) : out;
 }
+
+const q = (s, n = 40) => { const v = String(s ?? ''); return `"${v.length > n ? `${v.slice(0, n - 1)}…` : v}"`; };
+const fix = (v, d) => (isNum(v) ? v.toFixed(d) : '?');
+const count = (v) => (Array.isArray(v) ? v.length : 0);
+
+const SUMMARY = {
+  state: (m) => [`${m.state} · turn ${m.turn} of ${m.exchanges ?? '?'}`, m.at_look ? 'at look' : null, m.error ? `error: ${m.error}` : null].filter(Boolean).join(' · '),
+  progress: (m) => `stroke ${m.stroke} · ${m.drawn_mm ?? 0} mm`,
+  interpretation: (m) => (m.source === 'fallback' ? `fallback · ${m.error || 'outline and ticks around the new mark'}`
+    : `claude ${fix(m.latency_s, 1)} s · sees ${q(m.sees)} · adds ${q(m.adds)}`),
+  plan: (m) => `${count(m.polylines)} strokes · ${countPoints(m.polylines)} points · budget ${m.budget_mm ?? 0} mm · ${m.color || ''}`,
+  human: (m) => `${count(m.polylines)} strokes · ${count(m.new)} new · ${m.found === false ? 'not found' : 'found'}`,
+  shot: (m) => `${m.who || '?'} · turn ${m.turn ?? '?'}${m.frame_url ? ' · +frame' : ''}`,
+  error: (m) => String(m.message ?? ''),
+  dock: (m) => {
+    const slots = Object.entries(m.slots || {}).map(([k, v]) => `${k}:${v}`).join(' ') || 'none';
+    return `slots ${slots}${Array.isArray(m.reseat) && m.reseat.length ? ` · reseat ${m.reseat.join(', ')}` : ''}`;
+  },
+  calib: (m) => { const f = m.cam_to_robot || {}; return `${count(m.marks_image)} marks · tl ${m.board_tl_index} · fit ax ${fix(f.ax, 3)} ay ${fix(f.ay, 3)}`; },
+  video: (m) => String(m.url ?? ''),
+};
+
+/** One line for the log's summary column. */
+export function summarize(e) {
+  if (e.dir === 'ws') return e.type === 'close' ? `close ${e.raw.code ?? ''}`.trim() : 'open';
+  if (e.dir === 'out') return JSON.stringify(e.raw);
+  if (typeof e.raw === 'string') return `not JSON: ${e.raw.slice(0, 60)}`;
+  if (!KINDS.includes(e.type)) return 'unknown type';
+  if (!e.ok) return 'dropped by the parser';
+  return SUMMARY[e.type](e.raw);
+}
+
+/** A copy for the detail view: lists of points with more than eight points become "N strokes, M points". */
+export function fold(v) {
+  if (isPolylines(v) && countPoints(v) > 8) return `${v.length} stroke${v.length === 1 ? '' : 's'}, ${countPoints(v)} points`;
+  if (isPolyline(v) && v.length > 8) return `1 stroke, ${v.length} points`;
+  if (Array.isArray(v)) return v.map(fold);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fold(x)]));
+  return v;
+}
+
+/** Local time as HH:MM:SS.t */
+export function clock(t) {
+  const d = new Date(t), p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${Math.floor(d.getMilliseconds() / 100)}`;
+}

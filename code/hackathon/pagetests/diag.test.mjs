@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAP, LANES, append, frameEntry, sentEntry, socketEntry } from '../duet/static/js/diag.js';
+import { CAP, LANES, append, frameEntry, sentEntry, socketEntry, summarize, fold, clock } from '../duet/static/js/diag.js';
 
 const STATE = JSON.stringify({ type: 'state', state: 'human_turn', turn: 2, exchanges: 5, at_look: true, camera_errors: 3 });
 
@@ -44,4 +44,48 @@ test('append caps at CAP, keeps order, and never mutates its input', () => {
 
 test('lanes are the fixed kinds with out first', () => {
   assert.deepEqual(LANES, ['out', 'error', 'state', 'progress', 'plan', 'interpretation', 'human', 'shot', 'dock', 'calib', 'video']);
+});
+
+const inn = (obj, ok = true) => frameEntry(JSON.stringify(obj), ok ? obj : null, 0, 0);
+const PL = [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]];
+
+test('summarize gives one line per kind', () => {
+  assert.equal(summarize(inn({ type: 'state', state: 'human_turn', turn: 2, exchanges: 5, at_look: true, error: null })), 'human_turn · turn 2 of 5 · at look');
+  assert.equal(summarize(inn({ type: 'state', state: 'paused', turn: 1, exchanges: 5, at_look: false, error: 'recover timed out' })), 'paused · turn 1 of 5 · error: recover timed out');
+  assert.equal(summarize(inn({ type: 'progress', stroke: 3, drawn_mm: 412 })), 'stroke 3 · 412 mm');
+  assert.equal(summarize(inn({ type: 'interpretation', source: 'claude', latency_s: 6.42, sees: 'A cat.', adds: 'A hat.' })), 'claude 6.4 s · sees "A cat." · adds "A hat."');
+  assert.equal(summarize(inn({ type: 'interpretation', source: 'fallback', error: 'timeout' })), 'fallback · timeout');
+  assert.equal(summarize(inn({ type: 'plan', polylines: [PL, PL], budget_mm: 1200, color: '#1b8f3a' })), '2 strokes · 10 points · budget 1200 mm · #1b8f3a');
+  assert.equal(summarize(inn({ type: 'human', polylines: [PL, PL, PL], new: [PL], found: true })), '3 strokes · 1 new · found');
+  assert.equal(summarize(inn({ type: 'human', polylines: [], new: [], found: false })), '0 strokes · 0 new · not found');
+  assert.equal(summarize(inn({ type: 'shot', url: '/s/turn-02-human.jpg', who: 'human', turn: 2, frame_url: '/s/f.jpg' })), 'human · turn 2 · +frame');
+  assert.equal(summarize(inn({ type: 'error', message: 'board shifted' })), 'board shifted');
+  assert.equal(summarize(inn({ type: 'dock', slots: { A: 'green', B: 'empty' }, reseat: ['A'] })), 'slots A:green B:empty · reseat A');
+  assert.equal(summarize(inn({ type: 'dock', slots: {}, reseat: [] })), 'slots none');
+  assert.equal(summarize(inn({ type: 'calib', marks_image: [[1, 2], [3, 4], [5, 6], [7, 8]], board_tl_index: 1, cam_to_robot: { ax: 0.9673, bx: 8.46, ay: 0.991, by: 8.34 } })), '4 marks · tl 1 · fit ax 0.967 ay 0.991');
+  assert.equal(summarize(inn({ type: 'video', url: '/sessions/x/session.mp4' })), '/sessions/x/session.mp4');
+});
+
+test('summarize for dropped frames, out rows and socket events', () => {
+  assert.equal(summarize(frameEntry('garbage{', null, 0, 0)), 'not JSON: garbage{');
+  assert.equal(summarize(inn({ type: 'oracle' }, false)), 'unknown type');
+  assert.equal(summarize(inn({ type: 'state', state: 7 }, false)), 'dropped by the parser');
+  assert.equal(summarize(sentEntry({ type: 'set', length: 'long' }, 0, 0)), '{"type":"set","length":"long"}');
+  assert.equal(summarize(socketEntry('open', null, 0, 0)), 'open');
+  assert.equal(summarize(socketEntry('close', 1006, 0, 0)), 'close 1006');
+});
+
+test('fold collapses big point lists and keeps small ones and scalars', () => {
+  const plan = { type: 'plan', polylines: [PL, PL], budget_mm: 1200 };
+  assert.deepEqual(fold(plan), { type: 'plan', polylines: '2 strokes, 10 points', budget_mm: 1200 });
+  assert.deepEqual(fold({ new: [PL], polylines: [PL, PL] }), { new: [PL], polylines: '2 strokes, 10 points' });   // five points: under the eight-point rule
+  const calib = { marks_image: [[1, 2], [3, 4], [5, 6], [7, 8]], board_mm: [176, 240], cam_to_robot: { ax: 1 } };
+  assert.deepEqual(fold(calib), calib);
+  assert.deepEqual(fold([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12], [13, 14], [15, 16], [17, 18]]), '1 stroke, 9 points');
+  assert.equal(fold('text'), 'text'); assert.equal(fold(null), null); assert.equal(fold(3), 3);
+});
+
+test('clock is local HH:MM:SS.t', () => {
+  const d = new Date(2026, 8, 19, 14, 5, 9, 712);
+  assert.equal(clock(d.getTime()), '14:05:09.7');
 });
