@@ -11,7 +11,7 @@ Extends `docs/superpowers/specs/2026-09-19-duet-pitch-deck-grid-design.md`. Ever
 
 ## 2. Sizes
 
-Header logo height 3.2cqw; footer logo height 2.4cqw; card 2 logo width 22cqw (about 9cqw tall), so card 2's words column still fits: logo, subtitle, beats, chips with 2cqw gaps come to about 38cqw of the 39 available.
+Header logo height 3.2cqw; footer logo height 2.4cqw; card 2 logo width 20cqw (about 8cqw tall; every `<svg class="logo">` use carries `viewBox="0 0 320 130"`, without which the browser sizes the box at 300 by 150 pixels and the logo floats inside it), so card 2's words column still fits: logo, subtitle, beats, chips with 2cqw gaps come to about 38cqw of the 39 available.
 
 ## 3. Files and tests
 

@@ -64,7 +64,7 @@ ul, ol { padding: 0; list-style: none; }
 .plate-black .logo { color: #fff; }
 .wordmark .logo { height: 3.2cqw; width: auto; }
 .foot-logo { height: 2.4cqw; width: auto; }
-.name .logo { width: 16cqw; height: auto; }
+.name .logo { width: 20cqw; height: auto; }
 
 /* bands */
 .band { position: relative; display: flex; justify-content: space-between; align-items: center; gap: var(--s2); min-width: 0; }
