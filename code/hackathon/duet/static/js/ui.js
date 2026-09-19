@@ -80,10 +80,17 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     const st = app.state;
     if (!st) { $('state').textContent = app.connected ? 'Getting ready…' : 'Connecting…'; $('state').className = 'chip white'; return; }
     const c = chipFor(st.state);
+    const stateChanged = $('state').textContent !== c.text;
     $('state').textContent = c.text; $('state').className = `chip ${c.tone}`;
-    $('count').innerHTML = `Exchange <b>${st.turn}</b> of ${st.exchanges}`;
-    $('go').classList.toggle('hidden', st.state !== 'human_turn');
+    if (stateChanged) popIt($('state'));
+    const count = `Exchange <b>${st.turn}</b> of ${st.exchanges}`;
+    if ($('count').innerHTML !== count) { $('count').innerHTML = count; popIt($('count')); }
+    const goHidden = st.state !== 'human_turn';
+    if (!goHidden && $('go').classList.contains('hidden')) popIt($('go'));
+    $('go').classList.toggle('hidden', goHidden);
   }
+  /** Restart the design system's pop on an element whose content just changed. */
+  function popIt(el) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 
   // ---- bubble ----
   function currentBubble() {
@@ -109,7 +116,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     const b = currentBubble();
     $('bubble').classList.remove('speech', 'thought', 'thinking');
     $('bubble').classList.add(b.kind); if (b.thinking) $('bubble').classList.add('thinking');
-    $('words').textContent = b.text;
+    if ($('words').textContent !== b.text) { $('words').textContent = b.text; popIt($('bubble')); }
     placeBubble(b);
   }
   setInterval(() => { if (view.source === 'live' && currentBubble().thinking) renderBubble(); }, PLACEHOLDER_MS);

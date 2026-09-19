@@ -8,8 +8,9 @@ const read = (name) => readFileSync(DIR + name, 'utf8');
 
 test('the page loads the design system and the embedded font, not Google Fonts', () => {
   const h = read('index.html');
-  assert.ok(h.includes('href="/static/tokens.css"'), 'tokens.css linked');
-  assert.ok(h.includes('href="/static/fredoka.css"'), 'fredoka.css linked');
+  assert.match(h, /href="\/static\/tokens\.css(\?v=\w+)?"/, 'tokens.css linked');
+  assert.match(h, /href="\/static\/fredoka\.css(\?v=\w+)?"/, 'fredoka.css linked');
+  assert.match(h, /href="\/static\/duet\.css\?v=\w+"/, 'duet.css carries a cache-busting version');
   assert.ok(!h.includes('fonts.googleapis.com'), 'no network font');
   assert.ok(h.indexOf('tokens.css') < h.indexOf('duet.css'), 'tokens load before the page styles');
 });
