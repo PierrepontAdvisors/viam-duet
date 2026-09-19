@@ -24,3 +24,9 @@ Extends the grid spec and the logo spec. Everything not named here is unchanged.
 ## 4. Tests
 
 The copy test drops the old node copy and strip and gains the new sentences, the Viam lines and the fourth module's text. The master-page and logo tests no longer special-case card 6. A new test asserts the five icon symbols exist and are used, card 5 has four modules, card 6 has four Viam lines, and the CSS has `@keyframes pop` with the reduced-motion guard.
+
+## 5. Amendments while building
+
+- Card 6's four boxes and four Viam lines are two aligned rows (`.mods.four` then `.mods.four.viams`) rather than four stacked columns, so the boxes share one bottom edge whatever the Viam lines' line count.
+- The "Next" pill sits in the fourth module's top-right corner, outside the head row, so "Your own artist" stays on one line.
+- Nicholas confirmed the toy pop (option B) while the plan was being written.
