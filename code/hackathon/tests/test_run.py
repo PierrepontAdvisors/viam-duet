@@ -1,6 +1,7 @@
 import asyncio
 import os
 import signal
+from pathlib import Path
 
 from duet import recorder, run
 
@@ -46,3 +47,45 @@ def test_main_fake_wires_the_loop_and_shuts_down(tmp_path, monkeypatch):
 
     asyncio.run(scenario())
     assert seen[:3] == ["start", "human_turn", "capture"], seen
+
+
+def test_fake_visitor_reloads_the_recorded_piece_on_a_new_session(monkeypatch):
+    monkeypatch.setattr(run.cv2, "imread", lambda p: Path(p).name)
+    monkeypatch.setattr(run, "VISITOR_WAITS", (0.0, 0.0, 0.0))
+
+    class Frames:
+        def __init__(self):
+            self.shown, self.robot_boards = [], []
+
+        def show_board(self, board):
+            self.shown.append(board)
+
+        def jitter(self, seconds):
+            pass
+
+    class Sess:
+        passes = 0
+
+        def pass_turn(self):
+            self.passes += 1
+
+    async def scenario():
+        bus = run.EventBus()
+        frames, session = Frames(), Sess()
+        task = asyncio.create_task(run.fake_visitor(bus, frames, Path("s/turn-00-start.jpg"), [Path("s/turn-01-human.jpg")],
+                                                    [Path("s/turn-01-robot.jpg")], session))
+        await asyncio.sleep(0)
+        bus.emit("state", state="start", session="a")
+        bus.emit("state", state="human_turn", session="a")
+        await asyncio.sleep(0.05)
+        bus.emit("state", state="human_turn", session="a")        # out of recorded turns: no Go
+        await asyncio.sleep(0.05)
+        bus.emit("state", state="start", session="b")
+        bus.emit("state", state="human_turn", session="b")
+        await asyncio.sleep(0.05)
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        return frames, session
+    frames, session = asyncio.run(scenario())
+    assert frames.shown == ["turn-00-start.jpg", "turn-01-human.jpg", "turn-00-start.jpg", "turn-01-human.jpg"]
+    assert session.passes == 2 and frames.robot_boards == ["turn-01-robot.jpg"]
