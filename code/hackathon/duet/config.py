@@ -41,13 +41,13 @@ REQUIRE_GRAB_DETECT = False   # set True in stage 3 if this gripper unit reports
 
 COVERAGE_END = 0.33           # end the session when this fraction of the drawable area is inked
 
-# ---- perception and brain (plan 2) -----------------------------------------------------------
+# ---- perception: trigger readings (plan 2) --------------------------------------------------
 FIXTURES_DIR = PACKAGE_DIR.parent / "tests" / "fixtures"
 
 DOCK_SLOTS = ("green",)         # markers in the dock; single-marker rig decided 2026-09-18
 COLOR_HEX = {"green": "#1b8f3a", "red": "#c62828", "blue": "#1e56c9", "black": "#222222"}
 
-CLEARANCE_MM = 3.0              # unattached robot strokes keep this far from existing ink
+CLEARANCE_MM = 5.0              # the robot never draws within this distance of existing ink (spec section 15)
 DOT_TOLERANCE_MM = 3.0          # a docked marker's dot further than this from its recorded spot is "moved"
 DOT_MIN_AREA_PX = 30            # smaller color blobs are noise, not a marker's end plug
 
@@ -56,17 +56,11 @@ STILL_THRESH = 3.0              # mean absolute gray difference between frames t
 STILL_S = 1.5                   # dock rule: markers home, still, no hand for this long
 HELD_QUIET_S = 2.0              # held rule: still and no hand for this long after activity
 
-HAND_HEIGHT_MM = 25.0           # anything this far above the board plane, over the board or dock, is a hand
-HAND_AREA_MM2 = 2000.0
-COVERAGE_END = 0.33             # the session ends when this fraction of the drawable area is inked
-
-CLAUDE_MODEL = "claude-opus-5"
-CLAUDE_TIMEOUT_S = 8.0
-CLAUDE_MAX_TOKENS = 6000        # a Long proposal is a few dozen strokes of JSON
-CLAUDE_EFFORT = "low"
+HAND_HEIGHT_MM = 25.0           # depth check: anything this far above the board plane, over the board or dock, is a hand
+HAND_AREA_MM2 = 2000.0          # a changed or raised blob at least this big is a hand, not ink
+HAND_DIFF_THRESH = 40           # color backup: gray difference from the reference frame that counts as changed
+HAND_OPEN_PX = 9                # color backup: opening kernel that erases marker lines but not a hand
 
 ARTIST = "haring"
-HARING = {"pass_gap_mm": 1.5, "tick_every_mm": 25.0, "tick_min_mm": 8.0, "tick_max_mm": 15.0,
-          "outline_offset_mm": 6.0}
 # A small glyph the robot signs with, in mm relative to its own top-left; the session places it in a corner.
 SIGNATURE_MM = [[(0.0, 8.0), (4.0, 0.0), (8.0, 8.0)], [(2.0, 5.0), (6.0, 5.0)]]
