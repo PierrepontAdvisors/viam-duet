@@ -130,7 +130,7 @@ body.controls .panel { display: grid; }
 .diag { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; z-index: 5; display: none; flex-direction: column; gap: .6cqw;
         padding: .8cqw 1.6cqw 1cqw; background: rgba(255,255,255,.94); border-top: var(--frame-stroke) solid var(--ink);
         font-family: var(--mono); color: var(--ink); }
-body.diagnostics .diag { display: flex; }   /* the body class differs from the drawer's own class on purpose: body.diag would match .diag { display: none } and hide the page */
+body.diagnostics .diag { display: flex; }   /* the body class differs from the drawer's own class on purpose: a shared name would make the body match .diag { display: none } and hide the page */
 .diag-head { display: flex; gap: 1cqw; align-items: center; height: 2.4cqw; flex: 0 0 auto; }
 .diag .lbl { font: 700 .85cqw/1 var(--story); letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
 .diag-summary { flex: 1; font: .85cqw/1.5 var(--mono); color: #555; }
