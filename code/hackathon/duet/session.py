@@ -5,22 +5,28 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import asdict, dataclass, replace
+from time import monotonic
 
 import numpy as np
 
 from duet import config as cfg
 from duet import planner, svg, vision
+from duet.camera import Frame
 from duet.claude_turn import TurnResult
 from duet.controller import Blocked
 from duet.strokes import Polyline, length
-from duet.styles import haring
+from duet.styles import haring, mondrian, vangogh
 from duet.trigger import Reading, Trigger
 from duet.turn import all_ink, map_strokes
 
-ARTISTS = ("haring",)
-RETRY_AFTER_FAULT = {"look": "look", "human_turn": "human_turn", "capture": "human_turn", "interpret": "human_turn",
-                     "plan": "human_turn", "robot_draw": "look", "finish": "look"}
+ARTISTS = ("haring", "mondrian", "vangogh")
+STYLERS = {"haring": haring, "mondrian": mondrian, "vangogh": vangogh}
+# Where Resume picks up after a fault. `interpret` and `plan` retry themselves: the visitor's strokes
+# are already consumed, so sending them back to `human_turn` would ask for the mark to be drawn again.
+RETRY_AFTER_FAULT = {"start": "start", "look": "look", "human_turn": "human_turn", "capture": "human_turn",
+                     "interpret": "interpret", "plan": "plan", "robot_draw": "look", "finish": "finish"}
 HAND_WAIT_S = 30
+HAND_WAIT_MESSAGE_S = 5        # how often the "still waiting" line is repeated while the arm is held back
 SETTLE_AFTER_LOOK_S = 0.8      # the camera image settles after the arm stops, as in duet.turn
 FALLBACK_QUIP = "Lost my words. Drawing anyway!"   # the speech bubble when Claude did not answer
 FALLBACK_THOUGHT = "Hmm... my words got lost."       # the thought cloud when Claude did not answer
@@ -163,6 +169,7 @@ class Session:
         self.last_error: str | None = None
         self.dock_status: dict[str, str] = {}
         self.dot_displacement: dict[str, tuple[float, float]] = {}
+        self._signed = False                # the signature is drawn once, even if `finish` retries
         self._running = asyncio.Event()
         self._running.set()
         self._pass = asyncio.Event()
@@ -172,6 +179,7 @@ class Session:
     # ---- controls, called from the page ------------------------------------------------------
     def update_settings(self, **changes) -> Settings:
         self.settings = replace(self.settings, **changes).check()
+        self.ctl.held_mode = self.settings.handoff == "held"    # the arm must not reach for a dock it is not using
         self.rec.update(**self.settings.record())
         self.emit_state()
         return self.settings
@@ -189,6 +197,7 @@ class Session:
     async def clear_error(self) -> None:
         await self.ctl.clear_error()
         self.last_error = None
+        self.bus.last.pop("error", None)
         self.emit_state()
 
     # ---- events --------------------------------------------------------------------------------
@@ -196,20 +205,22 @@ class Session:
         guard = "off" if self.guard is None else f"{self.guard.mode} at the look pose"
         self.bus.emit("state", state=self.state, turn=self.turn, coverage=round(self.coverage, 3),
                       error=self.last_error, at_look=self.at_look, hand_guard=guard, session=self.rec.id,
-                      artists=list(ARTISTS), **asdict(self.settings))
+                      artists=list(ARTISTS), camera_errors=getattr(self.frames, "errors", 0),
+                      camera_error=getattr(self.frames, "last_error", None), **asdict(self.settings))
 
     def _set(self, state: str) -> None:
         self.state = state
         self.states_seen.append(state)
         self.emit_state()
 
-    def _emit_shot(self, who: str) -> None:
+    def _emit_shot(self, who: str, turn: int) -> None:
         """`who` is "start", "human", "robot" or "final", so the page can label thumbnails without parsing
-        the URL. `frame_url` is the raw landscape camera frame of the same capture, when one was saved."""
+        the URL, and `turn` is the photo's own turn number, the one in its filename. `frame_url` is the
+        raw landscape camera frame of the same capture, when one was saved."""
         p = self.rec.latest_photo
         if p is not None:
             f = self.rec.latest_frame
-            self.bus.emit("shot", url=f"/sessions/{self.rec.id}/{p.name}", turn=self.turn, who=who,
+            self.bus.emit("shot", url=f"/sessions/{self.rec.id}/{p.name}", turn=turn, who=who,
                           frame_url=f"/sessions/{self.rec.id}/{f.name}" if f is not None else None)
 
     def _set_look(self, value: bool) -> None:
@@ -220,13 +231,7 @@ class Session:
     # ---- the loop ------------------------------------------------------------------------------
     async def run(self) -> None:
         try:
-            self._set("look")
-            await self.ctl.go_look()
-            self._set_look(True)
-            self.previous_photo, frame = await self._capture_board()
-            self.rec.save_photo(0, "start", self.previous_photo, frame)
-            self._emit_shot("start")
-            self._set("human_turn")
+            self._set("start")
             while self.state != "finished":
                 if not self._running.is_set():
                     if self.state != "paused":
@@ -246,6 +251,8 @@ class Session:
                 try:
                     nxt = await getattr(self, f"_state_{self.state}")()
                 except Exception as exc:
+                    if not self._running.is_set():
+                        continue          # the operator paused: stop() aborted the state, it did not fault
                     self.last_error = f"{type(exc).__name__}: {exc}"
                     self.bus.emit("error", message=self.last_error)
                     self._running.clear()
@@ -253,6 +260,14 @@ class Session:
                 self._set(nxt)
         finally:
             self.rec.write()
+
+    async def _state_start(self) -> str:
+        await self.ctl.go_look()
+        self._set_look(True)
+        self.previous_photo, frame = await self._capture_board()
+        self.rec.save_photo(0, "start", self.previous_photo, frame)
+        self._emit_shot("start", 0)
+        return "human_turn"
 
     def _board_homography(self) -> np.ndarray:
         if self._homography is None:
@@ -274,9 +289,10 @@ class Session:
         return Reading(t=frame.t, hand=bool(hand), still=vision.still(colors), dots=dots)
 
     async def _state_human_turn(self) -> str:
-        trig = Trigger(self.settings.handoff)
+        handoff = self.settings.handoff
+        trig = Trigger(handoff)
         self._pass.clear()
-        if self.settings.handoff == "dock" and not self.cal.get("dots"):
+        if handoff == "dock" and not self.cal.get("dots"):
             self.bus.emit("error", message="dock handoff has no calibrated marker dots, so the turn cannot end by itself: "
                                            "use Pass, or switch the marker setting to Held")
         while True:
@@ -286,6 +302,9 @@ class Session:
                 self._pass.clear()
                 return "capture"
             await asyncio.sleep(self.poll_s)
+            if self.settings.handoff != handoff:        # the operator switched the marker setting mid-turn
+                handoff = self.settings.handoff
+                trig = Trigger(handoff)
             frame = self.frames.latest()
             if frame is None:
                 continue
@@ -303,10 +322,13 @@ class Session:
         frame = await self.frames.capture_median()
         quad = vision.find_corner_marks(frame, expected=self.cal["marks_image"])
         drift = max(float(np.hypot(*(np.asarray(q) - np.asarray(e)))) for q, e in zip(quad, self.cal["marks_image"]))
-        if drift > 40:
+        if drift > 70:
             self.bus.emit("error", message=f"board shifted {drift * self._mm_per_px():.0f} mm since calibration; re-run calibrate")
         if self.guard is not None:
-            self.guard.reference = frame
+            if self.guard.reading(Frame(frame, None, monotonic())) is True:
+                self.bus.emit("error", message="a hand was in the capture; keeping the previous reference frame")
+            else:
+                self.guard.reference = frame
         return vision.warp_to_board(frame, vision.board_quad(quad, self.cal["board_tl_index"])), frame
 
     def _mm_per_px(self) -> float:
@@ -322,7 +344,7 @@ class Session:
         mask, coverage = vision.new_ink(photo, self.previous_photo)
         new_cam = vision.trace(mask)
         if not new_cam:
-            self.bus.emit("human", polylines=self.human_ink, new=[], found=False)
+            self.bus.emit("human", polylines=self.human_ink, new=[], found=False, turn=self.turn + 1)
             return "human_turn"
         self.human_new_cam = new_cam
         self.human_new = vision.cam_to_robot(new_cam, self.cal)
@@ -330,18 +352,20 @@ class Session:
         self.coverage = coverage
         self.previous_photo = photo
         self.rec.save_photo(self.turn + 1, "human", photo, frame)
-        self._emit_shot("human")
-        self.bus.emit("human", polylines=self.human_ink, new=self.human_new, found=True)
+        self._emit_shot("human", self.turn + 1)
+        self.bus.emit("human", polylines=self.human_ink, new=self.human_new, found=True, turn=self.turn + 1)
         return "interpret"
 
     async def _state_interpret(self) -> str:
         self.result = await self.brain.propose(self.previous_photo, self.human_new_cam, self.history,
-                                               self.settings.length, self.turn + 1, self.settings.exchanges)
+                                               self.settings.length, self.turn + 1, self.settings.exchanges,
+                                               artist=self.settings.artist)
         p = self.result.proposal
         self.bus.emit("interpretation", sees=p.sees if p else "", adds=p.adds if p else "",
                       thought=(getattr(p, "thought", "") or FALLBACK_THOUGHT) if p else FALLBACK_THOUGHT,
                       quip=(getattr(p, "quip", "") or FALLBACK_QUIP) if p else FALLBACK_QUIP,
-                      source=self.result.source, latency_s=round(self.result.latency_s, 2), error=self.result.error)
+                      source=self.result.source, latency_s=round(self.result.latency_s, 2), error=self.result.error,
+                      turn=self.turn + 1)
         return "plan"
 
     async def _state_plan(self) -> str:
@@ -350,60 +374,82 @@ class Session:
         r = self.result
         if r is not None and r.proposal is not None:
             strokes = map_strokes([s.model_dump() for s in r.proposal.strokes], self.cal)
-            styled, self.color = haring.style(planner.validate(strokes, ink, budget),
-                                              energy=self.settings.energy, direction_deg=self.settings.direction)
+            styled, self.color = STYLERS[self.settings.artist].style(
+                planner.validate(strokes, ink, budget),
+                energy=self.settings.energy, direction_deg=self.settings.direction)
             sees, adds, source = r.proposal.sees, r.proposal.adds, r.source
         else:
-            styled, self.color = haring.fallback(self.human_new)
+            styled, self.color = STYLERS[self.settings.artist].fallback(self.human_new)
             sees, adds, source = "(fallback)", "outline and ticks around your mark", "fallback"
         self.plan = planner.finalize(styled, ink, budget)
+        if not self.plan and r is not None and r.proposal is not None:
+            # every stroke Claude proposed sat inside the 5 mm clearance: answer the visitor's mark instead
+            styled, self.color = STYLERS[self.settings.artist].fallback(self.human_new)
+            self.plan = planner.finalize(styled, ink, budget)
+            source = "fallback"
+        if not self.plan:
+            self.bus.emit("error", message="every proposed stroke was within 5 mm of existing ink; "
+                                           "nothing to draw this turn")
         self.history = self.history + [{"sees": sees, "adds": adds, "source": source}]
         turn = self.turn + 1
         self.rec.save_svg(turn, svg.render(ink, self.robot_ink, self.plan, self.color))
         self.rec.record_turn(turn, sees=sees, adds=adds, source=source, latency_s=round(r.latency_s, 2) if r else None,
                              error=r.error if r else None, color=self.color,
                              planned_mm=round(sum(length(pl) for pl in self.plan)))
-        self.bus.emit("plan", polylines=self.plan, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=budget)
+        self.bus.emit("plan", polylines=self.plan, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=budget,
+                      turn=self.turn + 1)
         return "robot_draw"
 
     async def _wait_hands_clear(self) -> None:
         """Right before the arm leaves the look pose: wait for the hand to go, then mark the guard
         blind until the next go_look (the wrist camera no longer sees the board it was checked against)."""
-        if self.guard is None:
-            return
-        for _ in range(HAND_WAIT_S):
-            if not await self.guard():
-                break
-            self.bus.emit("error", message="hand over the board or dock: waiting before the arm moves")
-            await asyncio.sleep(1.0)
-        else:
-            raise Blocked("hand over the board or dock for 30 s")
+        if self.guard is not None:
+            for second in range(HAND_WAIT_S):
+                blind = self.frames.latest() is None       # no frame at all reads as a hand; say which it is
+                if not blind and not await self.guard():
+                    break
+                if second % HAND_WAIT_MESSAGE_S == 0:      # the same line every second is noise on the page
+                    self.bus.emit("error", message="no camera frame for the hand check; waiting" if blind else
+                                  "hand over the board or dock: waiting before the arm moves")
+                await asyncio.sleep(1.0)
+            else:
+                raise Blocked("hand over the board or dock for 30 s")
         self._set_look(False)
 
-    async def _forward_progress(self, task: asyncio.Task) -> None:
+    async def _forward_progress(self, task: asyncio.Task, turn: int) -> None:
         while not task.done():
             try:
                 ev = await asyncio.wait_for(self.ctl.events.get(), 0.1)
             except asyncio.TimeoutError:
                 continue
-            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]))
+            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]), turn=turn)
         while not self.ctl.events.empty():
             ev = self.ctl.events.get_nowait()
-            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]))
+            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]), turn=turn)
 
-    async def _draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float):
+    async def _draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float, turn: int):
+        """`turn` is the exchange the strokes belong to: the one in progress for a plan, the one just
+        finished for the signature."""
         await self._wait_hands_clear()
         await self.ctl.pick_marker(self.color, self.dot_displacement.get(self.color, (0.0, 0.0)))
         task = asyncio.create_task(self.ctl.draw(polylines, budget_mm, budget_s))
-        await self._forward_progress(task)
-        result = await task
+        try:
+            await self._forward_progress(task, turn)
+            result = await task
+        except BaseException:
+            # the loop is being cancelled or the draw failed; the arm must stop before anything else
+            await self.ctl.stop()
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+            raise
         await self.ctl.return_marker(self.color)
         return result
 
     async def _state_robot_draw(self) -> str:
         if not self.plan:
             return "look"
-        result = await self._draw(self.plan, cfg.BUDGET_MM[self.settings.length], cfg.BUDGET_S[self.settings.length])
+        result = await self._draw(self.plan, cfg.BUDGET_MM[self.settings.length], cfg.BUDGET_S[self.settings.length],
+                                  self.turn + 1)
         self.robot_ink = self.robot_ink + [list(pl) for pl in self.plan[:result.strokes_done]]
         if result.blocked:
             self.bus.emit("error", message="a hand was seen between strokes; the turn ended early")
@@ -417,7 +463,7 @@ class Session:
         _, self.coverage = vision.new_ink(photo, self.previous_photo)
         self.previous_photo = photo
         self.rec.save_photo(self.turn, "robot", photo, frame)
-        self._emit_shot("robot")
+        self._emit_shot("robot", self.turn)
         self.rec.record_turn(self.turn, coverage=round(self.coverage, 3))
         self.rec.set_turn(self.turn)
         self.rec.write()
@@ -428,15 +474,18 @@ class Session:
     async def _state_finish(self) -> str:
         ox, oy = cfg.BOARD_W_MM - cfg.INSET_MM - 12, cfg.BOARD_H_MM - cfg.INSET_MM - 12
         signature = [[(ox + x, oy + y) for x, y in pl] for pl in cfg.SIGNATURE_MM]
-        self.bus.emit("plan", polylines=signature, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=100)
-        await self._draw(signature, 100.0, 20.0)
-        self.robot_ink = self.robot_ink + signature
+        if not self._signed:
+            self.bus.emit("plan", polylines=signature, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=100,
+                          turn=self.turn)
+            await self._draw(signature, 100.0, 20.0, self.turn)
+            self.robot_ink = self.robot_ink + signature
+            self._signed = True
         await self.ctl.go_look()
         self._set_look(True)
         photo, frame = await self._capture_board()
         self.previous_photo = photo
         self.rec.save_photo(self.turn, "final", photo, frame)
-        self._emit_shot("final")
+        self._emit_shot("final", self.turn)
         self.rec.write()
         video = await asyncio.to_thread(self.rec.stitch)
         if video is not None:

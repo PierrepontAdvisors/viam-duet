@@ -59,7 +59,7 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
         await asyncio.wait_for(task, 60)
         return s, ctl, rec, drain(q)
     s, ctl, rec, events = asyncio.run(scenario())
-    assert s.states_seen == ["look", "human_turn", "capture", "interpret", "plan", "robot_draw", "look", "finish", "finished"]
+    assert s.states_seen == ["start", "human_turn", "capture", "interpret", "plan", "robot_draw", "look", "finish", "finished"]
     kinds = [c[0] for c in ctl.calls]
     assert kinds[0] == "go_look" and kinds.count("draw") == 2       # the plan, then the signature
     for name in ("turn-00-start.jpg", "turn-00-start-frame.jpg", "turn-01-human.jpg", "turn-01-human-frame.jpg",
@@ -67,21 +67,27 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
         assert (rec.dir / name).exists(), name
     shot = next(e for e in events if e["type"] == "shot")
     assert shot["who"] == "start" and shot["frame_url"].endswith("turn-00-start-frame.jpg")
+    human_shot = next(e for e in events if e["type"] == "shot" and e["who"] == "human")
+    assert human_shot["turn"] == 1
     meta = json.loads((rec.dir / "session.json").read_text())
-    assert meta["turn"] == 1 and meta["exchanges"] == 1 and meta["history"][0]["source"] == "claude"
+    assert meta["turn"] == 1 and meta["exchanges"] == 1 and meta["history"][0]["source"] == "fake"
     assert meta["history"][0]["sees"].startswith("A creature")
     types = [e["type"] for e in events]
     for t in ("state", "human", "interpretation", "plan", "progress", "shot", "video"):
         assert t in types, t
     interp = next(e for e in events if e["type"] == "interpretation")
-    assert interp["quip"] == "What a creature! Here comes the sun." and interp["source"] == "claude"
+    assert interp["quip"] == "What a creature! Here comes the sun." and interp["source"] == "fake"
     assert interp["thought"] == "Is that a creature waking up?"
+    assert interp["turn"] == 1
     human = next(e for e in events if e["type"] == "human")
     assert 10 <= len(human["new"]) <= 16
+    assert human["turn"] == 1
     xs = [x for pl in human["new"] for x, _ in pl]
     assert 30 <= min(xs) <= 45 and 130 <= max(xs) <= 145              # robot-board mm (cam_to_robot applied)
+    assert [e["turn"] for e in events if e["type"] == "progress"] == [1] * sum(e["type"] == "progress" for e in events)
     plan = next(e for e in events if e["type"] == "plan")
     assert plan["polylines"] and plan["color"] == cfg.COLOR_HEX["green"]
+    assert plan["turn"] == 1
     assert ctl.drawn[0] == plan["polylines"][:len(ctl.drawn[0])]
 
 
@@ -155,7 +161,7 @@ def test_pause_and_resume_recover_the_arm(tmp_path, look_frame, exchange_start, 
 
 def test_a_fault_in_the_brain_pauses_with_the_error_on_the_bus(tmp_path, look_frame, exchange_start, exchange_human, calibration):
     class BrokenBrain:
-        async def propose(self, board, human_cam, history, length, exchange, total):
+        async def propose(self, board, human_cam, history, length, exchange, total, artist="haring"):
             raise RuntimeError("no network")
 
     async def scenario():
@@ -179,7 +185,7 @@ def test_a_fault_in_the_brain_pauses_with_the_error_on_the_bus(tmp_path, look_fr
 
 
 def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_start, calibration):
-    s, *_ = build(tmp_path, look_frame, exchange_start, calibration)
+    s, frames, ctl, *_ = build(tmp_path, look_frame, exchange_start, calibration)
     with pytest.raises(ValueError):
         s.update_settings(length="huge")
     with pytest.raises(ValueError):
@@ -191,4 +197,64 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
     new = s.update_settings(length="medium", exchanges=4, energy=0.8, direction=45)
     assert (new.exchanges, new.energy, new.direction) == (4, 0.8, 45)
     state = s.bus.last["state"]
-    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring"]
+    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring", "mondrian", "vangogh"]
+    s.update_settings(handoff="dock")                     # the arm's held flag follows the page's Marker toggle
+    assert ctl.held_mode is False
+    s.update_settings(handoff="held")
+    assert ctl.held_mode is True
+
+
+def test_pause_during_the_robot_turn_stops_the_arm_and_resume_finishes(tmp_path, look_frame, exchange_start, exchange_human, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        ctl.stroke_s = 0.15                             # slow enough to pause in the middle of the plan
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        frames.show_board(exchange_human)
+        s.pass_turn()
+        await until_state(s, "robot_draw")
+        await asyncio.sleep(0.4)
+        await s.pause()
+        await until_state(s, "paused")
+        s.resume()
+        await asyncio.wait_for(task, 60)
+        return s, ctl, drain(q)
+    s, ctl, events = asyncio.run(scenario())
+    assert ctl.calls.index(("stop",)) < ctl.calls.index(("recover",))
+    assert "paused" in s.states_seen and s.states_seen[-1] == "finished"
+    assert not any(e["type"] == "error" and "Aborted" in e["message"] for e in events)
+
+
+def test_a_startup_fault_pauses_and_resume_retries(tmp_path, look_frame, exchange_start, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        ctl.fail_go_look_once = True                    # a latched arm error on the very first move
+        task = asyncio.create_task(s.run())
+        await until_state(s, "paused")
+        assert "Emergency Stop" in s.last_error
+        s.resume()
+        await until_state(s, "human_turn")
+        await cancel(task)
+        return s, drain(q)
+    s, events = asyncio.run(scenario())
+    assert any(e["type"] == "error" and "Emergency Stop" in e["message"] for e in events)
+    assert s.states_seen[:3] == ["start", "paused", "start"]
+
+
+def test_a_hand_in_the_capture_does_not_become_the_reference(tmp_path, look_frame, exchange_start, exchange_human, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        ref0 = s.guard.reference
+        frames.show_hand(True)
+        frames.show_board(exchange_human)
+        await s._capture_board()
+        assert s.guard.reference is ref0                # the hand frame was refused
+        frames.show_hand(False)
+        await s._capture_board()
+        assert s.guard.reference is not ref0            # a clean frame refreshes it
+        await cancel(task)
+        return s, drain(q)
+    s, events = asyncio.run(scenario())
+    assert any(e["type"] == "error" and "reference" in e["message"] for e in events)

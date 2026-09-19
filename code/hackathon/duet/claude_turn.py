@@ -72,13 +72,24 @@ Keep every stroke inside the drawable area. Never draw on or across ink that is 
 the person's marks are theirs. Complement them from the free space around them, at least 5 mm away;
 respond to their shapes, echo them, frame them, give them company, but do not touch them. Anything
 you draw within 5 mm of existing ink will be removed before the robot draws. Set attached to false. The total length of all strokes
-must stay within the budget you are given. The artist mode is Keith Haring: thick, simple, continuous outlines; simplified figures and creatures
-with rounded limbs in energetic poses; clear silhouettes; playful symbols; everything reads from across a
-room. Motion ticks radiating from your strokes are added for you, so do not draw them. Be generous:
-use the budget.
+must stay within the budget you are given.
 Draw like a marker on a whiteboard: line art only, no fills, no shading. Use the pacing you are given:
 early exchanges add one clear element; the last exchange should complete the piece.
 Respond only through the structured output."""
+
+
+ARTIST_NOTES = {
+    "haring": "The artist mode is Keith Haring: thick, simple, continuous outlines; simplified figures and "
+              "creatures with rounded limbs in energetic poses; clear silhouettes; playful symbols; everything "
+              "reads from across a room. Motion ticks radiating from your strokes are added for you, so do not "
+              "draw them. Be generous: use the budget.",
+    "mondrian": "The artist mode is Piet Mondrian: straight horizontal and vertical lines only, rectangles and "
+                "grids; your strokes will be snapped to a 10 mm grid and drawn as rectangles with a few "
+                "subdivisions, so give simple boxes and bars. Be generous: use the budget.",
+    "vangogh": "The artist mode is Vincent van Gogh: flowing lines and swirls; your strokes will be redrawn as "
+               "rows of short curved dashes streaming along them, so give long sweeping lines rather than small "
+               "marks. Be generous: use the budget.",
+}
 
 
 def grid_overlay(board_bgr: np.ndarray) -> np.ndarray:
@@ -125,14 +136,15 @@ def make_client() -> anthropic.Anthropic:
 
 
 def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Polyline], history: list[dict],
-            length_setting: str, exchange: int, exchange_total: int) -> TurnResult:
+            length_setting: str, exchange: int, exchange_total: int, artist: str = "haring") -> TurnResult:
     budget = cfg.BUDGET_MM[length_setting]
     asks = {"short": "one small addition: a detail or an accent",
             "medium": "one full element that extends the drawing",
             "long": "a full scene: six to twelve bold elements, such as figures, creatures, a setting and "
                     "symbols, each a simple continuous outline, spread across the free space"}[length_setting]
     hist = "\n".join(f"  exchange {i + 1}: saw \"{h['sees']}\"; added \"{h['adds']}\"" for i, h in enumerate(history)) or "  (this is the first exchange)"
-    text = (f"Exchange {exchange} of {exchange_total}. Length setting: {length_setting}, so add {asks}. "
+    text = (f"{ARTIST_NOTES[artist]}\n"
+            f"Exchange {exchange} of {exchange_total}. Length setting: {length_setting}, so add {asks}. "
             f"Stroke budget: {budget:.0f} mm total. Allowed color: green.\n"
             f"New strokes the person just drew, as polylines in board millimeters:\n{fmt_polylines(human)}\n"
             f"Earlier exchanges:\n{hist}")

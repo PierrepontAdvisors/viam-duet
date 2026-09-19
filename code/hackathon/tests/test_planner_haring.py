@@ -39,6 +39,18 @@ def test_finalize_keeps_styled_passes_and_ticks_off_the_ink():
         assert LineString(pl).distance(ink_line) >= cfg.CLEARANCE_MM - 1e-6
 
 
+def test_finalize_clips_styled_strokes_to_the_drawable_area():
+    # hugs the top inset edge, drawn right to left, so the ticks radiate off the board
+    styled = haring.style([[(150.0, 15.0), (20.0, 15.0)]], energy=1.0)[0]
+    assert min(y for pl in styled for _, y in pl) < cfg.INSET_MM, "the styled input must escape, or this proves nothing"
+    final = planner.finalize(styled, [], 10_000)
+    assert final, "something must survive"
+    for pl in final:
+        for x, y in pl:
+            assert cfg.INSET_MM - 1e-6 <= x <= cfg.BOARD_W_MM - cfg.INSET_MM + 1e-6
+            assert cfg.INSET_MM - 1e-6 <= y <= cfg.BOARD_H_MM - cfg.INSET_MM + 1e-6
+
+
 def test_validate_converts_circles_and_respects_budget():
     out = planner.validate([{"kind": "circle", "cx": 88, "cy": 120, "r": 20}], [], 50)
     assert 1 <= len(out) <= 2
