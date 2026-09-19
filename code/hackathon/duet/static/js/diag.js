@@ -37,15 +37,16 @@ export function append(entries, entry) {
 const q = (s, n = 40) => { const v = String(s ?? ''); return `"${v.length > n ? `${v.slice(0, n - 1)}…` : v}"`; };
 const fix = (v, d) => (isNum(v) ? v.toFixed(d) : '?');
 const count = (v) => (Array.isArray(v) ? v.length : 0);
+const artist = (m) => (typeof m.artist === 'string' && m.artist ? ` · ${m.artist}` : '');   // the turn's artist, when the message names one
 
 const SUMMARY = {
   state: (m) => [`${m.state} · turn ${m.turn} of ${m.exchanges ?? '?'}`, m.at_look ? 'at look' : null, m.error ? `error: ${m.error}` : null].filter(Boolean).join(' · '),
   progress: (m) => `stroke ${m.stroke} · ${m.drawn_mm ?? 0} mm`,
   interpretation: (m) => (m.source === 'fallback' ? `fallback · ${m.error || 'outline and ticks around the new mark'}`
-    : `claude ${fix(m.latency_s, 1)} s · sees ${q(m.sees)} · adds ${q(m.adds)}`),
-  plan: (m) => `${count(m.polylines)} strokes · ${countPoints(m.polylines)} points · budget ${m.budget_mm ?? 0} mm · ${m.color || ''}`,
+    : `${m.source || 'claude'} ${fix(m.latency_s, 1)} s · sees ${q(m.sees)} · adds ${q(m.adds)}`) + artist(m),
+  plan: (m) => `${count(m.polylines)} strokes · ${countPoints(m.polylines)} points · budget ${m.budget_mm ?? 0} mm · ${m.color || ''}` + artist(m),
   human: (m) => `${count(m.polylines)} strokes · ${count(m.new)} new · ${m.found === false ? 'not found' : 'found'}`,
-  shot: (m) => `${m.who || '?'} · turn ${m.turn ?? '?'}${m.frame_url ? ' · +frame' : ''}`,
+  shot: (m) => `${m.who || '?'} · turn ${m.turn ?? '?'}${m.frame_url ? ' · +frame' : ''}` + artist(m),
   error: (m) => String(m.message ?? ''),
   dock: (m) => {
     const slots = Object.entries(m.slots || {}).map(([k, v]) => `${k}:${v}`).join(' ') || 'none';

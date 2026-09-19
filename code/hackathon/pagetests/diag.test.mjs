@@ -55,6 +55,9 @@ test('summarize gives one line per kind', () => {
   assert.equal(summarize(inn({ type: 'progress', stroke: 3, drawn_mm: 412 })), 'stroke 3 · 412 mm');
   assert.equal(summarize(inn({ type: 'interpretation', source: 'claude', latency_s: 6.42, sees: 'A cat.', adds: 'A hat.' })), 'claude 6.4 s · sees "A cat." · adds "A hat."');
   assert.equal(summarize(inn({ type: 'interpretation', source: 'fallback', error: 'timeout' })), 'fallback · timeout');
+  assert.equal(summarize(inn({ type: 'interpretation', source: 'ink', latency_s: 0.02, sees: 'A loop.', adds: 'An echo.', artist: 'mimic' })), 'ink 0.0 s · sees "A loop." · adds "An echo." · mimic');
+  assert.equal(summarize(inn({ type: 'plan', polylines: [PL], budget_mm: 400, color: '#1b8f3a', artist: 'haring' })), '1 strokes · 5 points · budget 400 mm · #1b8f3a · haring');
+  assert.equal(summarize(inn({ type: 'shot', url: '/s/turn-01-robot.jpg', who: 'robot', turn: 1, artist: 'shader' })), 'robot · turn 1 · shader');
   assert.equal(summarize(inn({ type: 'plan', polylines: [PL, PL], budget_mm: 1200, color: '#1b8f3a' })), '2 strokes · 10 points · budget 1200 mm · #1b8f3a');
   assert.equal(summarize(inn({ type: 'human', polylines: [PL, PL, PL], new: [PL], found: true })), '3 strokes · 1 new · found');
   assert.equal(summarize(inn({ type: 'human', polylines: [], new: [], found: false })), '0 strokes · 0 new · not found');
