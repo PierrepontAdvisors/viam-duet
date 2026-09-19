@@ -182,7 +182,11 @@ async def main(args: argparse.Namespace) -> None:
     session = Session(settings, frames, ctl, brain, rec, bus, cal, guard=guard)
     if args.fake:
         tasks.append(watch(asyncio.create_task(fake_visitor(bus, frames, start, humans, robots, session), name="visitor")))
-    app = make_app(session, frames, bus, calibration=cal)
+    def relaunch() -> None:
+        """The page's Relaunch run: uvicorn stops serving, the finally below stops the arm, the process
+        exits, and demo.sh starts it again with the code now on disk."""
+        server.should_exit = True
+    app = make_app(session, frames, bus, calibration=cal, relaunch=relaunch)
     # the MJPEG stream never ends by itself, so an open page would hold a graceful shutdown forever
     server = uvicorn.Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning",
                                            timeout_graceful_shutdown=1))

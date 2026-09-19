@@ -13,7 +13,7 @@ const LAYER_NODES = { ink: 'l-ink', board: 'l-board' };
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 export function initUI(app, { sendSet, sendCommand, on }) {
-  const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null };
+  const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null, relaunching: false };
   const stage = $('stage'), viewer = app.viewer;
 
   // ---- layers and colors ----
@@ -208,6 +208,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   $('clear').onclick = () => sendCommand('clear_error');
   $('reset-arm').onclick = () => sendCommand('reset_arm');
   $('end').onclick = () => sendCommand('end');
+  $('relaunch').onclick = () => { view.relaunching = true; sendCommand('relaunch'); };   // the page reloads once the new run answers
   const dir = $('direction'), energy = $('energy');
   const showDir = () => { $('direction-val').textContent = `${dir.value}°`; $('sun').style.setProperty('--dir', `${dir.value}deg`); };
   const showEnergy = () => { $('energy-val').textContent = (energy.value / 100).toFixed(2); };
@@ -315,7 +316,8 @@ export function initUI(app, { sendSet, sendCommand, on }) {
       if (msg.state === 'finished' && view.autoplayed !== msg.session) { view.autoplayed = msg.session; setTimeout(() => { if (view.source === 'live') play(); }, 3000); }
       if (msg.state === 'human_turn' && msg.turn === 0 && view.source !== 'live') showLive();
     }
-    if (msg.type === 'error') view.lastError = { message: msg.message, t: Date.now() };
+    if (msg.type === 'error') { view.lastError = { message: msg.message, t: Date.now() }; if (msg.message.startsWith('relaunch refused')) view.relaunching = false; }
+    if (msg.type === 'socket' && msg.connected && view.relaunching) location.reload();   // the relaunched run is up: fetch its files afresh
     if (msg.type === 'plan' && !view.strokeLocked) { stage.style.setProperty('--vec-stroke', msg.color); strokeColor.value = msg.color; }
     renderAll();
   });

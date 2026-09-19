@@ -118,6 +118,31 @@ def test_a_failing_command_answers_with_an_error_and_the_socket_lives(tmp_path):
     assert stub.actions == ["pass"]
 
 
+def test_relaunch_exits_the_run_when_the_arm_is_idle_and_is_refused_while_it_moves(tmp_path):
+    bus, stub, calls = EventBus(), StubSession(), []
+    app = web.make_app(stub, StubFrames(), bus, sessions_dir=tmp_path, relaunch=lambda: calls.append("exit"))
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws") as ws:
+            stub.state = "robot_draw"
+            ws.send_json({"type": "relaunch"})
+            err = receive(ws)
+            assert err["type"] == "error" and "moving" in err["message"] and calls == []
+            stub.state = "human_turn"
+            ws.send_json({"type": "relaunch"})
+            notice = receive(ws)                             # every page hears it, through the bus
+            assert notice["type"] == "error" and "relaunching" in notice["message"]
+    assert calls == ["exit"] and "relaunching" in bus.last["error"]["message"]
+
+
+def test_relaunch_is_refused_without_a_relauncher(tmp_path):
+    app = web.make_app(StubSession(), StubFrames(), EventBus(), sessions_dir=tmp_path)
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws") as ws:
+            ws.send_json({"type": "relaunch"})
+            err = receive(ws)
+            assert err["type"] == "error" and "demo.sh" in err["message"]
+
+
 def test_reset_arm_command_reaches_the_session(tmp_path):
     bus = EventBus()
     bus.emit("state", state="human_turn", turn=1)
