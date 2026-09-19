@@ -195,6 +195,8 @@ class Replay:
                 self.emit_state()
         elif kind == "clear_error":
             self.error = None; self.emit_state()
+        elif kind == "relaunch":                 # no run to relaunch here; the page keeps its socket and shows this
+            return {"type": "error", "message": "relaunch refused: the harness has no run to relaunch"}
         elif kind == "reset_arm":                # no arm here: the script just carries on, so the button does not error
             self.paused.clear(); self.error = None; self.emit_state()
         else:

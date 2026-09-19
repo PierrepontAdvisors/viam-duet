@@ -123,7 +123,13 @@ async def watch_feed(session, frames, bus, period_s: float = STREAM_PERIOD_S) ->
         await asyncio.sleep(period_s)
 
 
-def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibration: dict | None = None) -> FastAPI:
+RELAUNCHABLE = ("idle", "human_turn", "finished", "paused")   # the arm is at the look pose or stopped: the run may exit
+
+
+def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibration: dict | None = None,
+             relaunch=None) -> FastAPI:
+    """`relaunch()` asks the run to exit cleanly (the arm is stopped on the way out); under demo.sh the
+    run comes back five seconds later with whatever code is on disk. Without one the command is refused."""
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
         task = watch(asyncio.create_task(watch_feed(session, frames, bus), name="feed"))
@@ -191,6 +197,13 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
             session.restart()
         elif kind == "reset_arm":
             await session.reset_arm()
+        elif kind == "relaunch":
+            if relaunch is None:
+                return {"type": "error", "message": "relaunch refused: this run has no relauncher (start it with demo.sh)"}
+            if session.state not in RELAUNCHABLE:
+                return {"type": "error", "message": "relaunch refused: the robot is moving; wait for the look pose or pause first"}
+            bus.emit("error", message="relaunching the run; the page comes back on its own in about 15 seconds")
+            relaunch()
         else:
             return {"type": "error", "message": f"unknown command {kind!r}"}
         return None

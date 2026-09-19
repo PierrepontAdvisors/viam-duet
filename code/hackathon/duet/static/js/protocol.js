@@ -79,7 +79,7 @@ export function parseMessage(text) {
 }
 
 export const SETTINGS = ['artist', 'length', 'exchanges', 'mode', 'handoff', 'energy', 'direction'];
-const COMMANDS = ['pause', 'resume', 'pass', 'clear_error', 'restart', 'reset_arm', 'end'];   // restart: start a new session in place; end: sign the piece at the next safe point
+const COMMANDS = ['pause', 'resume', 'pass', 'clear_error', 'restart', 'reset_arm', 'end', 'relaunch'];   // restart: a new session in place; end: sign at the next safe point; relaunch: exit the run so demo.sh restarts it
 
 export function setCommand(changes) {
   const out = { type: 'set' };
