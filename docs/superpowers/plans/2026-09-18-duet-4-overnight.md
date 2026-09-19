@@ -1127,6 +1127,7 @@ def test_no_new_ink_returns_to_the_human_turn(tmp_path, look_frame, exchange_sta
 
 def test_held_trigger_fires_from_the_frames_alone(tmp_path, look_frame, exchange_start, exchange_human, calibration, monkeypatch):
     monkeypatch.setattr(cfg, "HELD_QUIET_S", 0.3)
+    monkeypatch.setattr(cfg, "TRIGGER_GRACE_S", 0.1)   # Trigger refuses a grace window as long as the quiet one
     async def scenario():
         s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
         task = asyncio.create_task(s.run())
@@ -1870,9 +1871,11 @@ Expected: `7 passed`. The full-exchange test runs the real trace and ffmpeg and 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add duet/fakes.py duet/session.py tests/test_session.py
+git add duet/claude_turn.py duet/fakes.py duet/session.py tests/test_session.py
 git commit -m "feat: session turn loop with event bus, hand guard, and fakes that replay real boards"
 ```
+
+**Amendments after review (applied in a follow-up commit):** the startup look is its own state `start` (a fault there pauses instead of killing the loop; `states_seen` begins with `"start"`); `_draw` stops the arm and cancels the draw task on any exception or cancellation before re-raising; `RETRY_AFTER_FAULT` retries `interpret`, `plan` and `finish` in place (a Claude timeout is resumable without new ink; the signature is drawn once, guarded by `_signed`); an empty plan after the clearance cut falls back to the Haring grammar and, if still empty, says so on the bus; `_capture_board` keeps the previous hand-check reference when the new frame itself shows a hand; `clear_error` drops the stale `error` from the snapshot; an operator pause does not surface as an error; the board-shift alarm is 70 px; the trigger is rebuilt when the handoff setting changes mid-turn; `FakeController.stop()` aborts a running draw (so pause during a robot turn is tested) and `fail_go_look_once` simulates a latched arm error.
 
 ---
 
@@ -2408,6 +2411,8 @@ git add duet/web.py duet/static/index.html tests/test_web.py
 git commit -m "feat: FastAPI server with WebSocket, MJPEG stream, and a plain functional Duet page"
 ```
 
+**Amendments after review (applied in a follow-up commit):** a command that raises (for example `clear_error` when the arm is offline) answers with an `error` message instead of closing the socket, and a non-JSON or non-object frame is answered the same way; a pump failure closes the socket with code 1011 so the page reconnects; the stroke overlay is a module-level `overlay(img, plan, h_inv, color_bgr, cam_to_robot)` that inverts the per-axis camera-to-robot fit before the homography (the plan is in robot-board mm), with a test on the real look frame; the page re-requests the stream on error and the server yields a "no camera frame" placeholder when no frame has arrived for two seconds. The per-exchange messages `human`, `interpretation`, `plan`, `progress` carry `turn` (the exchange in progress), and `shot`'s `turn` matches its filename. `run.py` binds `127.0.0.1` by default (`--host` to change), since any client of the page can command the arm.
+
 ---
 
 ### Task 6: The runner, fake mode with the real day-1 boards, and the browser check
@@ -2488,6 +2493,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--claude", action="store_true", help="with --fake: call the real Claude anyway")
     p.add_argument("--replay", default="20260918-190258", help="with --fake: the session folder whose boards are replayed")
     p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--host", default="127.0.0.1", help="the page accepts arm commands from any client, so stay on loopback unless a second screen needs it")
     p.add_argument("--length", choices=tuple(cfg.BUDGET_MM), default="short")
     p.add_argument("--exchanges", type=int, default=5)
     p.add_argument("--handoff", choices=("held", "dock"), default="held" if cfg.HELD_MODE else "dock")
@@ -2579,13 +2585,15 @@ async def main(args: argparse.Namespace) -> None:
     guard = HandGuard(frames, cal)
     session = Session(settings, frames, ctl, brain, rec, bus, cal, guard=guard)
     app = make_app(session, frames, bus, calibration=cal)
-    server = uvicorn.Server(uvicorn.Config(app, host="0.0.0.0", port=args.port, log_level="warning"))
+    server = uvicorn.Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning"))
     print(f"Duet on http://localhost:{args.port}  source={'fake replay of ' + args.replay if args.fake else 'armfarm22'} "
           f"brain={type(brain).__name__} hand_check={guard.mode} session={rec.dir}", flush=True)
     tasks += [asyncio.create_task(session.run()), asyncio.create_task(log_events(bus))]
     try:
         await server.serve()
     finally:
+        with contextlib.suppress(Exception):
+            await ctl.stop()                   # the arm halts before the loop is torn down
         for t in tasks:
             t.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -2605,7 +2613,7 @@ Run: `python -m pytest tests/test_run.py -q`
 Expected: `2 passed`
 
 Run in the background: `python -m duet.run --fake --port 8765 --exchanges 3`
-Expected within about a minute of log lines: `[state] look`, `[state] human_turn`, `[visitor] drew a mark`, `[state] capture`, `[human] {"found": true}`, `[state] interpret`, `[claude] claude 1.0 s: A creature sprawls ...`, `[plan] N strokes`, `[state] robot_draw`, `[state] look`, `[state] human_turn` ... and after three exchanges `[state] finish`, `[video] {...session.mp4}`, `[state] finished`. No `[error]` lines except at most one `board shifted` (the fixture frame's marks are 21 px, about 10 mm, from the calibrated spots; the threshold is 40 px so it should not appear).
+Expected within about a minute of log lines: `[state] start`, `[state] human_turn`, `[visitor] drew a mark`, `[state] capture`, `[human] {"found": true}`, `[state] interpret`, `[claude] claude 1.0 s: A creature sprawls ...`, `[plan] N strokes`, `[state] robot_draw`, `[state] look`, `[state] human_turn` ... and after three exchanges `[state] finish`, `[video] {...session.mp4}`, `[state] finished`. No `[error]` lines except at most one `board shifted` (the fixture frame's marks are 21 px, about 10 mm, from the calibrated spots; the threshold is 40 px so it should not appear).
 
 - [ ] **Step 5: Browser check of the page (the stage 7 exit test)**
 
