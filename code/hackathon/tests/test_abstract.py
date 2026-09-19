@@ -16,13 +16,6 @@ def test_style_keeps_strokes_as_given_with_no_extra_passes_or_ticks():
     assert out == [[(30.0, 30.0), (80.0, 30.0)], [(float(x), float(y)) for x, y in CIRCLE]]
 
 
-def test_a_stroke_that_crowds_an_earlier_one_is_dropped():
-    near = [(30.0, 35.0), (80.0, 35.0)]          # 5 mm below LINE
-    far = [(30.0, 60.0), (80.0, 60.0)]           # 30 mm below
-    out, _ = abstract.style([LINE, near, far])
-    assert out == [[(30.0, 30.0), (80.0, 30.0)], [(30.0, 60.0), (80.0, 60.0)]]
-
-
 def test_fallback_is_one_arc_beside_the_mark_inside_the_inset_and_clear_of_the_ink():
     out, color = abstract.fallback([LINE])
     assert color == "green" and len(out) == 1 and len(out[0]) == 25

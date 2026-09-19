@@ -66,3 +66,15 @@ HAND_OPEN_PX = 9                # color backup: opening kernel that erases marke
 ARTIST = "abstract"        # demo default from day 2: clean abstract shapes, no passes or ticks
 # A small glyph the robot signs with, in mm relative to its own top-left; the session places it in a corner.
 SIGNATURE_MM = [[(0.0, 8.0), (4.0, 0.0), (8.0, 8.0)], [(2.0, 5.0), (6.0, 5.0)]]
+
+# Open strokes (spec 2026-09-19): every plan large, single-lined, free of overlap, whatever the artist.
+MIN_SHAPE_MM = 30.0             # a proposed shape smaller than this across is enlarged...
+TARGET_SHAPE_MM = 40.0          # ...to this span, about its center
+SELF_GAP_MM = 5.0               # a stroke is cut where it comes back within this of its own path
+PARALLEL_GAP_MM = 6.0           # a stroke running alongside an earlier one within this is dropped
+STROKE_CAP = {"short": 2, "medium": 3, "long": 5}   # strokes kept per turn, dots not counted
+DOT_SPACING_MM = 9.0            # pointillist fill: grid spacing, jitter, tick length, cap per turn
+DOT_JITTER_MM = 1.5
+DOT_MM = 1.5
+DOTS_MAX = 60
+DOT_EXEMPT_MM = 3.0             # polylines shorter than this are dots and skip the rules above
