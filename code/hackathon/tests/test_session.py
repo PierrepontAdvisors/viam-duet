@@ -84,6 +84,7 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
     assert human["turn"] == 1
     xs = [x for pl in human["new"] for x, _ in pl]
     assert 30 <= min(xs) <= 45 and 130 <= max(xs) <= 145              # robot-board mm (cam_to_robot applied)
+    assert [e["turn"] for e in events if e["type"] == "progress"] == [1] * sum(e["type"] == "progress" for e in events)
     plan = next(e for e in events if e["type"] == "plan")
     assert plan["polylines"] and plan["color"] == cfg.COLOR_HEX["green"]
     assert plan["turn"] == 1

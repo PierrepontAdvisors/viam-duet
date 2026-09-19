@@ -407,23 +407,25 @@ class Session:
                 raise Blocked("hand over the board or dock for 30 s")
         self._set_look(False)
 
-    async def _forward_progress(self, task: asyncio.Task) -> None:
+    async def _forward_progress(self, task: asyncio.Task, turn: int) -> None:
         while not task.done():
             try:
                 ev = await asyncio.wait_for(self.ctl.events.get(), 0.1)
             except asyncio.TimeoutError:
                 continue
-            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]), turn=self.turn + 1)
+            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]), turn=turn)
         while not self.ctl.events.empty():
             ev = self.ctl.events.get_nowait()
-            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]), turn=self.turn + 1)
+            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]), turn=turn)
 
-    async def _draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float):
+    async def _draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float, turn: int):
+        """`turn` is the exchange the strokes belong to: the one in progress for a plan, the one just
+        finished for the signature."""
         await self._wait_hands_clear()
         await self.ctl.pick_marker(self.color, self.dot_displacement.get(self.color, (0.0, 0.0)))
         task = asyncio.create_task(self.ctl.draw(polylines, budget_mm, budget_s))
         try:
-            await self._forward_progress(task)
+            await self._forward_progress(task, turn)
             result = await task
         except BaseException:
             # the loop is being cancelled or the draw failed; the arm must stop before anything else
@@ -437,7 +439,8 @@ class Session:
     async def _state_robot_draw(self) -> str:
         if not self.plan:
             return "look"
-        result = await self._draw(self.plan, cfg.BUDGET_MM[self.settings.length], cfg.BUDGET_S[self.settings.length])
+        result = await self._draw(self.plan, cfg.BUDGET_MM[self.settings.length], cfg.BUDGET_S[self.settings.length],
+                                  self.turn + 1)
         self.robot_ink = self.robot_ink + [list(pl) for pl in self.plan[:result.strokes_done]]
         if result.blocked:
             self.bus.emit("error", message="a hand was seen between strokes; the turn ended early")
@@ -465,7 +468,7 @@ class Session:
         if not self._signed:
             self.bus.emit("plan", polylines=signature, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=100,
                           turn=self.turn)
-            await self._draw(signature, 100.0, 20.0)
+            await self._draw(signature, 100.0, 20.0, self.turn)
             self.robot_ink = self.robot_ink + signature
             self._signed = True
         await self.ctl.go_look()
