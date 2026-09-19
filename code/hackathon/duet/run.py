@@ -182,7 +182,7 @@ async def main(args: argparse.Namespace) -> None:
                                            timeout_graceful_shutdown=1))
     logging.getLogger("uvicorn.error").addFilter(QuietShutdownCancels())
     print(f"Duet on http://localhost:{args.port}  source={'fake replay of ' + args.replay if args.fake else 'armfarm22'} "
-          f"brain={type(brain).__name__} hand_check={guard.mode} session={rec.dir}", flush=True)
+          f"brain={type(brain).__name__} hand_check={'off' if guard is None else guard.mode} session={rec.dir}", flush=True)
     # the logger first: it subscribes before the loop's first emit, so `start` is printed too
     tasks += [watch(asyncio.create_task(log_events(bus), name="log")),
               watch(asyncio.create_task(session.run_forever(), name="session"))]
