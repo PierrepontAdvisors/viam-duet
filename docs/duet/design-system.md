@@ -36,6 +36,8 @@ Plate colour with the squiggle texture (generated plates at 12 percent, SVG tile
 - **Logo.** Four toy blocks D U E T in yellow, red, blue, green with a marker squiggle; header height 3.2cqw; 20cqw wide on the deck's card 2. Ink parts follow `currentColor`, so it turns white on black.
 - **Step icons.** Eye with ticks, thought cloud, marker mid-squiggle, three-joint arm, pencil and sparkle. Thick round ink strokes, one plate colour each.
 - **Panel (live page).** Paper at 94 percent over the picture, ink top rule, Fredoka labels, pill buttons.
+- **Buttons, the toy press.** Every button rests on a hard ink shadow (.18cqw in the panel, .25 on chips, .4 on Start and Go). Hover lifts it a step and tilts it one degree while the shadow grows; press squashes it onto its shadow; a panel switch that is on sits pressed in yellow. Disabled buttons do not move. Start and Go wiggle once (three degrees, 600 ms) after they pop in.
+- **Welcome page (live page).** The zero state: logo, "A robot arm that draws with you.", two lines, Start. Shows at load, when a fresh session begins, and 8 seconds after a session ends. Start hides it; on a finished session it sends `restart` and waits.
 
 ## Motion
 
