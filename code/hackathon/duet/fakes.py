@@ -16,7 +16,7 @@ from duet import config as cfg
 from duet import vision
 from duet.camera import Frame
 from duet.claude_turn import Proposal, Pt, Stroke, TurnResult
-from duet.controller import DrawResult
+from duet.controller import Aborted, DrawResult
 from duet.strokes import Polyline, length
 
 INK_BGR = {"human": (30, 30, 170), "green": (40, 140, 40), "red": (30, 30, 170), "blue": (200, 60, 40)}
@@ -94,13 +94,15 @@ class FakeFrames:
         return [self._frame(), self._frame()]
 
     async def capture_median(self, n: int = 5, delay_s: float = 0.0) -> np.ndarray:
-        return self.image.copy()
+        return self._frame().color.copy()
 
 
 class FakeController:
-    def __init__(self, frames: FakeFrames | None = None, stroke_s: float = 0.02):
+    def __init__(self, frames: FakeFrames | None = None, stroke_s: float = 0.02, fail_go_look_once: bool = False):
         self.frames = frames
         self.stroke_s = stroke_s
+        self.fail_go_look_once = fail_go_look_once     # a latched arm error on the first move
+        self._abort = asyncio.Event()                  # set by stop(), cleared by recover()
         self.calls: list[tuple] = []
         self.drawn: list[list[Polyline]] = []
         self.events: asyncio.Queue = asyncio.Queue()
@@ -111,6 +113,9 @@ class FakeController:
 
     async def go_look(self) -> None:
         self.calls.append(("go_look",))
+        if self.fail_go_look_once:
+            self.fail_go_look_once = False
+            raise RuntimeError("xArm: Emergency Stop Button Pushed In")
 
     async def pick_marker(self, slot: str, displacement_mm=(0.0, 0.0)) -> None:
         self.calls.append(("pick", slot, displacement_mm))
@@ -122,6 +127,8 @@ class FakeController:
         self.calls.append(("draw", len(polylines)))
         t0, drawn, done = monotonic(), 0.0, 0
         for i, pl in enumerate(polylines):
+            if self._abort.is_set():
+                raise Aborted("stop() was called")
             if drawn >= budget_mm or monotonic() - t0 >= budget_s:
                 break
             await asyncio.sleep(self.stroke_s)
@@ -135,9 +142,11 @@ class FakeController:
 
     async def stop(self) -> None:
         self.calls.append(("stop",))
+        self._abort.set()
 
     async def recover(self) -> None:
         self.calls.append(("recover",))
+        self._abort.clear()
 
     async def clear_error(self) -> None:
         self.calls.append(("clear_error",))

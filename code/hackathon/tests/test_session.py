@@ -59,7 +59,7 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
         await asyncio.wait_for(task, 60)
         return s, ctl, rec, drain(q)
     s, ctl, rec, events = asyncio.run(scenario())
-    assert s.states_seen == ["look", "human_turn", "capture", "interpret", "plan", "robot_draw", "look", "finish", "finished"]
+    assert s.states_seen == ["start", "human_turn", "capture", "interpret", "plan", "robot_draw", "look", "finish", "finished"]
     kinds = [c[0] for c in ctl.calls]
     assert kinds[0] == "go_look" and kinds.count("draw") == 2       # the plan, then the signature
     for name in ("turn-00-start.jpg", "turn-00-start-frame.jpg", "turn-01-human.jpg", "turn-01-human-frame.jpg",
@@ -192,3 +192,59 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
     assert (new.exchanges, new.energy, new.direction) == (4, 0.8, 45)
     state = s.bus.last["state"]
     assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring"]
+
+
+def test_pause_during_the_robot_turn_stops_the_arm_and_resume_finishes(tmp_path, look_frame, exchange_start, exchange_human, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        ctl.stroke_s = 0.15                             # slow enough to pause in the middle of the plan
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        frames.show_board(exchange_human)
+        s.pass_turn()
+        await until_state(s, "robot_draw")
+        await asyncio.sleep(0.4)
+        await s.pause()
+        await until_state(s, "paused")
+        s.resume()
+        await asyncio.wait_for(task, 60)
+        return s, ctl, drain(q)
+    s, ctl, events = asyncio.run(scenario())
+    assert ctl.calls.index(("stop",)) < ctl.calls.index(("recover",))
+    assert "paused" in s.states_seen and s.states_seen[-1] == "finished"
+    assert not any(e["type"] == "error" and "Aborted" in e["message"] for e in events)
+
+
+def test_a_startup_fault_pauses_and_resume_retries(tmp_path, look_frame, exchange_start, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        ctl.fail_go_look_once = True                    # a latched arm error on the very first move
+        task = asyncio.create_task(s.run())
+        await until_state(s, "paused")
+        assert "Emergency Stop" in s.last_error
+        s.resume()
+        await until_state(s, "human_turn")
+        await cancel(task)
+        return s, drain(q)
+    s, events = asyncio.run(scenario())
+    assert any(e["type"] == "error" and "Emergency Stop" in e["message"] for e in events)
+    assert s.states_seen[:3] == ["start", "paused", "start"]
+
+
+def test_a_hand_in_the_capture_does_not_become_the_reference(tmp_path, look_frame, exchange_start, exchange_human, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        ref0 = s.guard.reference
+        frames.show_hand(True)
+        frames.show_board(exchange_human)
+        await s._capture_board()
+        assert s.guard.reference is ref0                # the hand frame was refused
+        frames.show_hand(False)
+        await s._capture_board()
+        assert s.guard.reference is not ref0            # a clean frame refreshes it
+        await cancel(task)
+        return s, drain(q)
+    s, events = asyncio.run(scenario())
+    assert any(e["type"] == "error" and "reference" in e["message"] for e in events)
