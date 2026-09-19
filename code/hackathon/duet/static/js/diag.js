@@ -79,3 +79,45 @@ export function clock(t) {
   const d = new Date(t), p = (n) => String(n).padStart(2, '0');
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${Math.floor(d.getMilliseconds() / 100)}`;
 }
+
+/** The drawer's summary numbers. */
+export function header(entries, now, connected) {
+  const ins = entries.filter(e => e.dir === 'in');
+  const opens = entries.filter(e => e.dir === 'ws' && e.type === 'open').length;
+  return { connected, sinceLastMs: ins.length ? now - ins[ins.length - 1].t : null, received: ins.length,
+           sent: entries.filter(e => e.dir === 'out').length, reconnects: Math.max(0, opens - 1), dropped: ins.filter(e => !e.ok).length };
+}
+
+/** Connected and disconnected stretches across the window, from the socket events in time order. The state
+ *  before the first known event is the opposite of that event; with no events the window takes `connected`. */
+function socketBands(entries, now, windowMs, connected) {
+  const events = entries.filter(e => e.dir === 'ws' && e.t <= now).map(e => ({ t: e.t, connected: e.type === 'open' }));
+  if (!events.length) return [{ x0: 0, x1: 1, connected }];
+  const start = now - windowMs, frac = (t) => (t - start) / windowMs;
+  let state = !events[0].connected, from = start;
+  const out = [];
+  for (const ev of events) {
+    if (ev.t <= start) { state = ev.connected; continue; }
+    out.push({ x0: frac(from), x1: frac(ev.t), connected: state });
+    from = ev.t; state = ev.connected;
+  }
+  out.push({ x0: frac(from), x1: 1, connected: state });
+  return out.filter(b => b.x1 > b.x0);
+}
+
+/** Lanes, socket bands and time ticks for the timeline; every x is a fraction of the window, now at 1. */
+export function timeline(entries, now, windowMs, connected) {
+  const lanes = LANES.map(type => ({ type, marks: [] }));
+  const lane = Object.fromEntries(lanes.map(l => [l.type, l]));
+  for (const e of entries) {
+    if (e.dir === 'ws' || e.t > now || now - e.t > windowMs) continue;
+    const target = e.dir === 'out' ? 'out' : (e.ok && e.type in lane ? e.type : 'error');
+    lane[target].marks.push({ x: 1 - (now - e.t) / windowMs, label: e.dir === 'in' && e.ok && e.type === 'state' ? e.raw.state : null });
+  }
+  const ticks = [];
+  for (let back = windowMs - TICK_MS; back >= TICK_MS; back -= TICK_MS) {
+    ticks.push({ x: 1 - back / windowMs, label: `−${Math.floor(back / 60000)}:${String(Math.floor((back % 60000) / 1000)).padStart(2, '0')}` });
+  }
+  ticks.push({ x: 1, label: 'now' });
+  return { lanes, bands: socketBands(entries, now, windowMs, connected), ticks };
+}

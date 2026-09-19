@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CAP, LANES, append, frameEntry, sentEntry, socketEntry, summarize, fold, clock } from '../duet/static/js/diag.js';
+import { CAP, LANES, WINDOW_MS, TICK_MS, append, frameEntry, sentEntry, socketEntry, summarize, fold, clock, header, timeline } from '../duet/static/js/diag.js';
 
 const STATE = JSON.stringify({ type: 'state', state: 'human_turn', turn: 2, exchanges: 5, at_look: true, camera_errors: 3 });
 
@@ -88,4 +88,61 @@ test('fold collapses big point lists and keeps small ones and scalars', () => {
 test('clock is local HH:MM:SS.t', () => {
   const d = new Date(2026, 8, 19, 14, 5, 9, 712);
   assert.equal(clock(d.getTime()), '14:05:09.7');
+});
+
+const at = (t, e) => ({ ...e, t });
+
+test('header counts received, sent, reconnects and dropped, and ages the newest incoming entry', () => {
+  const entries = [
+    at(0, socketEntry('open', null, 0, 1)), at(10, inn({ type: 'state', state: 'idle', turn: 0 })), at(20, sentEntry({ type: 'pass' }, 0, 3)),
+    at(30, socketEntry('close', 1006, 0, 4)), at(40, socketEntry('open', null, 0, 5)), at(50, frameEntry('junk', null, 0, 6)),
+    at(60, socketEntry('close', 1006, 0, 7)), at(70, socketEntry('open', null, 0, 8)), at(80, inn({ type: 'progress', stroke: 1 })),
+  ];
+  assert.deepEqual(header(entries, 1080, true), { connected: true, sinceLastMs: 1000, received: 3, sent: 1, reconnects: 2, dropped: 1 });
+  assert.deepEqual(header([], 5, false), { connected: false, sinceLastMs: null, received: 0, sent: 0, reconnects: 0, dropped: 0 });
+});
+
+test('timeline places marks as fractions of the window, keeps every lane in order, and drops old entries', () => {
+  const now = 1000000, W = WINDOW_MS;
+  const entries = [
+    at(now - W - 1, inn({ type: 'progress', stroke: 0 })),                    // too old
+    at(now - W / 2, inn({ type: 'state', state: 'capture', turn: 1 })),
+    at(now, inn({ type: 'progress', stroke: 2 })),
+    at(now - W / 4, sentEntry({ type: 'pause' }, 0, 0)),
+    at(now - W / 4, inn({ type: 'oracle' }, false)),
+    at(now - W / 8, frameEntry('junk', null, 0, 0)),
+  ];
+  const { lanes } = timeline(entries, now, W, true);
+  assert.deepEqual(lanes.map(l => l.type), LANES);
+  const lane = (k) => lanes.find(l => l.type === k).marks;
+  assert.deepEqual(lane('state'), [{ x: 0.5, label: 'capture' }]);
+  assert.deepEqual(lane('progress'), [{ x: 1, label: null }]);
+  assert.deepEqual(lane('out'), [{ x: 0.75, label: null }]);
+  assert.deepEqual(lane('error'), [{ x: 0.75, label: null }, { x: 0.875, label: null }]);
+  assert.deepEqual(lane('plan'), []);
+});
+
+test('timeline ticks every TICK_MS with now last', () => {
+  const { ticks } = timeline([], 0, WINDOW_MS, true);
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  assert.deepEqual(ticks.map(t => t.label), ['−2:30', '−2:00', '−1:30', '−1:00', '−0:30', 'now']);
+  ticks.forEach((t, i) => assert.ok(near(t.x, (i + 1) / 6), `tick ${i} at ${t.x}`));
+  assert.equal(TICK_MS, 30000);
+});
+
+test('bands: no socket events means the whole window takes the current state', () => {
+  assert.deepEqual(timeline([], 100, 100, true).bands, [{ x0: 0, x1: 1, connected: true }]);
+  assert.deepEqual(timeline([inn({ type: 'progress', stroke: 1 })], 100, 100, false).bands, [{ x0: 0, x1: 1, connected: false }]);
+});
+
+test('bands: a close then an open inside the window reads green, red, green', () => {
+  const entries = [at(150, socketEntry('close', 1006, 0, 1)), at(175, socketEntry('open', null, 0, 2))];
+  assert.deepEqual(timeline(entries, 200, 100, true).bands, [
+    { x0: 0, x1: 0.5, connected: true }, { x0: 0.5, x1: 0.75, connected: false }, { x0: 0.75, x1: 1, connected: true },
+  ]);
+});
+
+test('bands: still disconnected runs red to the right edge; events before the window set the opening state', () => {
+  const entries = [at(50, socketEntry('open', null, 0, 1)), at(180, socketEntry('close', 1006, 0, 2))];
+  assert.deepEqual(timeline(entries, 200, 100, false).bands, [{ x0: 0, x1: 0.8, connected: true }, { x0: 0.8, x1: 1, connected: false }]);
 });
