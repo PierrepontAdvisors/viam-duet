@@ -15,11 +15,11 @@ from duet.camera import Frame
 from duet.claude_turn import TurnResult
 from duet.controller import Blocked
 from duet.strokes import Polyline, length
-from duet.styles import haring, mondrian, vangogh
+from duet.styles import abstract, haring, mondrian, vangogh
 from duet.turn import all_ink, map_strokes
 
-ARTISTS = ("haring", "mondrian", "vangogh")
-STYLERS = {"haring": haring, "mondrian": mondrian, "vangogh": vangogh}
+ARTISTS = ("abstract", "haring", "mondrian", "vangogh")
+STYLERS = {"abstract": abstract, "haring": haring, "mondrian": mondrian, "vangogh": vangogh}
 # Where Resume picks up after a fault. `interpret` and `plan` retry themselves: the visitor's strokes
 # are already consumed, so sending them back to `human_turn` would ask for the mark to be drawn again.
 RETRY_AFTER_FAULT = {"start": "start", "look": "look", "human_turn": "human_turn", "capture": "human_turn",

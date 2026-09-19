@@ -47,7 +47,7 @@ FIXTURES_DIR = PACKAGE_DIR.parent / "tests" / "fixtures"
 DOCK_SLOTS = ("green",)         # markers in the dock; single-marker rig decided 2026-09-18
 COLOR_HEX = {"green": "#1b8f3a", "red": "#c62828", "blue": "#1e56c9", "black": "#222222"}
 
-CLEARANCE_MM = 5.0              # the robot never draws within this distance of existing ink (spec section 15)
+CLEARANCE_MM = 8.0              # the robot never draws within this distance of existing ink (spec section 15)
 DOT_TOLERANCE_MM = 3.0          # a docked marker's dot further than this from its recorded spot is "moved"
 DOT_MIN_AREA_PX = 30            # smaller color blobs are noise, not a marker's end plug
 
@@ -63,6 +63,6 @@ HAND_COLOR_AREA_MM2 = 5000.0        # color backup: a filled shape up to about 7
 HAND_DIFF_THRESH = 40           # color backup: gray difference from the reference frame that counts as changed
 HAND_OPEN_PX = 9                # color backup: opening kernel that erases marker lines but not a hand
 
-ARTIST = "haring"
+ARTIST = "abstract"        # demo default from day 2: clean abstract shapes, no passes or ticks
 # A small glyph the robot signs with, in mm relative to its own top-left; the session places it in a corner.
 SIGNATURE_MM = [[(0.0, 8.0), (4.0, 0.0), (8.0, 8.0)], [(2.0, 5.0), (6.0, 5.0)]]

@@ -79,6 +79,13 @@ Respond only through the structured output."""
 
 
 ARTIST_NOTES = {
+    "abstract": "The artist mode is Abstract: answer the person's marks with a few clean abstract shapes that "
+                "complement them without copying them: circles, arcs, spirals, zigzags, lozenges, a short row of "
+                "small rings, one long sweeping curve. Choose the opposite of what the person drew (lines against "
+                "their curves, a curve against their angles) and vary the family from exchange to exchange. Each "
+                "shape is one continuous stroke, drawn exactly once as a single clean line; nothing is added for "
+                "you. Keep shapes at least 10 mm from each other and 8 mm from any ink. Fewer, larger shapes beat "
+                "many small ones; leave most of the budget unused if the picture is better for it.",
     "haring": "The artist mode is Keith Haring: thick, simple, continuous outlines; simplified figures and "
               "creatures with rounded limbs in energetic poses; clear silhouettes; playful symbols; everything "
               "reads from across a room. Motion ticks radiating from your strokes are added for you, so do not "
@@ -138,10 +145,12 @@ def make_client() -> anthropic.Anthropic:
 def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Polyline], history: list[dict],
             length_setting: str, exchange: int, exchange_total: int, artist: str = "haring") -> TurnResult:
     budget = cfg.BUDGET_MM[length_setting]
-    asks = {"short": "one small addition: a detail or an accent",
+    asks = ({"short": "one abstract shape", "medium": "two or three abstract shapes",
+             "long": "four to six large abstract shapes spread across the free space"} if artist == "abstract" else
+            {"short": "one small addition: a detail or an accent",
             "medium": "one full element that extends the drawing",
             "long": "a full scene: six to twelve bold elements, such as figures, creatures, a setting and "
-                    "symbols, each a simple continuous outline, spread across the free space"}[length_setting]
+                    "symbols, each a simple continuous outline, spread across the free space"})[length_setting]
     hist = "\n".join(f"  exchange {i + 1}: saw \"{h['sees']}\"; added \"{h['adds']}\"" for i, h in enumerate(history)) or "  (this is the first exchange)"
     text = (f"{ARTIST_NOTES.get(artist, ARTIST_NOTES['haring'])}\n"
             f"Exchange {exchange} of {exchange_total}. Length setting: {length_setting}, so add {asks}. "

@@ -180,7 +180,7 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
     new = s.update_settings(length="medium", exchanges=4, energy=0.8, direction=45)
     assert (new.exchanges, new.energy, new.direction) == (4, 0.8, 45)
     state = s.bus.last["state"]
-    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring", "mondrian", "vangogh"]
+    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["abstract", "haring", "mondrian", "vangogh"]
     s.update_settings(handoff="dock")                     # the arm's held flag follows the page's Marker toggle
     assert ctl.held_mode is False
     s.update_settings(handoff="held")
@@ -193,8 +193,8 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
 
 def test_pause_during_the_robot_turn_stops_the_arm_and_resume_finishes(tmp_path, look_frame, exchange_start, exchange_human, calibration):
     async def scenario():
-        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
-        ctl.stroke_s = 0.15                             # slow enough to pause in the middle of the plan
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held", artist="haring")
+        ctl.stroke_s = 0.15                             # haring's passes and ticks make a plan long enough to pause in the middle of
         task = asyncio.create_task(s.run())
         await until_state(s, "human_turn")
         frames.show_board(exchange_human)

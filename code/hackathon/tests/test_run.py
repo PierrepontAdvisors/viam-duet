@@ -7,7 +7,7 @@ from duet import recorder, run
 
 def test_parser_defaults_and_fake_flags():
     a = run.build_parser().parse_args([])
-    assert (a.fake, a.claude, a.port, a.artist, a.length, a.exchanges, a.handoff, a.replay) == (False, False, 8000, "haring", "short", 5, "held", "20260918-190258")
+    assert (a.fake, a.claude, a.port, a.artist, a.length, a.exchanges, a.handoff, a.replay) == (False, False, 8000, "abstract", "short", 5, "held", "20260918-190258")
     b = run.build_parser().parse_args(["--fake", "--claude", "--port", "8765", "--artist", "vangogh", "--length", "long",
                                        "--exchanges", "3", "--handoff", "dock", "--replay", "20260918-185927"])
     assert (b.fake, b.claude, b.port, b.artist, b.length, b.exchanges, b.handoff, b.replay) == (True, True, 8765, "vangogh", "long", 3, "dock", "20260918-185927")
