@@ -1,7 +1,7 @@
 /** The storybook layer's words and bookkeeping: what the chips and bubbles say in each state, and the
  *  per-turn record of thoughts, quips, ink, plans, and photos. No DOM here. */
-import { centroid, BOARD_CENTER } from './geometry.js?v=ds3';
-import { shotUrl } from './protocol.js?v=ds3';
+import { centroid, BOARD_CENTER } from './geometry.js?v=ds4';
+import { shotUrl } from './protocol.js?v=ds4';
 
 export const PLACEHOLDERS = ['Hmm…', 'Looking closely…', 'What could it be?', 'I see lines…'];
 export const PLACEHOLDER_MS = 1500;
