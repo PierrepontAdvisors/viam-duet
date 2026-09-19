@@ -142,11 +142,11 @@ ul, ol { padding: 0; list-style: none; }
 .mod-head .sample { width: 6cqw; height: 3.6cqw; flex: none; }
 .icon { width: 4cqw; height: 4cqw; flex: none; display: block; }
 .mods.four .mod .body { line-height: 1.25; }
-.pill.next { padding: .2cqw .8cqw; background: var(--yellow); margin-left: auto; }
+.mod.own { position: relative; }
+.pill.next { position: absolute; top: calc(-1 * var(--s1)); right: var(--s2); padding: .2cqw .8cqw; background: var(--yellow); }
 .pill.prompt { align-self: flex-start; text-align: left; font-weight: 600; }
-.step { min-width: 0; display: flex; flex-direction: column; gap: var(--s1); }
-.step .node { flex: 1; }
-.viam { font-weight: 600; padding: 0 .4cqw; }
+.viams { margin-top: calc(-1 * var(--s1) + .4cqw); }
+.viam { font-weight: 600; padding: 0 .4cqw; min-width: 0; }
 
 /* entrance: everything inside the frame pops in, in reading order, when a card becomes active */
 @keyframes pop { from { opacity: 0; transform: translateY(1cqw) scale(.92); } 70% { opacity: 1; transform: translateY(0) scale(1.02); } to { opacity: 1; transform: none; } }
@@ -159,6 +159,7 @@ ul, ol { padding: 0; list-style: none; }
 .card.active :is(.split .words > :nth-child(3), .triptych .m3, .modules .mods > :nth-child(2)) { --i: 4; }
 .card.active :is(.split .words > :nth-child(4), .split .figure, .modules .mods > :nth-child(3)) { --i: 5; }
 .card.active .modules .mods > :nth-child(4) { --i: 6; }
+.card.active .modules .viams > * { --i: 7; }
 .card.active :is(.modules .closing, .foot > *) { --i: 7; }
 @media (prefers-reduced-motion: reduce) { .card.active * { animation: none !important; } }
 
