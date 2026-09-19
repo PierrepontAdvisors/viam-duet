@@ -49,63 +49,49 @@
   <button class="gear" id="gear" title="Show controls (C)" data-el="controls toggle button">Controls</button>
 
   <div class="panel" id="panel" data-el="controls panel">
-    <div class="bar" data-el="image bar">
-      <span class="lbl">Image</span>
-      <button id="b-live" data-el="source — live">Live</button>
-      <button id="b-prev" data-el="source — previous photo">◀</button>
-      <span class="pos" id="pos" data-el="source — position label">live · wrist camera</span>
-      <button id="b-next" data-el="source — next photo">▶</button>
-      <button id="b-play" data-el="source — play loop">▶ Play loop</button>
-      <span class="sep"></span>
-      <span class="seg" id="crop-seg" data-el="view — full or crop"><button data-v="full" class="on" data-el="view — full frame">Full view</button><button data-v="board" data-el="view — crop to board">Crop to board</button></span>
-      <a id="b-video" class="hidden" target="_blank" data-el="session video link">Video</a>
-      <button class="hide" id="hide" data-el="hide controls button">Hide controls</button>
-    </div>
-    <div class="bar" data-el="layer bar">
-      <span class="lbl">Layers</span>
+    <span class="lbl">Image</span>
+    <div class="g s3" data-el="image — source"><button id="b-live" data-el="source — live">Live</button><button id="b-prev" data-el="source — previous photo">◀</button><button id="b-next" data-el="source — next photo">▶</button></div>
+    <div class="g s3 pos" id="pos" data-el="source — position label">live · wrist camera</div>
+    <div class="g s2"><button id="b-play" data-el="source — play loop">▶ Play loop</button></div>
+    <div class="g s2 seg" id="crop-seg" data-el="view — full or crop"><button data-v="full" class="on" data-el="view — full frame">Full view</button><button data-v="board" data-el="view — crop to board">Crop</button></div>
+    <div class="g s1"><a id="b-video" class="hidden" target="_blank" data-el="session video link">Video</a></div>
+    <div class="g s1"><button class="hide" id="hide" data-el="hide controls button">Hide</button></div>
+
+    <span class="lbl">Layers</span>
+    <div class="g s6" data-el="layer toggles">
       <button data-layer="robot" class="on" data-el="layer toggle — plan">Plan</button>
       <button data-layer="ink" class="on" data-el="layer toggle — ink">Ink</button>
       <button data-layer="caption" class="on" data-el="layer toggle — bubble">Bubble</button>
       <button data-layer="chips" class="on" data-el="layer toggle — chips">Chips</button>
       <button data-layer="board" data-el="layer toggle — board outline">Board</button>
-      <button data-layer="clean" class="on" data-el="layer toggle — clean board">Clean board</button>
+      <button data-layer="clean" class="on" data-el="layer toggle — clean board">Clean</button>
       <button data-layer="vector" data-el="layer toggle — ink only">Ink only</button>
-      <label class="color" data-el="ink color">Ink <input type="color" id="ink-color" value="#111111"></label>
-      <label class="color" data-el="stroke color">Strokes <input type="color" id="stroke-color" value="#1b8f3a"></label>
-      <label class="color" data-el="ink width">Ink width <input type="range" class="short" id="ink-width" min="4" max="40" value="12"></label>
-      <label class="color" data-el="stroke width">Stroke width <input type="range" class="short" id="stroke-width" min="4" max="40" value="14"></label>
-      <button id="export-svg" data-el="export svg button">Export SVG</button>
     </div>
-    <div class="bar" data-el="picture bar">
-      <span class="lbl">Picture</span>
-      <span class="lbl2">Bright</span><input type="range" id="brightness" min="-50" max="50" value="7" data-el="brightness slider"><span class="num" id="brightness-val">+0.07</span>
-      <span class="lbl2">Contrast</span><input type="range" id="contrast" min="50" max="300" value="190" data-el="contrast slider"><span class="num" id="contrast-val">1.90</span>
-      <span class="lbl2">Exposure</span><input type="range" id="exposure" min="-20" max="20" value="0" data-el="exposure slider"><span class="num" id="exposure-val">+0.0</span>
-      <button id="picture-reset" data-el="picture neutral button">Neutral</button>
-      <button id="picture-clean" data-el="picture clean preset button">Clean</button>
+    <div class="g s5 fine" data-el="vector colors and widths">
+      <label class="color" data-el="ink color and width">Ink <input type="color" id="ink-color" value="#111111"><input type="range" id="ink-width" min="4" max="40" value="12" title="ink width"></label>
+      <label class="color" data-el="stroke color and width">Strokes <input type="color" id="stroke-color" value="#1b8f3a"><input type="range" id="stroke-width" min="4" max="40" value="14" title="stroke width"></label>
     </div>
-    <div class="bar" data-el="session bar">
-      <span class="lbl">Session</span>
-      <span class="seg" id="length-seg" data-el="length setting"><button data-v="short" data-el="length — short">Short</button><button data-v="medium" data-el="length — medium">Medium</button><button data-v="long" data-el="length — long">Long</button></span>
-      <span class="sep"></span>
-      <button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button><span class="lbl">exchanges</span>
-      <span class="sep"></span>
-      <span class="seg" id="handoff-seg" data-el="handoff setting"><button data-v="held" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></span>
-      <span class="sep"></span>
-      <span class="seg" id="artist-seg" data-el="artist setting"><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" disabled data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" disabled data-el="artist — van gogh">Van Gogh</button></span>
-      <span class="sep"></span>
-      <button id="pause" data-el="pause / resume button">Pause</button>
-      <button id="pass" data-el="pass turn button">Pass turn</button>
-      <button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button>
-    </div>
-    <div class="bar" data-el="light bar">
-      <span class="lbl">Light</span>
-      <span class="dial" data-el="light direction dial"><span class="sun" id="sun">☀</span><input type="range" id="direction" min="0" max="359" value="0" data-el="light direction slider"></span>
-      <span class="num" id="direction-val" data-el="light direction value">0°</span>
-      <span class="sep"></span>
-      <span class="lbl">Energy</span>
-      <input type="range" id="energy" min="0" max="100" value="50" data-el="energy slider"><span class="num" id="energy-val" data-el="energy value">0.50</span>
-    </div>
+    <div class="g s1"><button id="export-svg" data-el="export svg button">Export SVG</button></div>
+
+    <span class="lbl">Picture</span>
+    <div class="g s3 slider" data-el="brightness"><span class="lbl2">Bright</span><input type="range" id="brightness" min="-50" max="50" value="7" data-el="brightness slider"><span class="num" id="brightness-val">+0.07</span></div>
+    <div class="g s3 slider" data-el="contrast"><span class="lbl2">Contrast</span><input type="range" id="contrast" min="50" max="300" value="190" data-el="contrast slider"><span class="num" id="contrast-val">1.90</span></div>
+    <div class="g s3 slider" data-el="exposure"><span class="lbl2">Exposure</span><input type="range" id="exposure" min="-20" max="20" value="0" data-el="exposure slider"><span class="num" id="exposure-val">+0.0</span></div>
+    <div class="g s3"><button id="picture-reset" data-el="picture neutral button">Neutral</button><button id="picture-clean" data-el="picture clean preset button">Clean</button></div>
+
+    <span class="lbl">Session</span>
+    <div class="g s3 seg" id="length-seg" data-el="length setting"><button data-v="short" data-el="length — short">Short</button><button data-v="medium" data-el="length — medium">Medium</button><button data-v="long" data-el="length — long">Long</button></div>
+    <div class="g s2 count" data-el="exchanges"><button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button></div>
+    <div class="g s2 seg" id="handoff-seg" data-el="handoff setting"><button data-v="held" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></div>
+    <div class="g s3 seg" id="artist-seg" data-el="artist setting"><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" disabled data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" disabled data-el="artist — van gogh">Van Gogh</button></div>
+    <div class="g s2"><button id="pause" data-el="pause / resume button">Pause</button><button id="pass" data-el="pass turn button">Pass turn</button></div>
+
+    <span class="lbl">Light</span>
+    <div class="g s3 slider dial" data-el="light direction dial"><span class="sun" id="sun">☀</span><input type="range" id="direction" min="0" max="359" value="0" data-el="light direction slider"><span class="num" id="direction-val" data-el="light direction value">0°</span></div>
+    <div class="g s3 slider" data-el="energy"><span class="lbl2">Energy</span><input type="range" id="energy" min="0" max="100" value="50" data-el="energy slider"><span class="num" id="energy-val" data-el="energy value">0.50</span></div>
+    <div class="g s4"></div>
+    <div class="g s2"><button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button></div>
+
     <div class="status" id="status1" data-el="status line — session"></div>
     <div class="status" id="status2" data-el="status line — claude"></div>
     <div class="status" id="status3" data-el="status line — dock and errors"></div>
