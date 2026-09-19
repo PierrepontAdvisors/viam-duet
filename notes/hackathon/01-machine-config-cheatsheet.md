@@ -24,6 +24,7 @@ For a precise camera frame, the deck points at the `viam:camera-calibration:hand
 Heads-up: the companion repo's reference config uses `arm-1` / `gripper-1` / `cam-1` and a camera frame of translation (-73, 40, 18) with th=270, while the deck says `arm` / `gripper` / `cam` and (73, -40, 18) with th=90. Those two camera frames are not the same placement. Trust whatever is on the team machine, and check it in the 3D scene: the camera should sit where it physically is on the wrist.
 
 ## Obstacles
+- On `armfarm22` (checked 2026-09-18): `table`, `wall-front`, `wall-side`, `ceiling`. Resource names match the deck: `arm`, `gripper`, `cam`.
 - `table` and `wall` are `erh:vmodutils:obstacle` resources. The motion service plans around them. Direct arm moves do not.
 - Each obstacle is a `geometries` list (box dimensions, centered on the component's origin) plus a `frame` parented to `world`. They present on the API as grippers, so they appear among the grippers in `resource_names`. Reference shapes from the companion repo: table 1200 × 800 × 30 at z = -15; safety walls 20 × 1200 × 600 at z = 300.
 

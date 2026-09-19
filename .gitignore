@@ -31,3 +31,8 @@ api-key.json
 # cloned third-party reference repos
 code/hackathon/reference/
 code/hackathon/captures/
+code/hackathon/sessions/
+
+# brainstorming visual companion sessions and linked worktrees
+.superpowers/
+.worktrees/

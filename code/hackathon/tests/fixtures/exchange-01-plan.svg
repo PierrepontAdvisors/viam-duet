@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176.0 240.0" width="176.0mm" height="240.0mm">
+<rect x="0" y="0" width="176.0" height="240.0" fill="white" stroke="#999" stroke-width="0.5"/>
+<rect x="15.0" y="15.0" width="146.0" height="210.0" fill="none" stroke="#ddd" stroke-width="0.3"/>
+<path d="M 56.9 23.4 L 38.9 41.5 L 39.3 58.5 L 40.3 65.8" fill="none" stroke="#222" stroke-width="1.2"/>
+<path d="M 62.5 45.7 L 60.5 45.5 L 40.3 65.8" fill="none" stroke="#222" stroke-width="1.2"/>
+<path d="M 40.3 66.3 L 81.0 67.1 L 111.6 98.0" fill="none" stroke="#222" stroke-width="1.2"/>
+<path d="M 40.3 66.3 L 40.3 107.6 L 88.0 156.4 L 89.9 156.4 L 111.6 134.3 L 111.6 98.0" fill="none" stroke="#222" stroke-width="1.2"/>
+<path d="M 113.7 67.6 L 111.6 98.0" fill="none" stroke="#222" stroke-width="1.2"/>
+<path d="M 118.1 81.1 L 118.1 71.2" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+<path d="M 119.6 81.1 L 119.6 71.2" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+<path d="M 136.4 85.0 L 143.1 77.1" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+<path d="M 137.5 86.0 L 144.2 78.1" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+<path d="M 148.9 99.7 L 157.6 95.8" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+<path d="M 149.5 101.1 L 158.2 97.1" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+<path d="M 150.8 119.3 L 159.5 122.3" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+<path d="M 150.3 120.8 L 159.0 123.7" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+</svg>

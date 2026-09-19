@@ -31,6 +31,8 @@ GRIPPER = _env.get("VIAM_GRIPPER_NAME", "gripper")
 CAMERA = _env.get("VIAM_CAMERA_NAME", "cam")
 MOTION = "builtin"
 
+ANTHROPIC_API_KEY = _env.get("ANTHROPIC_API_KEY", "")   # for the Claude turn; also gitignored in .env
+
 
 def require_credentials() -> None:
     missing = [

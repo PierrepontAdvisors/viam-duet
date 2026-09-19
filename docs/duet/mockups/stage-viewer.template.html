@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duet stage: interactive mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 24px; background: #1a1a1a; color: #ddd; font: 15px/1.5 -apple-system, system-ui, sans-serif; }
+  h2 { margin: 0 0 6px; font-size: 22px; color: #fff; }
+  .subtitle { color: #aaa; margin: 0 0 16px; }
+  .frame { max-width: 1100px; margin: 0 auto; }
+  .stage { position: relative; aspect-ratio: 16/9; background: #000; overflow: hidden; container-type: inline-size;
+           font-family: "Fredoka", "Chalkboard SE", "Comic Sans MS", "Segoe Print", sans-serif; color: #000; user-select: none; }
+  .pic { position: absolute; inset: 0; transform-origin: 0 0; transition: transform .45s ease; }
+  .base { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+  body.crop .sub { top: auto; bottom: 1.6cqw; width: 21cqw; align-items: flex-end; }
+  body.crop.controls .sub { bottom: 20.5cqw; }
+  body.crop .bubble { font-size: 1.9cqw; padding: 1.3cqw 1.6cqw; }
+  .ov { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: visible; pointer-events: none; }
+  .ovimg { width: 176px; height: 240px; object-fit: fill; display: block; }
+  .ov path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .ov .ink path { stroke: #111; stroke-width: 1.2; }
+  .ov .robot path { stroke: #1b8f3a; stroke-width: 1.4; }
+  .ov .robot path.queued { stroke-dasharray: 2 1.5; }
+  .ov .board rect { fill: none; stroke: #ffd400; stroke-width: .8; }
+  .chip { display: inline-block; padding: .45cqw 1.4cqw; font-weight: 700; font-size: 1.6cqw; line-height: 1.2; border-radius: 999px; border: .35cqw solid #000; }
+  .chip.red { background: #c62828; color: #fff; }
+  .chip.green { background: #1b8f3a; color: #fff; }
+  .chip.black { background: #fff; color: #000; }
+  .chip.yellow { background: #ffd400; color: #000; }
+  .tl { position: absolute; left: 1.6cqw; top: 1.4cqw; display: flex; gap: 1cqw; align-items: center; }
+  .tl .name { font-size: 2.1cqw; transform: rotate(-3deg); }
+  .tr { position: absolute; right: 1.6cqw; top: 1.4cqw; font-size: 1.9cqw; transform: rotate(2deg); }
+  .tr b { color: #c62828; }
+  .sub { position: absolute; left: 1.6cqw; top: 0; bottom: 0; width: 24cqw; display: flex; align-items: center; }
+  .bubble { position: relative; border: .5cqw solid #000; padding: 1.8cqw 2.2cqw; font-size: 2.4cqw; font-weight: 700; line-height: 1.12; text-align: center; }
+  .bubble p { margin: 0; }
+  .bubble.speech { background: #ffd400; border-radius: 48% 52% 46% 54% / 58% 46% 54% 42%; transform: rotate(-2deg); }
+  .bubble.speech::before, .bubble.speech::after { content: ""; position: absolute; top: 62%; border-style: solid; border-color: transparent; border-right: 0; transform: rotate(8deg); }
+  .bubble.speech::before { right: -3.2cqw; border-width: 1.5cqw 0 1.9cqw 3.4cqw; border-left-color: #000; }
+  .bubble.speech::after { right: -1.8cqw; border-width: .95cqw 0 1.25cqw 2.3cqw; border-left-color: #ffd400; }
+  .bubble.thought { background: #fff; border-radius: 50% 50% 48% 52% / 60% 55% 45% 40%; transform: rotate(1.5deg); }
+  .bubble.thought::before, .bubble.thought::after { content: ""; position: absolute; background: #fff; border: .45cqw solid #000; border-radius: 50%; }
+  .bubble.thought::before { width: 2.2cqw; height: 2.2cqw; right: -2.6cqw; bottom: -1.2cqw; }
+  .bubble.thought::after { width: 1.2cqw; height: 1.2cqw; right: -4.6cqw; bottom: -2.9cqw; }
+  .hidden { display: none !important; }
+
+  .panel { position: absolute; left: 0; right: 0; bottom: 0; padding: 1cqw 1.6cqw 1.1cqw; background: rgba(0,0,0,.78);
+           display: none; flex-direction: column; gap: .7cqw; border-top: .2cqw solid rgba(255,255,255,.25); }
+  body.controls .panel { display: flex; }
+  body.controls .gear { display: none; }
+  .bar { display: flex; flex-wrap: wrap; gap: .6cqw; align-items: center; }
+  .bar .lbl { font-size: .8cqw; letter-spacing: .12em; text-transform: uppercase; color: #9aa; margin-right: .3cqw; width: 5cqw; }
+  .bar button { font: 800 .95cqw/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase;
+                padding: .6cqw .9cqw; background: #000; color: #fff; border: .18cqw solid #fff; cursor: pointer; }
+  .bar button.on { background: #ffd400; color: #000; border-color: #ffd400; }
+  .bar button:disabled { opacity: .35; cursor: default; }
+  .bar button.danger { border-color: #c62828; color: #fff; background: #c62828; }
+  .bar button.hide { margin-left: auto; background: transparent; border-color: rgba(255,255,255,.6); }
+  .bar .sep { width: .1cqw; height: 2cqw; background: #555; margin: 0 .4cqw; }
+  .bar .pos { font: 800 .95cqw/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #fff; min-width: 12cqw; text-align: center; }
+  .bar .num { font: 800 1.1cqw/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color: #fff; min-width: 1.8cqw; text-align: center; }
+  .gear { position: absolute; right: 1.6cqw; bottom: 1.4cqw; font: 800 1cqw/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+          padding: .5cqw .8cqw; background: rgba(0,0,0,.55); color: #fff; border: .2cqw solid rgba(255,255,255,.6); cursor: pointer; opacity: .55; }
+  .gear:hover { opacity: 1; }
+  .status { font: .85cqw/1.5 "SF Mono", Menlo, monospace; color: #9aa1a8; }
+  .status b { color: #fff; font-weight: 600; }
+  .notes { margin-top: 18px; color: #aaa; font-size: 14px; }
+  .notes li { margin: 4px 0; }
+  kbd { background: #333; color: #fff; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+  /* developer mode (press D) */
+  body.dev [data-el]{outline:1px dashed rgba(39,67,227,.4);outline-offset:-1px;}
+  body.dev [data-el]:hover{outline:2px solid #2743E3;background:rgba(39,67,227,.07);cursor:crosshair;}
+  .dev-badge{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483000;display:none;padding:7px 14px;font:600 11px/1 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:#2743E3;border-radius:999px;box-shadow:0 6px 20px rgba(39,67,227,.35);}
+  body.dev .dev-badge{display:block;}
+  .dev-label{position:fixed;z-index:2147483001;display:none;pointer-events:none;padding:4px 8px;font:600 11px/1 system-ui,sans-serif;color:#fff;background:#1B221D;border-radius:6px;white-space:nowrap;}
+  .dev-toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(10px);z-index:2147483002;opacity:0;padding:9px 16px;font:600 12px/1 system-ui,sans-serif;color:#fff;background:#1B2FA8;border-radius:999px;transition:opacity .2s,transform .2s;pointer-events:none;}
+  .dev-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="frame">
+  <h2>Stage viewer: full-bleed camera with registered layers</h2>
+  <p class="subtitle">Interactive. Switch the base image between the live frame and tonight's turn photos, play them as a loop, and toggle each layer. The plan and ink layers are mapped through the real calibration, so they land on the board in the camera frame exactly where the marker did. Press <kbd>D</kbd> for developer mode.</p>
+
+  <div class="stage" id="stage" data-el="stage">
+    <div class="pic" id="pic" data-el="picture layer (frame, photo, strokes)">
+    <img class="base" id="base" alt="" data-el="base image — live camera frame">
+    <img class="ov ovimg" id="photo" alt="" data-el="turn photo projected onto the board">
+    <svg class="ov" id="ov" width="176" height="240" viewBox="0 0 176 240" data-el="overlay svg">
+      <g class="board" id="l-board" data-el="layer — board outline"><rect x="0" y="0" width="176" height="240"/><rect x="15" y="15" width="146" height="210" stroke-dasharray="3 2"/></g>
+      <g id="fit"><!-- robot-board mm -> camera-board mm: cam = (robot - b) / a, per axis -->
+        <g class="ink" id="l-ink" data-el="layer — human ink"></g>
+        <g class="robot" id="l-robot" data-el="layer — plan strokes"></g>
+      </g>
+    </svg>
+    </div>
+    <div class="tl" id="chips" data-el="chips — top left"><span class="chip yellow name" data-el="chip — Duet">Duet</span><span class="chip black" id="state" data-el="chip — state"></span></div>
+    <div class="tr chip black" id="count" data-el="chip — exchange counter"></div>
+    <button class="gear" id="gear" title="Show controls (C)" data-el="controls toggle button">Controls</button>
+    <div class="panel" id="panel" data-el="controls panel">
+    <div class="bar" data-el="source bar">
+      <span class="lbl">Image</span>
+      <button id="b-live" data-el="source — live">Live</button>
+      <button id="b-prev" data-el="source — previous photo">◀</button>
+      <span class="pos" id="pos" data-el="source — position label"></span>
+      <button id="b-next" data-el="source — next photo">▶</button>
+      <button id="b-play" data-el="source — play loop">▶ Play loop</button>
+    <span class="sep"></span>
+    <span class="seg" data-seg="crop"><button data-v="full" class="on" data-el="view — full frame">Full view</button><button data-v="board" data-el="view — crop to board">Crop to board</button></span>
+      <button class="hide" id="hide" data-el="hide controls button">Hide controls</button>
+    </div>
+    <div class="bar" data-el="layer bar">
+      <span class="lbl">Layers</span>
+      <button data-layer="robot" class="on" data-el="layer toggle — plan">Plan</button>
+      <button data-layer="ink" class="on" data-el="layer toggle — ink">Ink</button>
+      <button data-layer="caption" class="on" data-el="layer toggle — caption">Caption</button>
+      <button data-layer="chips" class="on" data-el="layer toggle — chips">Chips</button>
+      <button data-layer="board" data-el="layer toggle — board outline">Board</button>
+    </div>
+    <div class="bar" data-el="session bar">
+      <span class="lbl">Session</span>
+      <span class="seg" data-seg="length"><button data-v="short" data-el="length — short">Short</button><button data-v="medium" data-el="length — medium">Medium</button><button data-v="long" class="on" data-el="length — long">Long</button></span>
+      <span class="sep"></span>
+      <button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button><span class="lbl">exchanges</span>
+      <span class="sep"></span>
+      <span class="seg" data-seg="handoff"><button data-v="held" class="on" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></span>
+      <span class="sep"></span>
+      <button id="pause" data-el="pause / resume button">Pause</button>
+      <button id="pass" data-el="pass turn button">Pass turn</button>
+      <button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button>
+    </div>
+    <div class="status" id="status" data-el="status line">state <b>robot_draw</b> · turn <b>3</b> of <b>5</b> · length <b>long</b> · handoff <b>held</b> · hand guard <b>color at the look pose</b> · error <b>none</b> · ws <b>connected</b></div>
+      <div class="status" id="reply" data-el="status line — full reply"></div>
+
+    </div>
+    <div class="sub" id="caption" data-el="speech bubble">
+      <div class="bubble speech" id="bubble"><p id="quip" data-el="bubble — words"></p></div>
+    </div>
+  </div>
+
+  <ul class="notes">
+    <li><b>Live</b> is the calibration frame from 18:58 at the straight-down look pose, standing in for the MJPEG stream. The registered plan is turn 3's, with 3 of 7 strokes drawn.</li>
+    <li><b>Photos</b> are the board shots the recorder saved tonight (start, then human and robot for each of six turns), projected back onto the board in the camera frame so every image is the same landscape view. On a human photo the plan shows dashed, about to be drawn. On the robot photo it shows solid, done.</li>
+    <li><b>Loop</b> steps one photo per second and holds the last for two, the same timing as the stitched video.</li>
+    <li><b>Bubbles</b> alternate: a white thought cloud while Claude looks at your mark (on the human photo), a yellow speech bubble when it answers (on the robot photo and while drawing). A few storybook words each, never the full reply. The full <em>sees</em> and <em>adds</em> sentences are on the second status line in the controls panel, and would go into the video captions.</li>
+    <li><b>Controls</b> live inside the frame. The small corner button (or <kbd>C</kbd>) opens a panel over the bottom of the picture; Hide controls closes it. Opening the page as <code>/?view=console</code> starts with it open.</li>
+    <li><b>Full view or crop.</b> Crop to board zooms the picture so the board fills the frame; photos and strokes ride along because they are registered to it. <kbd>Z</kbd> toggles.</li>
+    <li>Keys: <kbd>←</kbd> <kbd>→</kbd> step, <kbd>space</kbd> play or stop, <kbd>L</kbd> back to live, <kbd>C</kbd> controls, <kbd>Z</kbd> crop.</li>
+  </ul>
+</div>
+
+<div class="dev-badge">DEV MODE · click an element to copy its name · press D to exit</div>
+<div class="dev-label" id="devLabel"></div>
+<div class="dev-toast" id="devToast"></div>
+
+<script>
+/*__DATA__*/
+</script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage'), base = $('base'), ov = $('ov');
+  const SHOTS = [{ turn: 0, who: 'start' }];
+  for (let t = 1; t <= 6; t++) SHOTS.push({ turn: t, who: 'human' }, { turn: t, who: 'robot' });
+  const LIVE_TURN = 3, LIVE_DONE = 3;
+  const THOUGHTS = ['Hmm\u2026 is that a creature?', 'Ooh, it\u2019s growing loops!', 'Petals on top, a tail below\u2026',
+                    'So many little cells!', 'Hmm\u2026 my words got lost.', 'A whole colony! What now?'];
+  const QUIPS = ['I\u2019ll give it a tiny heartbeat!', 'Let\u2019s make that head glow!', 'One more eye, just for you!',
+                 'Wake up, little cell!', 'Drawing anyway. Here we go!', 'Time to dance! Wonderful work!'];
+  const START_QUIP = 'Your turn! Draw one mark.';
+  const S = { live: true, i: SHOTS.length - 1, playing: false, timer: null, crop: false };
+
+  // ---- geometry: board mm -> displayed pixels, through the calibration quad ----
+  function solve(A, b) {                       // Gaussian elimination, n x n
+    const n = b.length, M = A.map((r, i) => [...r, b[i]]);
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]];
+      for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; }
+    }
+    return M.map((r, i) => r[n] / r[i]);
+  }
+  function homography(src, dst) {
+    const A = [], b = [];
+    for (let i = 0; i < 4; i++) {
+      const [x, y] = src[i], [u, v] = dst[i];
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+      A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+    }
+    const h = solve(A, b);
+    return `matrix3d(${h[0]},${h[3]},0,${h[6]}, ${h[1]},${h[4]},0,${h[7]}, 0,0,1,0, ${h[2]},${h[5]},0,1)`;
+  }
+  function boardOrder(q, k) {                  // same rule as vision.board_quad: tl, tr, br, bl
+    const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const tl = q[k], nxt = q[(k + 1) % 4], prv = q[(k + 3) % 4];
+    const [tr, bl] = d(nxt, tl) <= d(prv, tl) ? [nxt, prv] : [prv, nxt];
+    return [tl, tr, q[(k + 2) % 4], bl];
+  }
+  function displayedRect() {                   // where object-fit: contain put the image
+    const W = stage.clientWidth, H = stage.clientHeight, nw = base.naturalWidth, nh = base.naturalHeight;
+    const s = Math.min(W / nw, H / nh);
+    return { s, ox: (W - nw * s) / 2, oy: (H - nh * s) / 2, nw, nh };
+  }
+  function register() {
+    if (!base.naturalWidth) return;
+    const { s, ox, oy, nw, nh } = displayedRect();
+    const k = nw / CALIB.image_size[0];        // the mockup's live frame is a downscaled copy
+    const quad = boardOrder(CALIB.marks_image.map(([x, y]) => [x * k, y * k]), CALIB.board_tl_index);
+    const dst = quad.map(([x, y]) => [x * s + ox, y * s + oy]);
+    const m = homography([[0, 0], [176, 0], [176, 240], [0, 240]], dst);
+    ov.style.transform = m;                    // strokes, in board mm
+    $('photo').style.transform = m;            // and the turn photo, which is the board at 4 px/mm
+    const pic = $('pic'), W = stage.clientWidth, H = stage.clientHeight;
+    if (S.crop) {                              // zoom the whole picture so the board fills the frame
+      const xs = dst.map(p => p[0]), ys = dst.map(p => p[1]);
+      const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+      const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+      const z = Math.min(W * 0.9 / bw, H * 0.9 / bh);
+      pic.style.transform = `translate(${W / 2 - z * cx}px, ${H / 2 - z * cy}px) scale(${z})`;
+    } else pic.style.transform = '';
+    document.body.classList.toggle('crop', S.crop);
+  }
+
+  // ---- layers ----
+  function paths(group, list, cls) {
+    group.innerHTML = '';
+    list.forEach((d, i) => {
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('d', d); if (cls && cls(i)) p.setAttribute('class', cls(i));
+      group.appendChild(p);
+    });
+  }
+  function current() {
+    if (S.live) return { turn: LIVE_TURN, who: 'live', done: LIVE_DONE };
+    const sh = SHOTS[S.i];
+    return { turn: sh.turn, who: sh.who, done: sh.who === 'robot' ? Infinity : 0 };
+  }
+  function render() {
+    const c = current();
+    if (!base.src) base.src = IMAGES.live;
+    const key = S.live ? '' : `turn-${String(c.turn).padStart(2, '0')}-${c.who}`;
+    const photo = $('photo');
+    photo.classList.toggle('hidden', S.live);
+    if (key && photo.dataset.key !== key) { photo.dataset.key = key; photo.src = IMAGES[key]; }
+    const plan = PLANS[c.turn] || { ink: [], robot: [] };
+    paths($('l-ink'), plan.ink);
+    paths($('l-robot'), plan.robot, (i) => (i < c.done ? '' : 'queued'));
+    const h = HISTORY[c.turn - 1];
+    const st = $('state');
+    if (c.who === 'live') { st.textContent = 'My turn! Hands off, please'; st.className = 'chip red'; }
+    else if (c.who === 'start') { st.textContent = 'Your turn!'; st.className = 'chip green'; }
+    else if (c.who === 'human') { st.textContent = `Turn ${c.turn} · your mark`; st.className = 'chip black'; }
+    else { st.textContent = `Turn ${c.turn} · my reply`; st.className = 'chip green'; }
+    $('count').innerHTML = `Exchange <b>${c.turn}</b> of 5`;
+    const thinking = c.who === 'human';       // on the person's photo Claude is looking; on the robot's it speaks
+    $('bubble').className = 'bubble ' + (thinking ? 'thought' : 'speech');
+    $('quip').textContent = !h ? START_QUIP : (thinking ? THOUGHTS[c.turn - 1] : QUIPS[c.turn - 1]);
+    $('reply').innerHTML = h ? (h.source === 'fallback' ? 'claude <b>fallback grammar</b> · outline and ticks around the new mark'
+                                : `claude <b>7.5 s</b> · sees <b>${h.sees}</b> · adds <b>${h.adds}</b>`) : 'claude <b>idle</b>';
+    $('pos').textContent = S.live ? 'live · wrist camera' : (c.who === 'start' ? 'start · blank board' : `turn ${String(c.turn).padStart(2, '0')} · ${c.who}`);
+    $('b-live').classList.toggle('on', S.live);
+    $('b-prev').disabled = S.live || S.i === 0;
+    $('b-next').disabled = S.live || S.i === SHOTS.length - 1;
+    $('b-play').classList.toggle('on', S.playing);
+    $('b-play').textContent = S.playing ? '■ Stop' : '▶ Play loop';
+    register();
+  }
+  const f = CALIB.cam_to_robot;
+  $('fit').setAttribute('transform', `matrix(${1 / f.ax} 0 0 ${1 / f.ay} ${-f.bx / f.ax} ${-f.by / f.ay})`);
+  base.addEventListener('load', register);
+  new ResizeObserver(register).observe(stage);
+
+  // ---- controls ----
+  function goLive() { stop(); S.live = true; render(); }
+  function goto(i) { S.live = false; S.i = (i + SHOTS.length) % SHOTS.length; render(); }
+  function tick() {
+    goto(S.live ? 0 : S.i + 1);
+    S.timer = setTimeout(tick, S.i === SHOTS.length - 1 ? 2000 : 1000);
+  }
+  function play() { if (S.playing) return; S.playing = true; S.live = false; S.i = -1; tick(); }
+  function stop() { if (!S.playing) return; S.playing = false; clearTimeout(S.timer); render(); }
+  $('b-live').onclick = goLive;
+  $('b-prev').onclick = () => { stop(); goto(S.i - 1); };
+  $('b-next').onclick = () => { stop(); goto(S.i + 1); };
+  $('b-play').onclick = () => (S.playing ? stop() : play());
+  for (const b of document.querySelectorAll('[data-layer]')) {
+    b.onclick = () => {
+      b.classList.toggle('on');
+      const on = b.classList.contains('on'), L = b.dataset.layer;
+      if (L === 'caption') $('caption').classList.toggle('hidden', !on);
+      else if (L === 'chips') { $('chips').classList.toggle('hidden', !on); $('count').classList.toggle('hidden', !on); }
+      else $('l-' + L).classList.toggle('hidden', !on);
+    };
+  }
+  $('l-board').classList.add('hidden');
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') { stop(); goto(S.live ? SHOTS.length - 1 : S.i - 1); }
+    else if (e.key === 'ArrowRight') { stop(); goto(S.live ? 0 : S.i + 1); }
+    else if (e.key === ' ') { e.preventDefault(); S.playing ? stop() : play(); }
+    else if (e.key === 'l' || e.key === 'L') goLive();
+    else if (e.key === 'c' || e.key === 'C') toggleControls();
+    else if (e.key === 'z' || e.key === 'Z') setCrop(!S.crop);
+  });
+  // ---- console mock controls (no server in the mockup; they only change the page) ----
+  function toggleControls() { document.body.classList.toggle('controls'); }
+  $('gear').onclick = toggleControls; $('hide').onclick = toggleControls;
+  for (const seg of document.querySelectorAll('[data-seg]'))
+    seg.onclick = (e) => {
+      if (!e.target.dataset.v) return;
+      for (const b of seg.children) b.classList.toggle('on', b === e.target);
+      if (seg.dataset.seg === 'crop') setCrop(e.target.dataset.v === 'board');
+    };
+  function setCrop(on) {
+    S.crop = on;
+    for (const b of document.querySelector('[data-seg="crop"]').children) b.classList.toggle('on', (b.dataset.v === 'board') === on);
+    register();
+  }
+  $('ex-minus').onclick = () => { $('ex').textContent = Math.max(1, +$('ex').textContent - 1); };
+  $('ex-plus').onclick = () => { $('ex').textContent = Math.min(10, +$('ex').textContent + 1); };
+  $('pause').onclick = () => {
+    const paused = $('pause').textContent === 'Pause';
+    $('pause').textContent = paused ? 'Resume' : 'Pause'; $('pause').classList.toggle('on', paused);
+    const st = $('state'); if (paused) { st.textContent = 'Paused'; st.className = 'chip red'; } else render();
+  };
+  render();
+})();
+</script>
+<script>
+(function(){
+  var label=document.getElementById('devLabel'),toast=document.getElementById('devToast'),tT=null;
+  function isDev(){return document.body.classList.contains('dev');}
+  function copy(t){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t)['catch'](fb);}else fb();
+    function fb(){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(a);}}
+  function toastMsg(m){toast.textContent=m;toast.classList.add('show');if(tT)clearTimeout(tT);tT=setTimeout(function(){toast.classList.remove('show');},1400);}
+  document.addEventListener('keydown',function(e){var t=e.target;if(t&&t.matches&&t.matches('input,textarea,[contenteditable]'))return;
+    if(e.key==='d'||e.key==='D'){document.body.classList.toggle('dev');if(!isDev())label.style.display='none';}});
+  document.addEventListener('mousemove',function(e){if(!isDev()){label.style.display='none';return;}
+    var el=e.target.closest?e.target.closest('[data-el]'):null;
+    if(el){label.textContent=el.getAttribute('data-el');label.style.display='block';
+      label.style.left=Math.min(e.clientX+12,window.innerWidth-label.offsetWidth-8)+'px';label.style.top=(e.clientY+14)+'px';}
+    else label.style.display='none';});
+  document.addEventListener('click',function(e){if(!isDev())return;
+    var el=e.target.closest?e.target.closest('[data-el]'):null;if(!el)return;
+    e.preventDefault();e.stopPropagation();var n=el.getAttribute('data-el');copy(n);toastMsg('Copied: '+n);},true);
+})();
+</script>
+</body>
+</html>

@@ -44,3 +44,29 @@ Every problem, in order. Newest at the bottom. Fill in the fix even if it was tr
 **Fix:** None applied. Root cause not established.
 **Why it worked:** Unknown. The motion planner is sampling-based, so a hard move near the arm's reach limit can time out on one run and succeed on the next. If it recurs, capture the Python traceback and raise the planner timeout in `move_gripper` (the `extra={"timeout": 15.0}` value) before changing anything else.
 **Time lost:**
+
+## 2026-09-18 — gripper call fails with "xArm: Emergency Stop Button Pushed In"
+**Module:** hackathon, first connection to `armfarm22`
+**Symptom:** `explore.py` connected, listed resources, and read the arm, then `gripper.is_holding_something()` raised `GRPCError(UNKNOWN, 'xArm: Emergency Stop Button Pushed In;')`.
+**What I tried:**
+1. Nothing in code. The message comes straight from the xArm controller.
+**Fix:** Physical. The red E-stop on the control box is engaged. Release it (twist to pop it out) once the area around the arm is clear, then rerun. The gripper talks to the same controller as the arm, so it refuses everything while the stop is in.
+**Why it worked:** The controller blocks all commands, including gripper state, while the E-stop is latched. Reads of the arm's position still work.
+**Time lost:**
+
+## 2026-09-18 — xArm drops out of manual (teach) mode on its own
+**Module:** hackathon teach.py
+**Symptom:** After `enter_manual_mode` the arm was rigid, or went rigid a few seconds later. The module logged "Manual mode enabled" every time.
+**Fix:** The driver forgets it is in manual mode when its Modbus link blips (`started` resets to -1) and the next ready-check re-enables servo mode. Added an `m` key at every teach prompt that re-enters manual mode. Works reliably enough with one or two retries.
+
+## 2026-09-18 — gripper holding sensor reports True when empty
+**Symptom:** `is_holding_something()` returned True with the fingers open and nothing in them.
+**Fix:** Stopped trusting it. The teach and bench scripts ask the operator (`k`/`o`/`q`); `REQUIRE_GRAB_DETECT` stays False.
+
+## 2026-09-18 — pen crushed the felt on the first square
+**Symptom:** Drawing pressed the tip hard enough to flatten it, at offsets of 0, 1, and 3 mm.
+**Fix:** The corners had been touched off with the marker held by hand; the robot's grip held it 27 mm differently. Re-teaching the corners with the marker in the runtime grip fixed it; a 1 mm offset then just kisses the surface.
+
+## 2026-09-18 — straight-down look pose over the board center was unreachable
+**Symptom:** `zero IK solutions produced` at 450 mm above the plane.
+**Fix:** The pen and gripper hang about 200 mm below the camera and the xArm6 reaches about 700 mm; a straight-down pose with the gripper 240 mm above the plane puts the camera near 450 mm and is reachable. Taught by hand.
