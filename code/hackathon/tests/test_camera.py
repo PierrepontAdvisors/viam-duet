@@ -110,6 +110,7 @@ def test_latest_respects_max_age():
     src = asyncio.run(scenario())
     assert src.latest(max_age_s=0.0) is None
     assert src.latest(max_age_s=10) is not None
+    assert camera.FrameSource(FakeCam(), fps=5, grab_timeout_s=2.0).stale_after_s == 3.0
 
 
 def test_grab_frame_drops_mismatched_depth():

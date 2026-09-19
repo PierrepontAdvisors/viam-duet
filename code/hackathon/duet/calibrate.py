@@ -87,7 +87,10 @@ def offline(argv: list[str]) -> bool:
         values = argv[i + 1:i + 5]
         if len(values) < 4:
             raise SystemExit("usage: --dock x0 y0 x1 y1")
-        x0, y0, x1, y1 = (int(v) for v in values)
+        try:
+            x0, y0, x1, y1 = (int(v) for v in values)
+        except ValueError:
+            raise SystemExit("usage: --dock x0 y0 x1 y1 (whole pixels)")
         cal["dock_region_image"] = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
         save_calibration(cal)
         print(f"dock region saved: x {x0}..{x1}, y {y0}..{y1}")
@@ -97,7 +100,12 @@ def offline(argv: list[str]) -> bool:
     if "--plane" in argv:
         if "marks_image" not in cal:
             raise SystemExit("no marks_image in calibration.json; run calibrate --tl first")
-        path = Path(argv[argv.index("--plane") + 1])
+        i = argv.index("--plane")
+        if i + 1 >= len(argv):
+            raise SystemExit("usage: --plane FILE (a .dep depth map or an .npz with a 'depth' array)")
+        path = Path(argv[i + 1])
+        if not path.exists():
+            raise SystemExit("usage: --plane FILE (a .dep depth map or an .npz with a 'depth' array)")
         depth = np.load(path)["depth"] if path.suffix == ".npz" else decode_depth(path.read_bytes())
         quad = np.array(cal["marks_image"], dtype=np.float32)
         center = quad.mean(axis=0)
