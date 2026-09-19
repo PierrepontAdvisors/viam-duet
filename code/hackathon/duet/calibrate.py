@@ -7,10 +7,11 @@ which one is the board's top-left, and save a warped board image to check.
     python -m duet.calibrate --fit 15,15,20 120,180,20
                                              fit camera-to-robot scale and offset from squares the robot drew
                                              (top-left x, y and side, in robot mm); reads captures/calib_board.jpg
+    python -m duet.calibrate --dock x0 y0 x1 y1
+                                             OFFLINE: record the dock tub's image rectangle for the hand check;
+                                             run --dock before --plane so the dock's height gets measured too
     python -m duet.calibrate --plane FILE    OFFLINE: fit the board plane for the depth hand check from a saved
                                              depth map (captures/depth.dep from explore.py, taken at the look pose)
-    python -m duet.calibrate --dock x0 y0 x1 y1
-                                             OFFLINE: record the dock tub's image rectangle for the hand check
 
 The arm must be at the look pose. Board top-left is the corner you touched off as `corner tl`.
 """
@@ -28,7 +29,7 @@ from viam.components.camera import Camera
 import viam_conn
 from duet import config as cfg
 from duet import vision
-from duet.camera import median_capture
+from duet.camera import decode_depth, median_capture
 
 CAPTURES = Path(__file__).resolve().parent.parent / "captures"
 LABELS = "ABCD"   # image order: top-left, top-right, bottom-right, bottom-left
@@ -83,13 +84,19 @@ def offline(argv: list[str]) -> bool:
     cal = load_calibration()
     if "--dock" in argv:
         i = argv.index("--dock")
-        x0, y0, x1, y1 = (int(v) for v in argv[i + 1:i + 5])
+        values = argv[i + 1:i + 5]
+        if len(values) < 4:
+            raise SystemExit("usage: --dock x0 y0 x1 y1")
+        x0, y0, x1, y1 = (int(v) for v in values)
         cal["dock_region_image"] = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
         save_calibration(cal)
         print(f"dock region saved: x {x0}..{x1}, y {y0}..{y1}")
+        if "plane" in cal:
+            print("re-run --plane so the dock's height is measured")
         return True
     if "--plane" in argv:
-        from duet.camera import decode_depth
+        if "marks_image" not in cal:
+            raise SystemExit("no marks_image in calibration.json; run calibrate --tl first")
         path = Path(argv[argv.index("--plane") + 1])
         depth = np.load(path)["depth"] if path.suffix == ".npz" else decode_depth(path.read_bytes())
         quad = np.array(cal["marks_image"], dtype=np.float32)
@@ -102,10 +109,20 @@ def offline(argv: list[str]) -> bool:
         resid = np.abs(depth[inside].astype(np.float32) - expected[inside])
         print(f"plane z = {plane[0]:.4f} x + {plane[1]:.4f} y + {plane[2]:.1f}; "
               f"median residual {np.median(resid):.1f} mm, {np.mean(resid < 15) * 100:.0f}% of readings within 15 mm")
+        if not (300.0 <= plane[2] <= 700.0):
+            print(f"WARNING: plane height {plane[2]:.0f} mm is outside 300 to 700 mm; "
+                  f"the look-pose camera sits about 450 mm above the board")
+        hand = vision.hand_present_depth(depth, vision.polygon_mask(depth.shape, [padded]), expected,
+                                         vision.mm_per_px(quad) ** 2)
+        if hand:
+            print("WARNING: the hand check sees a hand on this empty board; "
+                  "this depth map is probably not from the current look pose")
         if "dock_region_image" in cal:
             dock = (vision.polygon_mask(depth.shape, [cal["dock_region_image"]]) > 0) & (depth > 0)
             cal["dock_offset_mm"] = float(np.median(expected[dock] - depth[dock].astype(np.float32)))
             print(f"dock surface sits {cal['dock_offset_mm']:.0f} mm above the board plane (hand check reference)")
+        else:
+            print("no dock region yet: run --dock x0 y0 x1 y1 first, then --plane again")
         save_calibration(cal)
         return True
     return False

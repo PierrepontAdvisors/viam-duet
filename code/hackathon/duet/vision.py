@@ -242,6 +242,8 @@ def fit_plane(depth: np.ndarray, mask: np.ndarray) -> tuple[float, float, float]
     if z.size < 100:
         raise ValueError("not enough valid depth readings inside the region")
     keep = np.abs(z - np.median(z)) < 80
+    if keep.sum() < 100:
+        raise ValueError("not enough valid depth readings inside the region")
     a = np.column_stack([xs, ys, np.ones_like(xs)]).astype(np.float64)
     coef, *_ = np.linalg.lstsq(a[keep], z[keep], rcond=None)
     keep = np.abs(a @ coef - z) < 15
@@ -283,7 +285,7 @@ def hand_present_depth(depth: np.ndarray, region_mask: np.ndarray, expected_dept
 
 def hand_present_color(current: np.ndarray, reference: np.ndarray, region_mask: np.ndarray, mm2_per_px: float,
                        thresh: int = cfg.HAND_DIFF_THRESH, open_px: int = cfg.HAND_OPEN_PX,
-                       area_mm2: float = cfg.HAND_AREA_MM2) -> bool:
+                       area_mm2: float = cfg.HAND_COLOR_AREA_MM2) -> bool:
     """The backup when no depth plane is calibrated: compare the frame with the reference frame
     taken at the look pose after the robot's last turn. The difference is the largest of the three
     color channels, because on this camera's exposure the board reads mid-gray (about 127) and a
@@ -309,11 +311,16 @@ def dock_dots(frame_bgr: np.ndarray, slots: dict, homography: np.ndarray,
     calibration.json: {"green": {"xy": [x, y], "hsv_lo": [...], "hsv_hi": [...]}}. The displacement
     is measured through the board homography so it is in board axes, ready for the pick correction."""
     hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
+    h, w = hsv.shape[:2]
     out: dict[str, DotReading] = {}
     for name, slot in slots.items():
         ex, ey = slot["xy"]
         x0, y0 = max(int(ex - roi_px), 0), max(int(ey - roi_px), 0)
-        sub = hsv[y0:int(ey + roi_px), x0:int(ex + roi_px)]
+        x1, y1 = min(int(ex + roi_px), w), min(int(ey + roi_px), h)
+        sub = hsv[y0:y1, x0:x1]
+        if sub.size == 0:
+            out[name] = DotReading("missing", (0.0, 0.0))
+            continue
         mask = cv2.inRange(sub, np.array(slot["hsv_lo"], np.uint8), np.array(slot["hsv_hi"], np.uint8))
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
         n, _, stats, cents = cv2.connectedComponentsWithStats(mask)

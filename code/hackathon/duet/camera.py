@@ -52,6 +52,9 @@ async def grab_frame(cam) -> Frame:
             depth = decode_depth(img.data)
     if color is None:
         raise RuntimeError("the camera returned no color image")
+    if depth is not None and depth.shape != color.shape[:2]:
+        # a mismatched depth stream degrades to the color check instead of crashing the hand check
+        depth = None
     return Frame(color, depth, monotonic())
 
 
@@ -72,16 +75,19 @@ class FrameSource:
     """Polls the camera in the background at about `fps` and keeps the latest frame plus a short
     history for the stillness reading. A camera error is counted and polling continues."""
 
-    def __init__(self, cam, fps: float = 5.0, history_s: float = 3.0):
+    def __init__(self, cam, fps: float = 5.0, history_s: float = 3.0, grab_timeout_s: float = 2.0):
         self.cam = cam
         self.period = 1.0 / fps
         self.history_s = history_s
+        self.grab_timeout_s = grab_timeout_s
         self.frames: deque[Frame] = deque()
         self.errors = 0
         self.last_error: str | None = None
         self._task: asyncio.Task | None = None
 
     async def start(self) -> None:
+        if self._task is not None and not self._task.done():
+            return
         self._task = asyncio.create_task(self._loop())
 
     async def stop(self) -> None:
@@ -94,7 +100,7 @@ class FrameSource:
     async def _loop(self) -> None:
         while True:
             try:
-                frame = await grab_frame(self.cam)
+                frame = await asyncio.wait_for(grab_frame(self.cam), self.grab_timeout_s)
                 self.frames.append(frame)
                 while self.frames and frame.t - self.frames[0].t > self.history_s:
                     self.frames.popleft()
@@ -105,13 +111,16 @@ class FrameSource:
                 self.last_error = str(exc)
             await asyncio.sleep(self.period)
 
-    def latest(self) -> Frame | None:
-        return self.frames[-1] if self.frames else None
+    def latest(self, max_age_s: float = 1.0) -> Frame | None:
+        if not self.frames:
+            return None
+        frame = self.frames[-1]
+        if monotonic() - frame.t > max_age_s:
+            return None
+        return frame
 
     def recent(self, seconds: float) -> list[Frame]:
-        if not self.frames:
-            return []
-        cutoff = self.frames[-1].t - seconds
+        cutoff = monotonic() - seconds
         return [f for f in self.frames if f.t >= cutoff]
 
     async def capture_median(self, n: int = 5, delay_s: float = 0.1) -> np.ndarray:

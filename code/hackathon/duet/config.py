@@ -58,6 +58,7 @@ HELD_QUIET_S = 2.0              # held rule: still and no hand for this long aft
 
 HAND_HEIGHT_MM = 25.0           # depth check: anything this far above the board plane, over the board or dock, is a hand
 HAND_AREA_MM2 = 2000.0          # a changed or raised blob at least this big is a hand, not ink
+HAND_COLOR_AREA_MM2 = 5000.0        # color backup: bigger than any filled shape a visitor draws in one turn, smaller than a palm (~9000)
 HAND_DIFF_THRESH = 40           # color backup: gray difference from the reference frame that counts as changed
 HAND_OPEN_PX = 9                # color backup: opening kernel that erases marker lines but not a hand
 

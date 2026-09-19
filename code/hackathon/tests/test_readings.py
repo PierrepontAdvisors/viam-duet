@@ -80,12 +80,34 @@ def test_hand_present_color_on_the_real_look_frame(look_frame, calibration):
     for k in range(6):
         cv2.line(inked, (cx - 100, cy - 60 + 20 * k), (cx + 100, cy - 40 + 20 * k), (30, 30, 170), 3)
     assert vision.hand_present_color(inked, look_frame, region, mm2) is False
-    hand = inked.copy()                                             # a hand: about 65 x 45 mm of skin over the board
-    cv2.ellipse(hand, (cx, cy), (65, 45), 20, 0, 360, skin, -1)
+    hand = inked.copy()                                             # a hand: about 100 x 75 mm of skin over the board
+    cv2.ellipse(hand, (cx, cy), (100, 75), 20, 0, 360, skin, -1)
     assert vision.hand_present_color(hand, look_frame, region, mm2) is True
+    filled = look_frame.copy()                                      # a filled 60 x 60 mm shape a visitor drew: this is
+    cv2.rectangle(filled, (cx - 60, cy - 60), (cx + 60, cy + 60), (30, 30, 170), -1)  # the documented blind spot boundary
+    assert vision.hand_present_color(filled, look_frame, region, mm2) is False
     fingertip = look_frame.copy()                                   # a 9 mm dot of the same skin: too small
     cv2.circle(fingertip, (cx, cy), 9, skin, -1)
     assert vision.hand_present_color(fingertip, look_frame, region, mm2) is False
+
+
+def test_real_visitor_ink_is_not_a_hand(look_frame, exchange_start, exchange_human, calibration):
+    quad = quad_in(look_frame, calibration)
+    h = homography_for(quad, calibration)
+    size = (look_frame.shape[1], look_frame.shape[0])
+    h_inv = np.linalg.inv(h)
+    w, bh = vision.BOARD_PX
+    inner = np.zeros((bh, w), np.uint8)
+    inner[48:bh - 48, 48:w - 48] = 255                     # keep the frame's own corner marks and rim
+    mask = cv2.warpPerspective(inner, h_inv, size) > 0
+    def composite(board):
+        back = cv2.warpPerspective(board, h_inv, size)
+        out = look_frame.copy()
+        out[mask] = back[mask]
+        return out
+    before, after = composite(exchange_start), composite(exchange_human)
+    region = vision.polygon_mask(look_frame.shape, [quad.tolist()])
+    assert vision.hand_present_color(after, before, region, vision.mm_per_px(quad) ** 2) is False
 
 
 def green_frame(cx, cy, r=6):

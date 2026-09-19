@@ -79,3 +79,43 @@ def test_frame_source_survives_a_camera_error():
         return src
     src = asyncio.run(scenario())
     assert src.errors == 1 and "hiccup" in src.last_error and src.latest() is not None
+
+
+def test_frame_source_reports_a_stalled_camera():
+    class StalledCam(FakeCam):
+        async def get_images(self):
+            await asyncio.sleep(10)
+            return await FakeCam.get_images(self)
+
+    async def scenario():
+        src = camera.FrameSource(StalledCam(), fps=50, grab_timeout_s=0.05)
+        await src.start()
+        await asyncio.sleep(0.2)
+        await src.stop()
+        return src
+    src = asyncio.run(scenario())
+    assert src.errors >= 1
+    assert src.latest() is None
+
+
+def test_latest_respects_max_age():
+    async def scenario():
+        cam = FakeCam()
+        src = camera.FrameSource(cam, fps=50)
+        await src.start()
+        await asyncio.sleep(0.05)
+        await src.stop()
+        await asyncio.sleep(0.05)   # let the last frame go stale
+        return src
+    src = asyncio.run(scenario())
+    assert src.latest(max_age_s=0.0) is None
+    assert src.latest(max_age_s=10) is not None
+
+
+def test_grab_frame_drops_mismatched_depth():
+    class MismatchedCam(FakeCam):
+        def __init__(self):
+            super().__init__()
+            self.dep = dep_bytes(np.full((30, 40), 700, np.uint16))
+    f = asyncio.run(camera.grab_frame(MismatchedCam()))
+    assert f.depth is None
