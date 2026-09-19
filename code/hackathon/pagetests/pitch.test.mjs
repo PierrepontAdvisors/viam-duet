@@ -1,0 +1,119 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+// pagetests/ -> code/hackathon/ -> Viam/ -> docs/duet/pitch/
+const DIR = fileURLToPath(new URL('../../../docs/duet/pitch/', import.meta.url));
+const read = (name) => readFileSync(DIR + name, 'utf8');
+
+const FLIPBOOK = ['turn-00-start.jpg',
+  ...[1, 2, 3, 4, 5, 6].flatMap((n) => [`turn-0${n}-human.jpg`, `turn-0${n}-robot.jpg`])];
+const PLATES = [1, 2, 3, 4, 5, 6, 7].map((n) => `plate-${n}.jpg`);
+const HEROES = ['hero-thesis.jpg', 'hero-duet.jpg', 'hero-build.jpg'];
+
+test('the 13 flipbook photos from session 20260918-190258 are in img/', () => {
+  for (const f of FLIPBOOK) assert.ok(existsSync(DIR + 'img/' + f), `missing img/${f}`);
+  assert.equal(readdirSync(DIR + 'img').filter((f) => /^turn-.*\.jpg$/.test(f)).length, 13);
+});
+
+test('fredoka.css embeds the variable font as a data URI, so file:// in Chrome can use it', () => {
+  const css = read('fredoka.css');
+  assert.match(css, /font-family:\s*["']Fredoka["']/);
+  assert.match(css, /font-weight:\s*400 700/);
+  assert.match(css, /url\(data:font\/woff2;base64,[A-Za-z0-9+/=]{1000,}\)\s*format\(["']woff2["']\)/);
+});
+
+test('the generator exists, keeps the key out of the repo, and never names the artist', () => {
+  const py = read('gen_images.py');
+  assert.match(py, /GEMINI_API_KEY/);
+  assert.ok(!/AQ\.[A-Za-z0-9_-]{20,}/.test(py), 'no key literal in the script');
+  assert.ok(!/Haring/.test(py), 'prompts describe the grammar, they do not name the artist');
+  assert.match(py, /gemini-3\.1-flash-image/);
+  for (const n of [...PLATES, ...HEROES]) assert.ok(py.includes(n.replace('.jpg', '')), `job ${n} missing`);
+});
+
+test('the seven plates and three heroes were generated', () => {
+  for (const f of [...PLATES, ...HEROES]) assert.ok(existsSync(DIR + 'img/' + f), `missing img/${f}`);
+});
+
+// deck.js is a classic script for file://; Node runs it here with a bare `window` and no
+// `document`, which also proves the DOM wiring is guarded. It runs in this realm (not a vm
+// context) so deepEqual can compare the objects it returns.
+function loadDeck() {
+  const window = {};
+  new Function('window', read('deck.js'))(window);
+  return window.Deck;
+}
+
+test('advance reveals card 1 one line at a time, then moves to card 2', () => {
+  const D = loadDeck();
+  let s = { card: 1, build: 0 };
+  s = D.advance(s); assert.deepEqual(s, { card: 1, build: 1 });
+  s = D.advance(s); assert.deepEqual(s, { card: 1, build: 2 });
+  s = D.advance(s); assert.deepEqual(s, { card: 1, build: 3 });
+  s = D.advance(s); assert.deepEqual(s, { card: 2, build: 0 });
+  s = D.advance(s); assert.deepEqual(s, { card: 3, build: 0 });
+});
+
+test('advance stops on the last card and never mutates its input', () => {
+  const D = loadDeck();
+  const last = Object.freeze({ card: 7, build: 0 });
+  assert.equal(D.advance(last), last);
+  const first = Object.freeze({ card: 1, build: 0 });
+  D.advance(first);
+  assert.deepEqual(first, { card: 1, build: 0 });
+});
+
+test('back hides the latest line on card 1, and from card 2 lands on card 1 fully revealed', () => {
+  const D = loadDeck();
+  assert.deepEqual(D.back({ card: 1, build: 2 }), { card: 1, build: 1 });
+  assert.deepEqual(D.back({ card: 2, build: 0 }), { card: 1, build: 3 });
+  assert.deepEqual(D.back({ card: 5, build: 0 }), { card: 4, build: 0 });
+  const start = { card: 1, build: 0 };
+  assert.equal(D.back(start), start);
+});
+
+test('jump clamps to 1..7 and starts that card unrevealed', () => {
+  const D = loadDeck();
+  assert.deepEqual(D.jump(4), { card: 4, build: 0 });
+  assert.deepEqual(D.jump(0), { card: 1, build: 0 });
+  assert.deepEqual(D.jump(99), { card: 7, build: 0 });
+});
+
+test('parseHash reads #n and falls back to card 1', () => {
+  const D = loadDeck();
+  assert.equal(D.parseHash('#3'), 3);
+  assert.equal(D.parseHash('#12'), 7);
+  assert.equal(D.parseHash(''), 1);
+  assert.equal(D.parseHash('#nope'), 1);
+  assert.equal(D.parseHash(undefined), 1);
+});
+
+test('the flipbook lists the 13 photos in turn order, labels them, and holds on the last', () => {
+  const D = loadDeck();
+  assert.deepEqual(D.FLIPBOOK, FLIPBOOK);
+  assert.equal(D.flipLabel(0), 'start');
+  assert.equal(D.flipLabel(1), 'turn 1 of 6 · you');
+  assert.equal(D.flipLabel(2), 'turn 1 of 6 · Duet');
+  assert.equal(D.flipLabel(11), 'turn 6 of 6 · you');
+  assert.equal(D.flipLabel(12), 'turn 6 of 6 · Duet');
+  assert.equal(D.flipDelay(0), 700);
+  assert.equal(D.flipDelay(5), 700);
+  assert.equal(D.flipDelay(12), 2000);
+  assert.equal(D.nextFlip(3), 4);
+  assert.equal(D.nextFlip(12), 0);
+});
+
+test('deck.css defines the seven plates, the drifting pattern, and respects reduced motion', () => {
+  const css = read('deck.css');
+  for (const p of ['plate-yellow', 'plate-red', 'plate-blue', 'plate-green', 'plate-orange', 'plate-cream', 'plate-black']) {
+    assert.ok(css.includes('.' + p), `no .${p} rule`);
+  }
+  assert.match(css, /@keyframes drift/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce/);
+  assert.match(css, /--yellow:\s*#ffd400/);
+  assert.match(css, /--blue:\s*#1f4fd6/);
+  assert.ok(css.includes('.dev-badge'), 'developer-mode styles are in deck.css');
+  assert.ok(css.includes('.plate-img') && css.includes('.card.plated .pattern'), 'plate image layer with SVG fallback');
+});
