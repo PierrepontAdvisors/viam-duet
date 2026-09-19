@@ -29,7 +29,7 @@ from duet.calib import BoardToRobot, dict_to_pose, load_poses, save_pose
 from duet.controller import Controller, shifted
 
 SLOTS = ("red", "green", "blue")
-CORNERS = ("tl", "tr", "bl")
+CORNERS = ("tl", "tr", "bl", "br")
 VERIFY_LIFT_MM = 30.0
 
 

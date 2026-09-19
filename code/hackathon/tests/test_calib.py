@@ -71,3 +71,27 @@ def test_file_roundtrip_preserves_all_fields(tmp_path):
 def test_from_poses_reports_missing_corners():
     with pytest.raises(ValueError, match="missing corner touch-offs: tr, bl"):
         BoardToRobot.from_poses({"corner": {"tl": pose_to_dict(down(0, 0, 0))}})
+
+
+def test_fourth_corner_bends_the_surface_bilinearly(tmp_path):
+    path = tmp_path / "poses.json"
+    save_pose("corner.tl", down(300, -100, 5), path)
+    save_pose("corner.tr", down(300, 179, 5), path)
+    save_pose("corner.bl", down(84, -100, 5), path)
+    save_pose("corner.br", down(84, 179, 4), path)          # the far corner sits 1 mm lower than the plane
+    b = BoardToRobot.from_poses(load_poses(path))
+    w, h = cfg.BOARD_W_MM, cfg.BOARD_H_MM
+    assert round(b.to_world(0, 0).z, 6) == 5 and round(b.to_world(w, 0).z, 6) == 5 and round(b.to_world(0, h).z, 6) == 5
+    assert round(b.to_world(w, h).z, 6) == 4                 # the measured corner is hit exactly
+    assert round(b.to_world(w / 2, h / 2).z, 6) == 4.75      # and the middle bends a quarter of the way
+    assert round(b.to_world(w / 2, 0).z, 6) == 5             # the untouched edges stay on the plane
+
+
+def test_without_a_fourth_corner_nothing_changes(tmp_path):
+    path = tmp_path / "poses.json"
+    save_pose("corner.tl", down(300, -100, 5), path)
+    save_pose("corner.tr", down(300, 179, 5), path)
+    save_pose("corner.bl", down(84, -100, 5), path)
+    b = BoardToRobot.from_poses(load_poses(path))
+    assert b.warp == (0.0, 0.0, 0.0)
+    assert round(b.to_world(cfg.BOARD_W_MM / 2, cfg.BOARD_H_MM / 2).z, 6) == 5

@@ -1,5 +1,5 @@
 """The turn loop: one asyncio task, one method per state, the only module that calls the others in
-sequence. It replaces the Enter prompts of `duet.turn` with the trigger, and every dependency comes
+sequence. The human turn ends when the Go button on the page sends `pass`, and every dependency comes
 in through the constructor so tests and `run.py --fake` can swap the camera, the arm, and Claude."""
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ from duet.camera import Frame
 from duet.claude_turn import TurnResult
 from duet.controller import Blocked
 from duet.strokes import Polyline, length
-from duet.styles import haring, mondrian, vangogh
-from duet.trigger import Reading, Trigger
+from duet.styles import abstract, haring, mondrian, vangogh
 from duet.turn import all_ink, map_strokes
 
-ARTISTS = ("haring", "mondrian", "vangogh")
-STYLERS = {"haring": haring, "mondrian": mondrian, "vangogh": vangogh}
+ARTISTS = ("abstract", "haring", "mondrian", "vangogh")
+STYLERS = {"abstract": abstract, "haring": haring, "mondrian": mondrian, "vangogh": vangogh}
 # Where Resume picks up after a fault. `interpret` and `plan` retry themselves: the visitor's strokes
 # are already consumed, so sending them back to `human_turn` would ask for the mark to be drawn again.
+RECOVER_TIMEOUT_S = 45.0      # a recover that hangs on a dropped connection must not hold the loop forever
 RETRY_AFTER_FAULT = {"start": "start", "look": "look", "human_turn": "human_turn", "capture": "human_turn",
                      "interpret": "interpret", "plan": "plan", "robot_draw": "look", "finish": "finish"}
 HAND_WAIT_S = 30
@@ -242,7 +242,12 @@ class Session:
                         self._set("paused")
                     await self._running.wait()
                     try:
-                        await self.ctl.recover()
+                        await asyncio.wait_for(self.ctl.recover(), RECOVER_TIMEOUT_S)
+                    except asyncio.TimeoutError:
+                        self.last_error = "recover timed out: the machine connection may have dropped; press Resume again"
+                        self.bus.emit("error", message=self.last_error)
+                        self._running.clear()
+                        continue
                     except Exception as exc:
                         self.last_error = f"recover failed: {type(exc).__name__}: {exc}"
                         self.bus.emit("error", message=self.last_error)
@@ -278,26 +283,10 @@ class Session:
             self._homography = vision.board_homography(quad)
         return self._homography
 
-    def _reading(self, frame) -> Reading:
-        colors = [f.color for f in self.frames.recent(cfg.STILL_WINDOW_S)]
-        hand = self.guard.reading(frame) if self.guard is not None else None
-        dots: dict[str, str] = {}
-        if self.settings.handoff == "dock" and self.cal.get("dots"):
-            readings = vision.dock_dots(frame.color, self.cal["dots"], self._board_homography())
-            dots = {k: v.status for k, v in readings.items()}
-            self.dot_displacement = {k: v.displacement_mm for k, v in readings.items()}
-            if dots != self.dock_status:
-                self.dock_status = dots
-                self.bus.emit("dock", slots=dots, reseat=[])
-        return Reading(t=frame.t, hand=bool(hand), still=vision.still(colors), dots=dots)
-
     async def _state_human_turn(self) -> str:
-        handoff = self.settings.handoff
-        trig = Trigger(handoff)
+        """The visitor draws, then presses Go on the page (the `pass` command). Nothing ends the turn
+        by itself: the stillness, hand, and marker-dot trigger was removed on day 2."""
         self._pass.clear()
-        if handoff == "dock" and not self.cal.get("dots"):
-            self.bus.emit("error", message="dock handoff has no calibrated marker dots, so the turn cannot end by itself: "
-                                           "use Pass, or switch the marker setting to Held")
         while True:
             if not self._running.is_set():
                 return "human_turn"
@@ -305,18 +294,6 @@ class Session:
                 self._pass.clear()
                 return "capture"
             await asyncio.sleep(self.poll_s)
-            if self.settings.handoff != handoff:        # the operator switched the marker setting mid-turn
-                handoff = self.settings.handoff
-                trig = Trigger(handoff)
-            frame = self.frames.latest()
-            if frame is None:
-                continue
-            event = trig.update(self._reading(frame))
-            if event is None:
-                continue
-            if event.kind == "fire":
-                return "capture"
-            self.bus.emit("dock", slots=self.dock_status, reseat=list(event.slots) if event.kind == "reseat" else [])
 
     async def _capture_board(self) -> tuple[np.ndarray, np.ndarray]:
         """A median capture at the look pose: the warped board and the raw frame it came from. Also
@@ -338,8 +315,8 @@ class Session:
         return float(self.cal.get("mm_per_px") or vision.mm_per_px(np.array(self.cal["marks_image"], np.float32)))
 
     async def _state_capture(self) -> str:
-        # The trigger's debounce can fire one poll after a hand was last seen; never photograph a
-        # hand (it would be traced as ink and become the hand check's reference).
+        # Go can be pressed while a hand is still over the board; never photograph a hand (it would
+        # be traced as ink and become the hand check's reference).
         if self.guard is not None and await self.guard():
             self.bus.emit("error", message="a hand is still over the board; still your turn")
             return "human_turn"

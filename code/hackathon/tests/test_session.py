@@ -106,23 +106,6 @@ def test_no_new_ink_returns_to_the_human_turn(tmp_path, look_frame, exchange_sta
     assert any(e["type"] == "human" and e.get("found") is False for e in events)
 
 
-def test_held_trigger_fires_from_the_frames_alone(tmp_path, look_frame, exchange_start, exchange_human, calibration, monkeypatch):
-    monkeypatch.setattr(cfg, "HELD_QUIET_S", 0.3)
-    monkeypatch.setattr(cfg, "TRIGGER_GRACE_S", 0.1)   # Trigger refuses a grace window as long as the quiet one
-    async def scenario():
-        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
-        task = asyncio.create_task(s.run())
-        await until_state(s, "human_turn")
-        frames.jitter(0.2)                              # a hand moving over the board
-        await asyncio.sleep(0.1)
-        frames.show_board(exchange_human)
-        await until_seen(s, "capture", timeout=5)       # fires 0.3 s after the scene settles, no pass needed
-        await cancel(task)
-        return s
-    s = asyncio.run(scenario())
-    assert "capture" in s.states_seen
-
-
 def test_a_hand_over_the_board_blocks_the_capture_until_it_leaves(tmp_path, look_frame, exchange_start, exchange_human, calibration):
     async def scenario():
         s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
@@ -197,7 +180,7 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
     new = s.update_settings(length="medium", exchanges=4, energy=0.8, direction=45)
     assert (new.exchanges, new.energy, new.direction) == (4, 0.8, 45)
     state = s.bus.last["state"]
-    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["haring", "mondrian", "vangogh"]
+    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["abstract", "haring", "mondrian", "vangogh"]
     s.update_settings(handoff="dock")                     # the arm's held flag follows the page's Marker toggle
     assert ctl.held_mode is False
     s.update_settings(handoff="held")
@@ -210,8 +193,8 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
 
 def test_pause_during_the_robot_turn_stops_the_arm_and_resume_finishes(tmp_path, look_frame, exchange_start, exchange_human, calibration):
     async def scenario():
-        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
-        ctl.stroke_s = 0.15                             # slow enough to pause in the middle of the plan
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held", artist="haring")
+        ctl.stroke_s = 0.15                             # haring's passes and ticks make a plan long enough to pause in the middle of
         task = asyncio.create_task(s.run())
         await until_state(s, "human_turn")
         frames.show_board(exchange_human)
@@ -262,3 +245,28 @@ def test_a_hand_in_the_capture_does_not_become_the_reference(tmp_path, look_fram
         return s, drain(q)
     s, events = asyncio.run(scenario())
     assert any(e["type"] == "error" and "reference" in e["message"] for e in events)
+
+
+def test_a_hung_recover_times_out_and_stays_paused(tmp_path, look_frame, exchange_start, calibration, monkeypatch):
+    from duet import session as session_mod
+    monkeypatch.setattr(session_mod, "RECOVER_TIMEOUT_S", 0.2)
+
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+
+        async def hang():
+            ctl.calls.append(("recover",))
+            await asyncio.sleep(10)
+        ctl.recover = hang
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        await s.pause()
+        await until_state(s, "paused")
+        s.resume()
+        await asyncio.sleep(0.6)
+        state, err = s.state, s.last_error
+        await cancel(task)
+        return state, err, drain(q)
+    state, err, events = asyncio.run(scenario())
+    assert state == "paused" and "recover timed out" in err
+    assert any(e["type"] == "error" and "recover timed out" in e["message"] for e in events)

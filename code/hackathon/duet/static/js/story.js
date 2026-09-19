@@ -7,7 +7,7 @@ export const PLACEHOLDERS = ['Hmm…', 'Looking closely…', 'What could it be?'
 export const PLACEHOLDER_MS = 1500;
 
 export const FIXED = {
-  start: 'Your turn! Draw one mark.',
+  start: 'Your turn! Draw one mark, then press Go.',
   reseat: 'Please pop the marker back in its cap.',
   noQuip: 'Here we go!',
   oldThought: 'Hmm, what was this?',
