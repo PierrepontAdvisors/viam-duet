@@ -185,7 +185,7 @@ class Replay:
             self.ended.set()          # a scripted human turn ends now, not after its full eight seconds
             self.emit_state()
         elif kind == "restart":
-            if self.state not in RESTARTABLE:
+            if self.state not in RESTARTABLE:   # the real server latches a restart until the piece finishes; the harness says no instead
                 return {"type": "error", "message": "restart refused: the robot is moving; pause first or wait for it to finish"}
             self.paused.clear()       # a restart from `paused` must not leave the script parked in wait()
             self.again.set()
@@ -195,6 +195,8 @@ class Replay:
                 self.emit_state()
         elif kind == "clear_error":
             self.error = None; self.emit_state()
+        elif kind == "reset_arm":                # no arm here: the script just carries on, so the button does not error
+            self.paused.clear(); self.error = None; self.emit_state()
         else:
             return {"type": "error", "message": f"unknown command {kind!r}"}
         return None

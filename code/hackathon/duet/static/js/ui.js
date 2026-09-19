@@ -178,7 +178,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     $('b-prev').disabled = $('b-next').disabled = !app.book.shots.length;
     $('b-play').textContent = view.playing ? '■ Stop' : '▶ Play loop'; $('b-play').classList.toggle('on', view.playing);
     $('b-video').classList.toggle('hidden', !app.video); if (app.video) $('b-video').href = app.video.url;
-    $('end').disabled = !st || st.state === 'finished' || st.ending;   // nothing to end before the first state
+    $('end').disabled = !st || ['idle', 'start', 'finished'].includes(st.state) || st.ending;   // nothing to end before the first turn or after the last
     if (st) {
       markSeg('length-seg', st.length); markSeg('handoff-seg', st.handoff); markSeg('artist-seg', st.artist);
       for (const b of $('artist-seg').children) b.disabled = !st.artists.includes(b.dataset.v);

@@ -282,8 +282,9 @@ class Session:
             self.guard.at_look = value
 
     def _hold(self, frame: np.ndarray) -> None:
-        """The still the stream shows while the arm is away from the look pose."""
-        self.held_frame, self.held_id = frame, next(HELD_IDS)
+        """The still the stream shows while the arm is away from the look pose. A copy: the same array
+        is the guard's reference and the recorder's photo, and a draw on either must not reach the stream."""
+        self.held_frame, self.held_id = frame.copy(), next(HELD_IDS)
 
     # ---- the loop ------------------------------------------------------------------------------
     async def run(self) -> None:

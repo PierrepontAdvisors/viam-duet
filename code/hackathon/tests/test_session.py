@@ -347,10 +347,13 @@ def test_the_first_move_is_held_on_the_latest_live_frame(tmp_path, look_frame, e
     seen = []
 
     async def go_look():
-        seen.append(s.held_frame is not None)
-    ctl.go_look = go_look
+        seen.append(("go_look", s.held_frame is not None))
+
+    async def lift_if_low():
+        seen.append(("lift_if_low", s.held_frame is not None))
+    ctl.go_look, ctl.lift_if_low = go_look, lift_if_low
     asyncio.run(s._state_start())
-    assert seen == [True] and s.held_frame is not None
+    assert seen == [("lift_if_low", True), ("go_look", True)] and s.held_frame is not None   # held before the first move of all
 
 
 def test_end_during_the_human_turn_signs_and_finishes(tmp_path, look_frame, exchange_start, calibration):
@@ -414,6 +417,7 @@ def test_reset_clears_the_end_flag_so_the_next_piece_runs_its_exchanges(tmp_path
         await until_state(s, "human_turn")
         s.end()
         await until_state(s, "finished")
+        s.bus.emit("feed", source="live")               # the rig's picture source must survive the piece reset
         s.restart()
         await until_seen(s, "human_turn", count=2)
         await asyncio.sleep(0.1)                        # the new piece stays in the human turn; it does not finish at once
@@ -423,3 +427,4 @@ def test_reset_clears_the_end_flag_so_the_next_piece_runs_its_exchanges(tmp_path
     s, state, ending = asyncio.run(scenario())
     assert ending is False and state == "human_turn"
     assert s.states_seen[-2:] == ["start", "human_turn"]
+    assert "feed" in s.bus.last and "plan" not in s.bus.last
