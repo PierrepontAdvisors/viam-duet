@@ -152,6 +152,11 @@ test('bands: once the log has hit its cap, the state before the first kept event
   ]);
 });
 
+test('bands: repeated closes while reconnecting merge into one red stretch', () => {
+  const entries = [at(120, socketEntry('open', null, 0, 1)), at(150, socketEntry('close', 1006, 0, 2)), at(160, socketEntry('close', 1006, 0, 3)), at(170, socketEntry('close', 1006, 0, 4))];
+  assert.deepEqual(timeline(entries, 200, 100, false).bands, [{ x0: 0.2, x1: 0.5, connected: true }, { x0: 0.5, x1: 1, connected: false }]);
+});
+
 test('bands: still disconnected runs red to the right edge; events before the window set the opening state', () => {
   const entries = [at(50, socketEntry('open', null, 0, 1)), at(180, socketEntry('close', 1006, 0, 2))];
   assert.deepEqual(timeline(entries, 200, 100, false).bands, [{ x0: 0, x1: 0.8, connected: true }, { x0: 0.8, x1: 1, connected: false }]);

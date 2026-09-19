@@ -104,7 +104,12 @@ function socketBands(entries, now, windowMs, connected) {
     from = ev.t; state = ev.connected;
   }
   out.push({ x0: frac(from), x1: 1, connected: state });
-  return out.filter(b => b.x1 > b.x0);
+  // adjacent stretches in the same state merge: every failed reconnect attempt is a close event, and an
+  // outage would otherwise be one sliver per second
+  return out.filter(b => b.x1 > b.x0).reduce((acc, b) => {
+    const last = acc[acc.length - 1];
+    return last && last.connected === b.connected ? [...acc.slice(0, -1), { ...last, x1: b.x1 }] : [...acc, b];
+  }, []);
 }
 
 /** Lanes, socket bands and time ticks for the timeline; every x is a fraction of the window, now at 1. */
