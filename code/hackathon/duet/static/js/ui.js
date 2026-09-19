@@ -82,7 +82,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     const c = chipFor(st.state);
     $('state').textContent = c.text; $('state').className = `chip ${c.tone}`;
     $('count').innerHTML = `Exchange <b>${st.turn}</b> of ${st.exchanges}`;
-    $('go').classList.toggle('hidden', !(st.handoff === 'held' && st.state === 'human_turn'));
+    $('go').classList.toggle('hidden', st.state !== 'human_turn');
   }
 
   // ---- bubble ----

@@ -1,5 +1,5 @@
 """The turn loop: one asyncio task, one method per state, the only module that calls the others in
-sequence. It replaces the Enter prompts of `duet.turn` with the trigger, and every dependency comes
+sequence. The human turn ends when the Go button on the page sends `pass`, and every dependency comes
 in through the constructor so tests and `run.py --fake` can swap the camera, the arm, and Claude."""
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from duet.claude_turn import TurnResult
 from duet.controller import Blocked
 from duet.strokes import Polyline, length
 from duet.styles import haring, mondrian, vangogh
-from duet.trigger import Reading, Trigger
 from duet.turn import all_ink, map_strokes
 
 ARTISTS = ("haring", "mondrian", "vangogh")
@@ -278,26 +277,10 @@ class Session:
             self._homography = vision.board_homography(quad)
         return self._homography
 
-    def _reading(self, frame) -> Reading:
-        colors = [f.color for f in self.frames.recent(cfg.STILL_WINDOW_S)]
-        hand = self.guard.reading(frame) if self.guard is not None else None
-        dots: dict[str, str] = {}
-        if self.settings.handoff == "dock" and self.cal.get("dots"):
-            readings = vision.dock_dots(frame.color, self.cal["dots"], self._board_homography())
-            dots = {k: v.status for k, v in readings.items()}
-            self.dot_displacement = {k: v.displacement_mm for k, v in readings.items()}
-            if dots != self.dock_status:
-                self.dock_status = dots
-                self.bus.emit("dock", slots=dots, reseat=[])
-        return Reading(t=frame.t, hand=bool(hand), still=vision.still(colors), dots=dots)
-
     async def _state_human_turn(self) -> str:
-        handoff = self.settings.handoff
-        trig = Trigger(handoff)
+        """The visitor draws, then presses Go on the page (the `pass` command). Nothing ends the turn
+        by itself: the stillness, hand, and marker-dot trigger was removed on day 2."""
         self._pass.clear()
-        if handoff == "dock" and not self.cal.get("dots"):
-            self.bus.emit("error", message="dock handoff has no calibrated marker dots, so the turn cannot end by itself: "
-                                           "use Pass, or switch the marker setting to Held")
         while True:
             if not self._running.is_set():
                 return "human_turn"
@@ -305,18 +288,6 @@ class Session:
                 self._pass.clear()
                 return "capture"
             await asyncio.sleep(self.poll_s)
-            if self.settings.handoff != handoff:        # the operator switched the marker setting mid-turn
-                handoff = self.settings.handoff
-                trig = Trigger(handoff)
-            frame = self.frames.latest()
-            if frame is None:
-                continue
-            event = trig.update(self._reading(frame))
-            if event is None:
-                continue
-            if event.kind == "fire":
-                return "capture"
-            self.bus.emit("dock", slots=self.dock_status, reseat=list(event.slots) if event.kind == "reseat" else [])
 
     async def _capture_board(self) -> tuple[np.ndarray, np.ndarray]:
         """A median capture at the look pose: the warped board and the raw frame it came from. Also
@@ -338,8 +309,8 @@ class Session:
         return float(self.cal.get("mm_per_px") or vision.mm_per_px(np.array(self.cal["marks_image"], np.float32)))
 
     async def _state_capture(self) -> str:
-        # The trigger's debounce can fire one poll after a hand was last seen; never photograph a
-        # hand (it would be traced as ink and become the hand check's reference).
+        # Go can be pressed while a hand is still over the board; never photograph a hand (it would
+        # be traced as ink and become the hand check's reference).
         if self.guard is not None and await self.guard():
             self.bus.emit("error", message="a hand is still over the board; still your turn")
             return "human_turn"

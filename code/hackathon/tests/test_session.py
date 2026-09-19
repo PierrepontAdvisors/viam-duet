@@ -106,23 +106,6 @@ def test_no_new_ink_returns_to_the_human_turn(tmp_path, look_frame, exchange_sta
     assert any(e["type"] == "human" and e.get("found") is False for e in events)
 
 
-def test_held_trigger_fires_from_the_frames_alone(tmp_path, look_frame, exchange_start, exchange_human, calibration, monkeypatch):
-    monkeypatch.setattr(cfg, "HELD_QUIET_S", 0.3)
-    monkeypatch.setattr(cfg, "TRIGGER_GRACE_S", 0.1)   # Trigger refuses a grace window as long as the quiet one
-    async def scenario():
-        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
-        task = asyncio.create_task(s.run())
-        await until_state(s, "human_turn")
-        frames.jitter(0.2)                              # a hand moving over the board
-        await asyncio.sleep(0.1)
-        frames.show_board(exchange_human)
-        await until_seen(s, "capture", timeout=5)       # fires 0.3 s after the scene settles, no pass needed
-        await cancel(task)
-        return s
-    s = asyncio.run(scenario())
-    assert "capture" in s.states_seen
-
-
 def test_a_hand_over_the_board_blocks_the_capture_until_it_leaves(tmp_path, look_frame, exchange_start, exchange_human, calibration):
     async def scenario():
         s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")

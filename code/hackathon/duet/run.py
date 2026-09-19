@@ -8,7 +8,7 @@
     python -m duet.run --fake --replay 20260918-185927 --exchanges 1
     python -m duet.run --length medium --exchanges 3 --handoff dock --port 8080
 
-Stop with Ctrl-C. Every event is also printed to the terminal, so the trigger can be watched without the page.
+Stop with Ctrl-C. Every event is also printed to the terminal, so the loop can be watched without the page.
 """
 from __future__ import annotations
 
@@ -112,9 +112,9 @@ async def log_events(bus: EventBus) -> None:
         bus.unsubscribe(q)
 
 
-async def fake_visitor(bus: EventBus, frames, humans: list[Path]) -> None:
-    """Each human turn: wait a moment, move a hand over the board for a second, then show the next
-    real human-turn board and hold still, so the held trigger fires by itself."""
+async def fake_visitor(bus: EventBus, frames, humans: list[Path], session) -> None:
+    """Each human turn: wait a moment, move a hand over the board for a second, show the next real
+    human-turn board, then press Go (the pass command), as a visitor would."""
     q = bus.subscribe()
     boards = list(humans)
     try:
@@ -129,6 +129,9 @@ async def fake_visitor(bus: EventBus, frames, humans: list[Path]) -> None:
                 await asyncio.sleep(0.6)
                 frames.show_board(cv2.imread(str(boards.pop(0))))
                 print("[visitor] drew a mark", flush=True)
+                await asyncio.sleep(1.0)
+                session.pass_turn()
+                print("[visitor] pressed Go", flush=True)
     finally:
         bus.unsubscribe(q)
 
@@ -148,7 +151,6 @@ async def main(args: argparse.Namespace) -> None:
         frames.robot_boards = [cv2.imread(str(p)) for p in robots]
         ctl = FakeController(frames, stroke_s=0.3)
         brain = ClaudeBrain() if args.claude else FakeBrain(latency_s=1.0)
-        tasks.append(watch(asyncio.create_task(fake_visitor(bus, frames, humans), name="visitor")))
     else:
         from viam.components.camera import Camera
         import viam_conn
@@ -168,6 +170,8 @@ async def main(args: argparse.Namespace) -> None:
     vision.trace(warm)
     guard = HandGuard(frames, cal)
     session = Session(settings, frames, ctl, brain, rec, bus, cal, guard=guard)
+    if args.fake:
+        tasks.append(watch(asyncio.create_task(fake_visitor(bus, frames, humans, session), name="visitor")))
     app = make_app(session, frames, bus, calibration=cal)
     # the MJPEG stream never ends by itself, so an open page would hold a graceful shutdown forever
     server = uvicorn.Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning",
