@@ -205,8 +205,11 @@ class Session:
         error, lift if it was left low, go to the look pose, and hand the turn back to the visitor.
         The exchange count and the piece are kept."""
         self._reset_arm = True
+        was_paused = self.state == "paused"
         self._running.clear()
         await self.ctl.stop()
+        if was_paused:
+            self._running.set()          # wake the loop, which is parked waiting for Resume
 
     def restart(self) -> None:
         """After a piece is finished: begin a new one in place (the page's Start on the welcome)."""
@@ -273,9 +276,9 @@ class Session:
                     if self.state != "paused":
                         self._resume_to = RETRY_AFTER_FAULT.get(self.state, "human_turn")
                         self._set("paused")
-                    resetting, self._reset_arm = self._reset_arm, False
-                    if not resetting:
+                    if not self._reset_arm:
                         await self._running.wait()
+                    resetting, self._reset_arm = self._reset_arm, False     # read after waking: a reset can arrive while paused
                     try:
                         await asyncio.wait_for(self.ctl.recover(), RECOVER_TIMEOUT_S)
                         if resetting:
@@ -310,6 +313,7 @@ class Session:
             self.rec.write()
 
     async def _state_start(self) -> str:
+        await self.ctl.lift_if_low()        # a tool left low by a dropped connection rises before it travels
         await self.ctl.go_look()
         self._set_look(True)
         self.previous_photo, frame = await self._capture_board()

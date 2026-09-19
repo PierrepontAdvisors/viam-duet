@@ -61,7 +61,7 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
     s, ctl, rec, events = asyncio.run(scenario())
     assert s.states_seen == ["start", "human_turn", "capture", "interpret", "plan", "robot_draw", "look", "finish", "finished"]
     kinds = [c[0] for c in ctl.calls]
-    assert kinds[0] == "go_look" and kinds.count("draw") == 2       # the plan, then the signature
+    assert kinds[:2] == ["lift_if_low", "go_look"] and kinds.count("draw") == 2   # lift check, look, then the plan and the signature
     for name in ("turn-00-start.jpg", "turn-00-start-frame.jpg", "turn-01-human.jpg", "turn-01-human-frame.jpg",
                  "turn-01-robot.jpg", "turn-01-final.jpg", "turn-01-final-frame.jpg", "plan-01.svg", "session.mp4"):
         assert (rec.dir / name).exists(), name
@@ -311,3 +311,21 @@ def test_reset_arm_stops_recovers_returns_to_the_look_pose_and_keeps_the_turn(tm
     assert kinds.index("stop") < kinds.index("recover") < len(kinds) - 1 - kinds[::-1].index("go_look")
     assert s.turn == 0 and s.state == "human_turn" and s.at_look
     assert not any(e["type"] == "error" for e in events)
+
+
+def test_reset_arm_also_works_while_paused(tmp_path, look_frame, exchange_start, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=3, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        await s.pause()
+        await until_state(s, "paused")
+        await s.reset_arm()
+        async with asyncio.timeout(10):
+            while [c[0] for c in ctl.calls].count("go_look") < 2 or s.state != "human_turn":
+                await asyncio.sleep(0.01)
+        await cancel(task)
+        return s, ctl
+    s, ctl = asyncio.run(scenario())
+    kinds = [c[0] for c in ctl.calls]
+    assert kinds.count("go_look") == 2 and s.state == "human_turn" and s.turn == 0
