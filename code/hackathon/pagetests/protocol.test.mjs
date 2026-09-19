@@ -43,6 +43,13 @@ test('shot fills who and turn from the url when they are missing', () => {
   assert.equal(parseMessage(JSON.stringify({ type: 'shot' })), null);
 });
 
+test('per-turn messages carry an optional turn number', () => {
+  assert.equal(parseMessage(JSON.stringify({ type: 'plan', polylines: [], turn: 3 })).turn, 3);
+  assert.equal(parseMessage(JSON.stringify({ type: 'interpretation', sees: 'a', adds: 'b' })).turn, null);
+  assert.equal(parseMessage(JSON.stringify({ type: 'human', polylines: [], turn: '2' })).turn, 2);
+  assert.equal(parseMessage(JSON.stringify({ type: 'progress', stroke: 1, turn: 4 })).turn, 4);
+});
+
 test('progress, video, dock and error are checked', () => {
   assert.equal(parseMessage(JSON.stringify({ type: 'progress', stroke: 2 })).drawn_mm, 0);
   assert.equal(parseMessage(JSON.stringify({ type: 'progress', stroke: 'two' })), null);

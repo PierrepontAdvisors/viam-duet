@@ -46,13 +46,13 @@ const PARSERS = {
     const fit = ['ax', 'bx', 'ay', 'by'].every(k => num(f[k]) !== null) ? { ax: f.ax, bx: f.bx, ay: f.ay, by: f.by } : { ax: 1, bx: 0, ay: 1, by: 0 };
     return { marks_image: marks, board_tl_index: tl, board_mm: pair(m.board_mm, [176, 240]), image_size: pair(m.image_size, [1280, 720]), cam_to_robot: fit };
   },
-  human: (m) => ({ polylines: polylines(m.polylines), new: polylines(m.new), found: bool(m.found, true) }),
+  human: (m) => ({ polylines: polylines(m.polylines), new: polylines(m.new), found: bool(m.found, true), turn: int(m.turn, null) }),
   interpretation(m) {
     return { sees: str(m.sees), adds: str(m.adds), thought: str(m.thought), quip: str(m.quip),
-      source: oneOf(m.source, ['claude', 'fallback'], 'claude'), latency_s: num(m.latency_s, null), error: strOrNull(m.error) };
+      source: oneOf(m.source, ['claude', 'fallback'], 'claude'), latency_s: num(m.latency_s, null), error: strOrNull(m.error), turn: int(m.turn, null) };
   },
-  plan: (m) => ({ polylines: polylines(m.polylines), color: /^#[0-9a-fA-F]{6}$/.test(m.color || '') ? m.color : '#1b8f3a', budget_mm: num(m.budget_mm, 0) }),
-  progress(m) { const s = int(m.stroke); return s === null ? null : { stroke: s, drawn_mm: num(m.drawn_mm, 0) }; },
+  plan: (m) => ({ polylines: polylines(m.polylines), color: /^#[0-9a-fA-F]{6}$/.test(m.color || '') ? m.color : '#1b8f3a', budget_mm: num(m.budget_mm, 0), turn: int(m.turn, null) }),
+  progress(m) { const s = int(m.stroke); return s === null ? null : { stroke: s, drawn_mm: num(m.drawn_mm, 0), turn: int(m.turn, null) }; },
   shot(m) {
     if (typeof m.url !== 'string') return null;
     const p = parseShotUrl(m.url) || {};
