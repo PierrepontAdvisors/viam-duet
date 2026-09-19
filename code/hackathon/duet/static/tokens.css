@@ -1,0 +1,15 @@
+/* Duet design system tokens: the source of truth for the live page (docs/duet/pitch/deck.css mirrors them
+   because the deck must stay a self-contained folder). Sizes are cqw of the 16:9 stage. */
+:root {
+  --yellow: #ffd400; --red: #e5322d; --blue: #1f4fd6; --green: #17a34a; --orange: #ff7a00; --cream: #fff4d6;
+  --ink: #111; --paper: #fff; --robot: #1b8f3a; --human: #c62828;
+  --story: "Fredoka", "Chalkboard SE", "Comic Sans MS", "Segoe Print", sans-serif;
+  --display: 6.4cqw; --headline: 4cqw; --body: 2.1cqw; --caption: 1.3cqw;
+  --s1: 1cqw; --s2: 2cqw; --s3: 3cqw; --s4: 4cqw;
+  --paper-radius: 1.2cqw; --paper-border: .35cqw; --paper-pad: 1.6cqw;
+  --gutter: 1.2cqw; --frame-inset: 3cqw; --frame-stroke: .45cqw;
+}
+/* the system's one entrance: a toy pop */
+@keyframes pop { from { opacity: 0; transform: translateY(1cqw) scale(.92); } 70% { opacity: 1; transform: translateY(0) scale(1.02); } to { opacity: 1; transform: none; } }
+.pop { animation: pop .45s cubic-bezier(.2, .7, .3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .pop { animation: none; } }
