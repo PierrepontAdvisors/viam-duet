@@ -199,7 +199,7 @@ test('deck.css is built on the tokens: four type sizes, three templates, no stra
   for (const v of sizes) assert.match(v, /^var\(--(display|headline|body|caption)\)$/, `font-size "${v}" is not a token`);
 });
 
-test('the toy logo replaces the Duet word, and every frame has a wash', () => {
+test('the toy logo replaces the Duet word in the header and on card 2, footers carry the name, every frame has a wash', () => {
   const h = read('index.html');
   const sym = h.slice(h.indexOf('<symbol id="logo"'), h.indexOf('</symbol>', h.indexOf('<symbol id="logo"')));
   assert.ok(sym.length > 0, 'symbol #logo exists');
@@ -210,9 +210,10 @@ test('the toy logo replaces the Duet word, and every frame has a wash', () => {
   sections.forEach((s, i) => {
     assert.ok(/class="wordmark"[^>]*>\s*<svg class="logo/.test(s), `card ${i + 1} header logo`);
     assert.ok(s.includes('class="wash"'), `card ${i + 1} wash`);
+    assert.ok(!s.includes('foot-logo'), `card ${i + 1} has no footer logo`);
     if (i !== 5) {
-      assert.ok(/class="band foot">\s*<svg class="logo foot-logo/.test(s), `card ${i + 1} footer logo`);
-      assert.ok(!s.includes('Viam Fine Motor Skills · 2026'), `card ${i + 1} footer line replaced`);
+      assert.ok(/class="band foot">\s*<span class="strip"[^>]*>Nicholas Fjellberg Swerdlowe/.test(s), `card ${i + 1} footer carries the name and hackathon line`);
+      assert.ok(!s.includes('Viam Fine Motor Skills · 2026'), `card ${i + 1} old footer line gone`);
     }
   });
   assert.ok(sections[5].includes('viam-server owns the arm'), 'card 6 keeps the strip');

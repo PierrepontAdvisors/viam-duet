@@ -7,11 +7,11 @@ Extends `docs/superpowers/specs/2026-09-19-duet-pitch-deck-grid-design.md`. Ever
 
 - **The inside of the frame is calmer than the margin.** A translucent wash covers the area inside the frame on every card: white at 22 percent on the colour plates (12 percent on cream), black at 35 percent on card 7. The plate texture keeps its opacity; the wash lifts the ground under the type. The margin outside the frame keeps the full plate colour, so the frame now reads as a mat.
 - **The Duet logo is a row of four toy alphabet blocks**, D U E T, one per block, in yellow, red, blue and green, each tumbled a few degrees, thick ink keyline, with a marker squiggle underneath. Vector, drawn once as an SVG `<symbol id="logo">` with Fredoka text, ink parts in `currentColor` so it turns white on card 7. Nicholas chose it over fridge-magnet letters and balloon letters.
-- **Where the logo goes (option C):** top-right in the header band on every card, in place of the word "Duet"; bottom-left in the footer band in place of "Viam Fine Motor Skills · 2026" on cards 1 to 5 and 7; large on card 2 in place of the display-size "Duet". Card 6's footer keeps the Viam strip, which is content, and has no footer logo.
+- **Where the logo goes:** top-right in the header band on every card, in place of the word "Duet", and large on card 2 in place of the display-size "Duet". Nicholas first chose the logo in both corners (option C), then, on seeing it, asked for the bottom-left to carry his name and the hackathon instead: the footer line on cards 1 to 5 and 7 reads "Nicholas Fjellberg Swerdlowe · Viam Fine Motor Skills Hackathon · 2026". Card 6's footer keeps the Viam strip, which is content.
 
 ## 2. Sizes
 
-Header logo height 3.2cqw; footer logo height 2.4cqw; card 2 logo width 20cqw (about 8cqw tall; every `<svg class="logo">` use carries `viewBox="0 0 320 130"`, without which the browser sizes the box at 300 by 150 pixels and the logo floats inside it), so card 2's words column still fits: logo, subtitle, beats, chips with 2cqw gaps come to about 38cqw of the 39 available.
+Header logo height 3.2cqw; card 2 logo width 20cqw (about 8cqw tall; every `<svg class="logo">` use carries `viewBox="0 0 320 130"`, without which the browser sizes the box at 300 by 150 pixels and the logo floats inside it), so card 2's words column still fits: logo, subtitle, beats, chips with 2cqw gaps come to about 38cqw of the 39 available.
 
 ## 3. Files and tests
 

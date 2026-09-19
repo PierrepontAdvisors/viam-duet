@@ -63,7 +63,6 @@ ul, ol { padding: 0; list-style: none; }
 .logo { display: block; color: var(--ink); }
 .plate-black .logo { color: #fff; }
 .wordmark .logo { height: 3.2cqw; width: auto; }
-.foot-logo { height: 2.4cqw; width: auto; }
 .name .logo { width: 20cqw; height: auto; }
 
 /* bands */
