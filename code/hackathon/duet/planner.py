@@ -8,9 +8,10 @@ from shapely.geometry import LineString, Polygon, box
 from shapely.ops import unary_union
 
 from duet import config as cfg
+from duet import open as op
 from duet.strokes import Polyline, cut_to_budget, length
 
-MIN_PIECE_MM = 2.0
+MIN_PIECE_MM = 1.0   # below a dot (config.DOT_MM), so dots survive the crumb filter
 
 
 def drawable_area() -> Polygon:
@@ -62,6 +63,13 @@ def keep_clear(polylines: list[Polyline], existing_ink: list[Polyline], clearanc
     return out
 
 
+def stroke_to_polylines(stroke: dict) -> list[Polyline]:
+    """A proposal stroke as polylines: one for a polyline, circle, or arc; many dots for a `dots` polygon."""
+    if stroke.get("kind") == "dots":
+        return op.stipple([(float(p["x"]), float(p["y"])) for p in stroke.get("points", [])])
+    return [stroke_to_polyline(stroke)]
+
+
 def stroke_to_polyline(stroke: dict) -> Polyline:
     kind = stroke.get("kind", "polyline")
     if kind == "circle":
@@ -79,15 +87,18 @@ def validate(strokes: list[dict], existing_ink: list[Polyline], budget_mm: float
     area = drawable_area()
     result: list[Polyline] = []
     for s in strokes:
-        parts = keep_clear(clip_to(stroke_to_polyline(s), area), existing_ink, clearance_mm)
-        result.extend(p for p in parts if length(p) >= MIN_PIECE_MM)
+        for pl in op.enlarge(stroke_to_polylines(s)):          # small shapes grow before they are clipped and cleared
+            parts = keep_clear(clip_to(pl, area), existing_ink, clearance_mm)
+            result.extend(p for p in parts if length(p) >= MIN_PIECE_MM)
     return cut_to_budget(result, budget_mm)
 
 
 def finalize(styled: list[Polyline], existing_ink: list[Polyline], budget_mm: float,
-             clearance_mm: float = cfg.CLEARANCE_MM, min_piece_mm: float = 3.0) -> list[Polyline]:
-    """The last gate before the arm: styling adds passes and ticks after `validate` clipped, so clip
-    to the drawable area again first, then clear them from existing ink, drop crumbs, and cut to the budget."""
+             clearance_mm: float = cfg.CLEARANCE_MM, min_piece_mm: float = MIN_PIECE_MM, length_setting: str = "long") -> list[Polyline]:
+    """The last gate before the arm, whatever the artist did: clip to the drawable area, cut every
+    stroke where it crosses its own path, drop strokes that run alongside an earlier one, clear them
+    from existing ink, keep at most the length setting's stroke count, drop crumbs, cut to the budget."""
     clipped = [p for pl in styled for p in clip_to(pl, drawable_area())]
-    clear = [p for p in keep_clear(clipped, existing_ink, clearance_mm) if length(p) >= min_piece_mm]
-    return cut_to_budget(clear, budget_mm)
+    opened = op.thin([op.uncross(p) for p in clipped])
+    clear = [p for p in keep_clear(opened, existing_ink, clearance_mm) if length(p) >= min_piece_mm]
+    return cut_to_budget(op.cap(clear, length_setting), budget_mm)

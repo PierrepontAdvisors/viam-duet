@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor } from '../duet/static/js/story.js';
+import { welcomeButton, welcomeReturns, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor } from '../duet/static/js/story.js';
 
 test('chipFor gives the storybook words and tone per state, and a readable fallback', () => {
   assert.deepEqual(chipFor('human_turn'), { text: 'Your turn!', tone: 'green' });
@@ -70,4 +70,22 @@ test('anchorFor points a thought at the new ink and a speech at the plan', () =>
   assert.deepEqual(anchorFor('speech', rec), [100, 200]);
   assert.deepEqual(anchorFor('speech', null), [88, 120]);
   assert.deepEqual(anchorFor('start', rec), [88, 120]);
+});
+
+test('welcomeButton: ready only at your turn or after the end; waiting after Start on a finished session', () => {
+  assert.deepEqual(welcomeButton(null), { label: 'Getting ready…', enabled: false });
+  assert.deepEqual(welcomeButton('look'), { label: 'Getting ready…', enabled: false });
+  assert.deepEqual(welcomeButton('human_turn'), { label: 'Start', enabled: true });
+  assert.deepEqual(welcomeButton('finished'), { label: 'Start', enabled: true });
+  assert.deepEqual(welcomeButton('finished', true), { label: 'Starting soon…', enabled: false });
+  assert.deepEqual(welcomeButton('robot_draw'), { label: 'Getting ready…', enabled: false });
+});
+
+test('welcomeReturns: a fresh state after a finished or running session, never at first load or between fresh states', () => {
+  assert.equal(welcomeReturns('finished', 'idle'), true);
+  assert.equal(welcomeReturns('human_turn', 'look'), true);
+  assert.equal(welcomeReturns(null, 'idle'), false);
+  assert.equal(welcomeReturns('idle', 'look'), false);
+  assert.equal(welcomeReturns('finished', 'human_turn'), false);
+  assert.equal(WELCOME_RETURN_MS, 8000);
 });

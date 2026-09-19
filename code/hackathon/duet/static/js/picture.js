@@ -2,7 +2,7 @@
  *
  *  The three sliders drive one linear levels map per channel, out = slope * in + intercept:
  *  contrast pivots around mid gray, brightness shifts, exposure multiplies by 2 per stop. */
-import { BOARD_MM } from './geometry.js';
+import { BOARD_MM } from './geometry.js?v=ds3';
 
 export const NEUTRAL_LEVELS = { brightness: 0, contrast: 1, exposure: 0 };
 /** Tonight's tuned clean-board look on the whiteboard at the look pose. */

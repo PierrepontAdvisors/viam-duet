@@ -1,5 +1,5 @@
 /** The ghost pen: traces the whole plan once at a constant speed, ahead of the real arm. */
-import { polylineLength, pointAlong, tracePath } from './geometry.js';
+import { polylineLength, pointAlong, tracePath } from './geometry.js?v=ds3';
 
 export class GhostPen {
   constructor(group, path, pen, { mmPerSec = 60 } = {}) {

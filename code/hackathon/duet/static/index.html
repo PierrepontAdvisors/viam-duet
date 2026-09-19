@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duet</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/duet.css">
+<link rel="stylesheet" href="/static/fredoka.css?v=ds3">
+<link rel="stylesheet" href="/static/tokens.css?v=ds3">
+<link rel="stylesheet" href="/static/duet.css?v=ds3">
 </head>
 <body>
 <!-- Live stream: /stream.mjpg?overlay=0 (set by app.js); state over the WebSocket at /ws. -->
+<div class="mat" id="mat" data-el="mat — plate around the stage">
 <div class="stage" id="stage" data-el="stage">
   <div class="pic" id="pic" data-el="picture layer (frame, photo, strokes)">
     <img class="base" id="base" alt="" data-el="base image — live camera">
@@ -18,6 +19,13 @@
       <filter id="levels" color-interpolation-filters="sRGB"><feComponentTransfer>
         <feFuncR type="linear" slope="1.9" intercept="-0.38"/><feFuncG type="linear" slope="1.9" intercept="-0.38"/><feFuncB type="linear" slope="1.9" intercept="-0.38"/>
       </feComponentTransfer></filter>
+      <symbol id="logo" viewBox="0 0 320 130">
+        <g transform="rotate(-6 52 64)"><rect x="20" y="32" width="64" height="64" rx="12" fill="#ffd400" stroke="currentColor" stroke-width="5"/><text x="52" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">D</text></g>
+        <g transform="rotate(4 124 64)"><rect x="92" y="32" width="64" height="64" rx="12" fill="#e5322d" stroke="currentColor" stroke-width="5"/><text x="124" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">U</text></g>
+        <g transform="rotate(-3 196 64)"><rect x="164" y="32" width="64" height="64" rx="12" fill="#1f4fd6" stroke="currentColor" stroke-width="5"/><text x="196" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">E</text></g>
+        <g transform="rotate(5 268 64)"><rect x="236" y="32" width="64" height="64" rx="12" fill="#17a34a" stroke="currentColor" stroke-width="5"/><text x="268" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">T</text></g>
+        <path d="M40 118 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+      </symbol>
     </defs></svg>
     <svg class="mask" id="mask" data-el="layer — clean board mask"><path id="maskpath" fill="#fff" fill-rule="evenodd"/></svg>
     <svg class="ov" id="ov" width="176" height="240" viewBox="0 0 176 240" data-el="overlay svg">
@@ -33,7 +41,7 @@
   </div>
 
   <div class="tl" id="chips" data-el="chips — top left">
-    <span class="chip yellow name" id="badge" data-el="chip — Duet">Duet</span>
+    <span class="logo-wrap" id="badge" data-el="logo — Duet"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span>
     <span class="chip white" id="state" data-el="chip — state">Connecting…</span>
   </div>
   <div class="tr" data-el="chips — top right">
@@ -45,6 +53,16 @@
   <div class="sub" id="caption" data-el="bubble">
     <div class="bubble speech" id="bubble"><p id="words" data-el="bubble — words"></p></div>
   </div>
+
+  <section class="welcome" id="welcome" data-el="welcome page">
+    <div class="welcome-inner">
+      <svg class="logo welcome-logo" viewBox="0 0 320 130" role="img" aria-label="Duet" data-el="welcome — logo"><use href="#logo"/></svg>
+      <h1 class="welcome-title" data-el="welcome — title">A robot arm that draws <span class="key">with</span> you.</h1>
+      <p class="welcome-line" data-el="welcome — line 1">Draw one mark. Duet looks, understands, and answers in the hand of an artist.</p>
+      <p class="welcome-line" data-el="welcome — line 2">Six exchanges. One of a kind. Yours to keep.</p>
+      <button class="welcome-start" id="start" data-el="welcome — start button" disabled>Getting ready…</button>
+    </div>
+  </section>
 
   <button class="gear" id="gear" title="Show controls (C)" data-el="controls toggle button">Controls</button>
 
@@ -96,11 +114,12 @@
     <div class="status" id="status2" data-el="status line — claude"></div>
     <div class="status" id="status3" data-el="status line — dock and errors"></div>
   </div>
+</div>
 
   <div class="dev-badge">DEV MODE · click an element to copy its name · press D to exit</div>
   <div class="dev-label" id="devLabel"></div>
   <div class="dev-toast" id="devToast"></div>
 </div>
-<script type="module" src="/static/js/app.js"></script>
+<script type="module" src="/static/js/app.js?v=ds3"></script>
 </body>
 </html>

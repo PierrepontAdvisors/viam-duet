@@ -78,3 +78,29 @@ def test_haring_fallback_outlines_the_human_mark():
 def test_svg_renders_paths():
     text = svg.render([[(10, 10), (20, 20)]], [[(30, 30), (40, 40)]], [[(50, 50), (60, 60)]])
     assert text.count("<path") == 3 and 'stroke-dasharray' in text
+
+
+def test_finalize_thins_the_haring_passes_to_one_line_and_caps_by_length():
+    from duet import config as cfg
+    line = [(30.0, 60.0), (120.0, 60.0)]
+    styled, _ = haring.style([line])                    # the stroke, two passes beside it, and ticks
+    out = planner.finalize(styled, [], 4000, length_setting="long")
+    long_lines = [p for p in out if planner.length(p) > 40]
+    assert len(long_lines) == 1                         # one pass survives; the ticks are short and spaced
+    short = planner.finalize(styled, [], 4000, length_setting="short")
+    assert len([p for p in short if planner.length(p) >= cfg.DOT_EXEMPT_MM]) <= cfg.STROKE_CAP["short"]
+
+
+def test_validate_enlarges_small_shapes_and_stipples_dots():
+    from duet import config as cfg
+    small = {"kind": "circle", "cx": 88.0, "cy": 120.0, "r": 10.0}
+    out = planner.validate([small], [], 4000)
+    xs = [x for pl in out for x, _ in pl]
+    assert max(xs) - min(xs) > 38                       # a 20 mm circle grew to about 40
+    dots = {"kind": "dots", "points": [{"x": 40, "y": 40}, {"x": 80, "y": 40}, {"x": 80, "y": 80}, {"x": 40, "y": 80}]}
+    ink = [[(40.0, 40.0), (80.0, 40.0)]]                # a mark along the polygon's top edge
+    out = planner.validate([dots], ink, 4000)
+    assert 8 <= len(out) <= 25 and all(abs(planner.length(d) - cfg.DOT_MM) < 1e-6 for d in out)
+    assert all(d[0][1] > 40 + cfg.CLEARANCE_MM - 1 for d in out)        # none within clearance of the ink
+    final = planner.finalize(out, ink, 4000, length_setting="short")
+    assert len(final) == len(out)                       # dots are not counted by the cap and are not crumbs

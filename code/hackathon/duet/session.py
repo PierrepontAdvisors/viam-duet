@@ -361,11 +361,11 @@ class Session:
         else:
             styled, self.color = STYLERS[self.settings.artist].fallback(self.human_new)
             sees, adds, source = "(fallback)", "outline and ticks around your mark", "fallback"
-        self.plan = planner.finalize(styled, ink, budget)
+        self.plan = planner.finalize(styled, ink, budget, length_setting=self.settings.length)
         if not self.plan and r is not None and r.proposal is not None:
             # every stroke Claude proposed sat inside the 5 mm clearance: answer the visitor's mark instead
             styled, self.color = STYLERS[self.settings.artist].fallback(self.human_new)
-            self.plan = planner.finalize(styled, ink, budget)
+            self.plan = planner.finalize(styled, ink, budget, length_setting=self.settings.length)
             source = "fallback"
         if not self.plan:
             self.bus.emit("error", message="every proposed stroke was within 5 mm of existing ink; "

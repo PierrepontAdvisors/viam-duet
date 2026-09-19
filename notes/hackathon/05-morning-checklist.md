@@ -38,3 +38,4 @@ asyncio.run(m())"`. If the gap is over 0.7 s, raise `STILL_WINDOW_S` in `config.
 - [ ] Freeze code by 14:30. Demo script: Short, 3 exchanges, one clear shape, let Claude's sentence carry the room.
 - [ ] If time allows: ask Viam staff for a webcam on a stand over the table and give `HandGuard` a second frame source, so the hand check works while the arm draws; collision sensitivity 5 on the arm.
 - Pitch deck before demos: `open docs/duet/pitch/index.html`, press F, rehearse the seven cards once with the arm parked. Card 7 stays up while you draw.
+- The page now carries the design system (mat, frame, logo, pills, paper panel). Asset links are versioned (`?v=ds1`), so a plain reload picks up the new styles; no hard refresh needed. Design reference: `docs/duet/design-system.md`.

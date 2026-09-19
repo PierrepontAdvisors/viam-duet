@@ -1,7 +1,7 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS } from './story.js';
-import { bubblePosition } from './geometry.js';
-import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, welcomeButton, welcomeReturns, WELCOME_RETURN_MS } from './story.js?v=ds3';
+import { bubblePosition } from './geometry.js?v=ds3';
+import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds3';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -33,11 +33,11 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     b.onclick = () => applyLayer(name, !b.classList.contains('on'));
   }
   const inkColor = $('ink-color'), strokeColor = $('stroke-color');
-  inkColor.value = store.get('color.ink', '#111111'); stage.style.setProperty('--ink', inkColor.value);
-  inkColor.oninput = () => { stage.style.setProperty('--ink', inkColor.value); store.set('color.ink', inkColor.value); };
+  inkColor.value = store.get('color.ink', '#111111'); stage.style.setProperty('--vec-ink', inkColor.value);
+  inkColor.oninput = () => { stage.style.setProperty('--vec-ink', inkColor.value); store.set('color.ink', inkColor.value); };
   const lockedStroke = store.get('color.stroke', null);
-  if (lockedStroke) { view.strokeLocked = true; strokeColor.value = lockedStroke; stage.style.setProperty('--stroke', lockedStroke); }
-  strokeColor.oninput = () => { view.strokeLocked = true; stage.style.setProperty('--stroke', strokeColor.value); store.set('color.stroke', strokeColor.value); };
+  if (lockedStroke) { view.strokeLocked = true; strokeColor.value = lockedStroke; stage.style.setProperty('--vec-stroke', lockedStroke); }
+  strokeColor.oninput = () => { view.strokeLocked = true; stage.style.setProperty('--vec-stroke', strokeColor.value); store.set('color.stroke', strokeColor.value); };
   const inkWidth = $('ink-width'), strokeWidth = $('stroke-width');
   function applyWidths() {
     stage.style.setProperty('--ink-w', inkWidth.value / 10); stage.style.setProperty('--stroke-w', strokeWidth.value / 10);
@@ -80,10 +80,17 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     const st = app.state;
     if (!st) { $('state').textContent = app.connected ? 'Getting ready…' : 'Connecting…'; $('state').className = 'chip white'; return; }
     const c = chipFor(st.state);
+    const stateChanged = $('state').textContent !== c.text;
     $('state').textContent = c.text; $('state').className = `chip ${c.tone}`;
-    $('count').innerHTML = `Exchange <b>${st.turn}</b> of ${st.exchanges}`;
-    $('go').classList.toggle('hidden', st.state !== 'human_turn');
+    if (stateChanged) popIt($('state'));
+    const count = `Exchange <b>${st.turn}</b> of ${st.exchanges}`;
+    if ($('count').innerHTML !== count) { $('count').innerHTML = count; popIt($('count')); }
+    const goHidden = st.state !== 'human_turn';
+    if (!goHidden && $('go').classList.contains('hidden')) popIt($('go'));
+    $('go').classList.toggle('hidden', goHidden);
   }
+  /** Restart the design system's pop on an element whose content just changed. */
+  function popIt(el) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 
   // ---- bubble ----
   function currentBubble() {
@@ -109,7 +116,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     const b = currentBubble();
     $('bubble').classList.remove('speech', 'thought', 'thinking');
     $('bubble').classList.add(b.kind); if (b.thinking) $('bubble').classList.add('thinking');
-    $('words').textContent = b.text;
+    if ($('words').textContent !== b.text) { $('words').textContent = b.text; popIt($('bubble')); }
     placeBubble(b);
   }
   setInterval(() => { if (view.source === 'live' && currentBubble().thinking) renderBubble(); }, PLACEHOLDER_MS);
@@ -191,7 +198,32 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (view.lastError && Date.now() - view.lastError.t < 5000) parts.push(`<span class="err">${esc(view.lastError.message)}</span>`);
     $('status3').innerHTML = parts.join(' · ');
   }
-  const renderAll = () => { renderChips(); renderBubble(); renderPanel(); };
+  // ---- welcome page: shown at load, hidden by Start, back when a session ends or a fresh one begins ----
+  const welcome = { shown: true, waiting: false, pressed: false, timer: null, prev: null };
+  function showWelcome(onOff) {
+    welcome.shown = onOff; $('welcome').classList.toggle('hidden', !onOff);
+    if (welcome.timer) { clearTimeout(welcome.timer); welcome.timer = null; }
+  }
+  function renderWelcome() {
+    const state = app.state ? app.state.state : null;
+    if (welcome.waiting && state && state !== 'finished') welcome.waiting = false;                 // a new session arrived
+    if (!welcome.shown && welcomeReturns(welcome.prev, state)) showWelcome(true);
+    if (state === 'finished' && !welcome.shown && !welcome.timer) {
+      welcome.timer = setTimeout(() => { welcome.timer = null; showWelcome(true); }, WELCOME_RETURN_MS);
+    } else if (state !== 'finished' && welcome.timer) { clearTimeout(welcome.timer); welcome.timer = null; }
+    if (welcome.shown && welcome.pressed && state === 'human_turn') { welcome.pressed = false; showWelcome(false); }
+    const b = welcomeButton(state, welcome.waiting);
+    const btn = $('start');
+    if (btn.textContent !== b.label) { btn.textContent = b.label; if (b.enabled) popIt(btn); }
+    btn.disabled = !b.enabled;
+    welcome.prev = state;
+  }
+  $('start').onclick = () => {
+    const state = app.state ? app.state.state : null;
+    if (state === 'finished') { welcome.waiting = true; welcome.pressed = true; sendCommand('restart'); renderWelcome(); return; }
+    welcome.pressed = false; showWelcome(false);
+  };
+  const renderAll = () => { renderChips(); renderBubble(); renderPanel(); renderWelcome(); };
 
   // ---- keys and developer mode ----
   document.addEventListener('keydown', (e) => {
@@ -229,7 +261,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
       if (msg.state === 'human_turn' && msg.turn === 0 && view.source !== 'live') showLive();
     }
     if (msg.type === 'error') view.lastError = { message: msg.message, t: Date.now() };
-    if (msg.type === 'plan' && !view.strokeLocked) { stage.style.setProperty('--stroke', msg.color); strokeColor.value = msg.color; }
+    if (msg.type === 'plan' && !view.strokeLocked) { stage.style.setProperty('--vec-stroke', msg.color); strokeColor.value = msg.color; }
     renderAll();
   });
   if (new URLSearchParams(location.search).get('view') === 'console') toggleControls(true);

@@ -37,8 +37,8 @@ class Pt(BaseModel):
 
 
 class Stroke(BaseModel):
-    kind: Literal["polyline", "circle", "arc"]
-    points: list[Pt]          # polyline only; empty otherwise
+    kind: Literal["polyline", "circle", "arc", "dots"]
+    points: list[Pt]          # polyline vertices, or the polygon a dots stroke fills; empty otherwise
     cx: float                 # circle and arc center; 0 otherwise
     cy: float
     r: float                  # circle and arc radius; 0 otherwise
@@ -67,13 +67,14 @@ off it. Only the area at least {cfg.INSET_MM:.0f} mm inside every edge is drawab
 Your job each turn: say in one sentence what the drawing is becoming, say in one sentence what you will add
 and why, then give the strokes as data. Also give a thought: a few wondering words about what you see,
 under eight words, in a storybook tone, no coordinates. And a quip: a few warm, encouraging words to the
-person, under eight words, no coordinates. Strokes are polylines, circles, or arcs in board millimeters.
+person, under eight words, no coordinates. Strokes are polylines, circles, arcs, or dots in board millimeters;
+a dots stroke is a polygon (its points) that the robot fills with sparse dots, the only way to fill an area.
 Keep every stroke inside the drawable area. Never draw on or across ink that is already on the board:
-the person's marks are theirs. Complement them from the free space around them, at least 5 mm away;
+the person's marks are theirs. Complement them from the free space around them, at least 8 mm away;
 respond to their shapes, echo them, frame them, give them company, but do not touch them. Anything
-you draw within 5 mm of existing ink will be removed before the robot draws. Set attached to false. The total length of all strokes
+you draw within 8 mm of existing ink will be removed before the robot draws. Set attached to false. The total length of all strokes
 must stay within the budget you are given.
-Draw like a marker on a whiteboard: line art only, no fills, no shading. Use the pacing you are given:
+Draw like a marker on a whiteboard: outlines only, never fills or hatching with lines; use a dots stroke to fill an area. Use the pacing you are given:
 early exchanges add one clear element; the last exchange should complete the piece.
 Respond only through the structured output."""
 
@@ -84,8 +85,8 @@ ARTIST_NOTES = {
                 "small rings, one long sweeping curve. Choose the opposite of what the person drew (lines against "
                 "their curves, a curve against their angles) and vary the family from exchange to exchange. Each "
                 "shape is one continuous stroke, drawn exactly once as a single clean line; nothing is added for "
-                "you. Keep shapes at least 10 mm from each other and 8 mm from any ink. Fewer, larger shapes beat "
-                "many small ones; leave most of the budget unused if the picture is better for it.",
+                "you. Fewer, larger shapes beat many small ones; leave most of the budget unused if the picture is "
+                "better for it.",
     "haring": "The artist mode is Keith Haring: thick, simple, continuous outlines; simplified figures and "
               "creatures with rounded limbs in energetic poses; clear silhouettes; playful symbols; everything "
               "reads from across a room. Motion ticks radiating from your strokes are added for you, so do not "
@@ -145,8 +146,8 @@ def make_client() -> anthropic.Anthropic:
 def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Polyline], history: list[dict],
             length_setting: str, exchange: int, exchange_total: int, artist: str = "haring") -> TurnResult:
     budget = cfg.BUDGET_MM[length_setting]
-    asks = ({"short": "one abstract shape", "medium": "two or three abstract shapes",
-             "long": "four to six large abstract shapes spread across the free space"} if artist == "abstract" else
+    asks = ({"short": "one or two abstract shapes", "medium": "up to three abstract shapes",
+             "long": "up to five large abstract shapes spread across the free space"} if artist == "abstract" else
             {"short": "one small addition: a detail or an accent",
             "medium": "one full element that extends the drawing",
             "long": "a full scene: six to twelve bold elements, such as figures, creatures, a setting and "
@@ -155,6 +156,8 @@ def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Poly
     text = (f"{ARTIST_NOTES.get(artist, ARTIST_NOTES['haring'])}\n"
             f"Exchange {exchange} of {exchange_total}. Length setting: {length_setting}, so add {asks}. "
             f"Stroke budget: {budget:.0f} mm total. Allowed color: green.\n"
+            f"Shapes are large: each at least 40 mm across, most 60 mm or more. Lines never cross their own path and never "
+            f"run alongside another line closer than 8 mm. Give at most {cfg.STROKE_CAP[length_setting]} shapes.\n"
             f"New strokes the person just drew, as polylines in board millimeters:\n{fmt_polylines(human)}\n"
             f"Earlier exchanges:\n{hist}")
     t0 = time.monotonic()

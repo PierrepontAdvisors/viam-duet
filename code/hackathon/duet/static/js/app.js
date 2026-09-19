@@ -1,12 +1,12 @@
 /** Boot: the WebSocket with snapshot and reconnect, message dispatch, and the modules. */
-import { parseMessage, setCommand, command } from './protocol.js';
-import { TurnBook } from './story.js';
-import { Viewer } from './viewer.js';
-import { initUI } from './ui.js';
-import { GhostPen } from './preview.js';
-import { Sound } from './audio.js';
-import { polylinesFromSvg } from './picture.js';
-import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js';
+import { parseMessage, setCommand, command } from './protocol.js?v=ds3';
+import { TurnBook } from './story.js?v=ds3';
+import { Viewer } from './viewer.js?v=ds3';
+import { initUI } from './ui.js?v=ds3';
+import { GhostPen } from './preview.js?v=ds3';
+import { Sound } from './audio.js?v=ds3';
+import { polylinesFromSvg } from './picture.js?v=ds3';
+import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds3';
 
 const $ = (id) => document.getElementById(id);
 export const app = {
