@@ -4,6 +4,7 @@ photos into session.mp4 when the piece is done."""
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -13,8 +14,8 @@ import numpy as np
 
 from duet import config as cfg
 
-FFMPEG = "/opt/homebrew/bin/ffmpeg"
-FFPROBE = "/opt/homebrew/bin/ffprobe"
+FFMPEG = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
+FFPROBE = shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
 
 
 class Recorder:
@@ -33,13 +34,15 @@ class Recorder:
         """The warped board photo and, when given, the raw landscape camera frame beside it as
         `turn-NN-<who>-frame.jpg`. The page and the video prefer the frame: it has no seam at the board edge."""
         path = self.dir / f"turn-{turn:02d}-{who}.jpg"
-        cv2.imwrite(str(path), bgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
+        if not cv2.imwrite(str(path), bgr, [cv2.IMWRITE_JPEG_QUALITY, 90]):
+            raise OSError(f"could not write {path}")
         self.photos.append(path)
         self.meta["last_photo"] = path.name
         self.latest_frame = None
         if frame is not None:
             fpath = self.dir / f"turn-{turn:02d}-{who}-frame.jpg"
-            cv2.imwrite(str(fpath), frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            if not cv2.imwrite(str(fpath), frame, [cv2.IMWRITE_JPEG_QUALITY, 90]):
+                raise OSError(f"could not write {fpath}")
             self.frames.append(fpath)
             self.latest_frame = fpath
         return path
@@ -56,7 +59,7 @@ class Recorder:
             entry = {"turn": turn}
             self.meta["turns"].append(entry)
         entry.update(fields)
-        if "sees" in entry and "adds" in entry:
+        if turn >= 1 and "sees" in entry and "adds" in entry:
             hist = {"sees": entry["sees"], "adds": entry["adds"], "source": entry.get("source", "claude")}
             while len(self.meta["history"]) < turn:
                 self.meta["history"].append({"sees": "", "adds": "", "source": ""})
@@ -72,7 +75,13 @@ class Recorder:
         text = json.dumps(self.meta, indent=2, default=str) + "\n"
         path = self.dir / "session.json"
         path.write_text(text)
-        (self.root / "current.json").write_text(text)
+        current = self.root / "current.json"
+        try:
+            owner = json.loads(current.read_text())["id"]
+        except (OSError, ValueError, KeyError):
+            owner = None
+        if owner is None or owner == self.id:
+            current.write_text(text)
         return path
 
     @property
@@ -97,10 +106,16 @@ class Recorder:
         out = self.dir / "session.mp4"
         fps = 10
         total_frames = round((per_frame_s * (len(sources) - 1) + hold_last_s) * fps)
-        subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
-                        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p", "-r", str(fps),
-                        "-frames:v", str(total_frames),
-                        "-c:v", "libx264", "-movflags", "+faststart", str(out)], check=True)
+        try:
+            subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
+                            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p", "-r", str(fps),
+                            "-frames:v", str(total_frames),
+                            "-c:v", "libx264", "-movflags", "+faststart", str(out)],
+                           check=True, capture_output=True, text=True)
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+            print(f"stitch failed, keeping the stills: {(getattr(exc, 'stderr', '') or str(exc)).strip()[:400]}")
+            return None
+        listing.unlink(missing_ok=True)
         return out
 
 

@@ -1,7 +1,9 @@
 import json
 
 import numpy as np
+import pytest
 
+import duet.recorder as recorder
 from duet.recorder import Recorder, video_duration_s, video_size
 
 
@@ -59,3 +61,33 @@ def test_camera_frames_are_saved_beside_the_photos_and_make_a_landscape_video(tm
     assert abs(video_duration_s(out) - 4.0) < 0.35
     rec.save_photo(3, "final", frame(120))                  # a turn without a frame: the stitch falls back to photos
     assert rec.latest_frame is None and video_size(rec.stitch()) == (96, 128)
+
+
+def test_stitch_with_a_single_photo_holds_for_the_full_duration(tmp_path):
+    rec = Recorder("one", root=tmp_path)
+    rec.save_photo(0, "start", frame(240))
+    out = rec.stitch()
+    assert abs(video_duration_s(out) - 2.0) < 0.35
+
+
+def test_stitch_honors_custom_frame_and_hold_durations(tmp_path):
+    rec = Recorder("custom", root=tmp_path)
+    for i, shade in enumerate((240, 220, 200, 180)):
+        rec.save_photo(i, "robot", frame(shade))
+    out = rec.stitch(per_frame_s=0.5, hold_last_s=1.0)
+    assert abs(video_duration_s(out) - 2.5) < 0.15
+
+
+def test_stitch_failure_is_swallowed_and_a_write_failure_raises(tmp_path, monkeypatch):
+    rec = Recorder("boom", root=tmp_path)
+    rec.save_photo(0, "start", frame(240))
+    monkeypatch.setattr(recorder, "FFMPEG", "/nonexistent/ffmpeg")
+    assert rec.stitch() is None
+
+    ro = Recorder("ro", root=tmp_path)
+    ro.dir.chmod(0o500)
+    try:
+        with pytest.raises(OSError):
+            ro.save_photo(0, "start", frame(240))
+    finally:
+        ro.dir.chmod(0o700)
