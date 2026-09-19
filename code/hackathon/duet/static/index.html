@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/duet.css">
+</head>
+<body>
+<!-- Live stream: /stream.mjpg?overlay=0 (set by app.js); state over the WebSocket at /ws. -->
+<div class="stage" id="stage" data-el="stage">
+  <div class="pic" id="pic" data-el="picture layer (frame, photo, strokes)">
+    <img class="base" id="base" alt="" data-el="base image — live camera">
+    <img class="ov ovimg hidden" id="photo" alt="" data-el="turn photo projected onto the board">
+    <svg width="0" height="0" class="defs" aria-hidden="true"><defs>
+      <filter id="levels" color-interpolation-filters="sRGB"><feComponentTransfer>
+        <feFuncR type="linear" slope="1.9" intercept="-0.38"/><feFuncG type="linear" slope="1.9" intercept="-0.38"/><feFuncB type="linear" slope="1.9" intercept="-0.38"/>
+      </feComponentTransfer></filter>
+    </defs></svg>
+    <svg class="mask" id="mask" data-el="layer — clean board mask"><path id="maskpath" fill="#fff" fill-rule="evenodd"/></svg>
+    <svg class="ov" id="ov" width="176" height="240" viewBox="0 0 176 240" data-el="overlay svg">
+      <rect class="paper" id="paper" x="0" y="0" width="176" height="240" data-el="layer — paper (vector view)"/>
+      <g class="board hidden" id="l-board" data-el="layer — board outline"><rect x="0" y="0" width="176" height="240"/><rect x="15" y="15" width="146" height="210" stroke-dasharray="3 2"/></g>
+      <g id="fit">
+        <g class="ink" id="l-ink" data-el="layer — human ink"></g>
+        <g class="robot" id="l-robot" data-el="layer — plan strokes"></g>
+        <g class="ghost" id="l-ghost" data-el="layer — ghost pen preview"><path id="ghostpath"/><circle id="ghostpen" r="2.2"/></g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="tl" id="chips" data-el="chips — top left">
+    <span class="chip yellow name" id="badge" data-el="chip — Duet">Duet</span>
+    <span class="chip white" id="state" data-el="chip — state">Connecting…</span>
+  </div>
+  <div class="tr" data-el="chips — top right">
+    <span class="chip black" id="count" data-el="chip — exchange counter">Exchange <b>0</b> of 5</span>
+    <button class="chip black" id="sound" title="Sound on or off" data-el="chip — sound toggle">Sound off</button>
+  </div>
+  <button class="go hidden" id="go" data-el="go robot button">Go, robot!</button>
+
+  <div class="sub" id="caption" data-el="bubble">
+    <div class="bubble speech" id="bubble"><p id="words" data-el="bubble — words"></p></div>
+  </div>
+
+  <button class="gear" id="gear" title="Show controls (C)" data-el="controls toggle button">Controls</button>
+
+  <div class="panel" id="panel" data-el="controls panel">
+    <div class="bar" data-el="image bar">
+      <span class="lbl">Image</span>
+      <button id="b-live" data-el="source — live">Live</button>
+      <button id="b-prev" data-el="source — previous photo">◀</button>
+      <span class="pos" id="pos" data-el="source — position label">live · wrist camera</span>
+      <button id="b-next" data-el="source — next photo">▶</button>
+      <button id="b-play" data-el="source — play loop">▶ Play loop</button>
+      <span class="sep"></span>
+      <span class="seg" id="crop-seg" data-el="view — full or crop"><button data-v="full" class="on" data-el="view — full frame">Full view</button><button data-v="board" data-el="view — crop to board">Crop to board</button></span>
+      <a id="b-video" class="hidden" target="_blank" data-el="session video link">Video</a>
+      <button class="hide" id="hide" data-el="hide controls button">Hide controls</button>
+    </div>
+    <div class="bar" data-el="layer bar">
+      <span class="lbl">Layers</span>
+      <button data-layer="robot" class="on" data-el="layer toggle — plan">Plan</button>
+      <button data-layer="ink" class="on" data-el="layer toggle — ink">Ink</button>
+      <button data-layer="caption" class="on" data-el="layer toggle — bubble">Bubble</button>
+      <button data-layer="chips" class="on" data-el="layer toggle — chips">Chips</button>
+      <button data-layer="board" data-el="layer toggle — board outline">Board</button>
+      <button data-layer="clean" class="on" data-el="layer toggle — clean board">Clean board</button>
+      <button data-layer="vector" data-el="layer toggle — ink only">Ink only</button>
+      <label class="color" data-el="ink color">Ink <input type="color" id="ink-color" value="#111111"></label>
+      <label class="color" data-el="stroke color">Strokes <input type="color" id="stroke-color" value="#1b8f3a"></label>
+    </div>
+    <div class="bar" data-el="session bar">
+      <span class="lbl">Session</span>
+      <span class="seg" id="length-seg" data-el="length setting"><button data-v="short" data-el="length — short">Short</button><button data-v="medium" data-el="length — medium">Medium</button><button data-v="long" data-el="length — long">Long</button></span>
+      <span class="sep"></span>
+      <button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button><span class="lbl">exchanges</span>
+      <span class="sep"></span>
+      <span class="seg" id="handoff-seg" data-el="handoff setting"><button data-v="held" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></span>
+      <span class="sep"></span>
+      <span class="seg" id="artist-seg" data-el="artist setting"><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" disabled data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" disabled data-el="artist — van gogh">Van Gogh</button></span>
+      <span class="sep"></span>
+      <button id="pause" data-el="pause / resume button">Pause</button>
+      <button id="pass" data-el="pass turn button">Pass turn</button>
+      <button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button>
+    </div>
+    <div class="bar" data-el="light bar">
+      <span class="lbl">Light</span>
+      <span class="dial" data-el="light direction dial"><span class="sun" id="sun">☀</span><input type="range" id="direction" min="0" max="359" value="0" data-el="light direction slider"></span>
+      <span class="num" id="direction-val" data-el="light direction value">0°</span>
+      <span class="sep"></span>
+      <span class="lbl">Energy</span>
+      <input type="range" id="energy" min="0" max="100" value="50" data-el="energy slider"><span class="num" id="energy-val" data-el="energy value">0.50</span>
+    </div>
+    <div class="status" id="status1" data-el="status line — session"></div>
+    <div class="status" id="status2" data-el="status line — claude"></div>
+    <div class="status" id="status3" data-el="status line — dock and errors"></div>
+  </div>
+
+  <div class="dev-badge">DEV MODE · click an element to copy its name · press D to exit</div>
+  <div class="dev-label" id="devLabel"></div>
+  <div class="dev-toast" id="devToast"></div>
+</div>
+<script type="module" src="/static/js/app.js"></script>
+</body>
+</html>
