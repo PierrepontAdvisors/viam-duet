@@ -29,6 +29,16 @@ test('tokens.css defines the system and the pop; duet.css leans on it', () => {
   assert.match(t, /prefers-reduced-motion: reduce\)\s*\{\s*\.pop \{ animation: none; \}/);
   const css = read('duet.css');
   assert.ok(!/@import/.test(css), 'no imports');
-  assert.ok(!/\.chip[^{]*\{[^}]*rotate\(/.test(css) && !/\.bubble[^{]*\{[^}]*rotate\(/.test(css), 'chips and bubbles sit square');
+  assert.ok(!/\.chip \{[^}]*rotate\(/.test(css) && !/\.bubble(\.speech|\.thought)? \{[^}]*rotate\(/.test(css), 'chips and bubbles sit square at rest (hover may tilt)');
   assert.ok(css.includes('var(--paper-radius)') && css.includes('var(--frame-stroke)'), 'page uses the tokens');
+});
+
+test('buttons are toy presses: shadow at rest, lift on hover, squash on press, wiggle once when Start and Go arrive', () => {
+  const css = read('duet.css');
+  assert.match(css, /\.panel button, \.panel a \{ box-shadow: \.18cqw \.18cqw 0 var\(--ink\); \}/);
+  assert.match(css, /\.panel button:not\(:disabled\):hover[^{]*\{[^}]*translate\(-\.12cqw, -\.12cqw\) rotate\(-1deg\)/);
+  assert.match(css, /\.go:hover, \.welcome-start:not\(:disabled\):hover \{[^}]*box-shadow: \.7cqw \.7cqw 0 var\(--ink\)/);
+  assert.match(css, /@keyframes wiggle/);
+  assert.match(css, /\.go\.pop, \.welcome-start\.pop \{ animation: pop .*?, wiggle/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{\s*button\.chip, \.gear, \.go, \.welcome-start, \.panel button, \.panel a \{ transition: none; \}/);
 });
