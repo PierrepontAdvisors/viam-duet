@@ -49,6 +49,17 @@ class DrawResult:
     blocked: bool = False   # a hand appeared between strokes; the pen is up and the arm is idle
 
 
+def board_corner_zs(board: BoardToRobot) -> list[float]:
+    """World z of the four board corners, the fourth one bent by the measured warp."""
+    o, ex, ey, w = board.origin, board.ex, board.ey, board.warp
+    return [o[2], o[2] + ex[2], o[2] + ey[2], o[2] + ex[2] + ey[2] + w[2]]
+
+
+def needs_lift_z(tip_z: float, corner_zs: list[float], margin_mm: float) -> bool:
+    """True when the tool sits within `margin_mm` above the board's highest corner (or below it)."""
+    return tip_z < max(corner_zs) + margin_mm
+
+
 def shifted(p: Pose, dx: float = 0.0, dy: float = 0.0, dz: float = 0.0) -> Pose:
     """A new pose offset in world axes, orientation unchanged."""
     return Pose(x=p.x + dx, y=p.y + dy, z=p.z + dz, o_x=p.o_x, o_y=p.o_y, o_z=p.o_z, theta=p.theta)
@@ -203,6 +214,22 @@ class Controller:
             await self.set_speed(cfg.SPEED_TRAVEL)
             await self._move(self._pose("look"))
             self._mark_clear()
+
+    async def lift_if_low(self, margin_mm: float = 25.0, lift_mm: float = 30.0) -> bool:
+        """A fresh process does not know where the last one left the tool. If the tip is within
+        `margin_mm` of the board's highest corner, lift it straight up before any travel move, so a
+        stroke interrupted by a dropped connection is not dragged across the board."""
+        if self.board is None:
+            return False
+        tip = await self.tip_pose()
+        if not needs_lift_z(tip.z, board_corner_zs(self.board), margin_mm):
+            return False
+        async with self._sequence(check_hand=False):
+            await self.set_speed(cfg.SPEED_DOCK)
+            await self._move(shifted(tip, dz=lift_mm), linear=True)
+            await self.set_speed(cfg.SPEED_TRAVEL)
+            self._mark_clear()
+        return True
 
     async def pick_marker(self, slot: str, displacement_mm: tuple[float, float] = (0.0, 0.0)) -> None:
         """Enter the dock through the taught approach pose, move straight across to above the slot,

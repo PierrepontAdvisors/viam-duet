@@ -62,3 +62,9 @@ def test_corner_marks_and_warp_on_a_synthetic_frame():
         assert abs(fx - x) < 2 and abs(fy - y) < 2
     board = vision.warp_to_board(frame, vision.board_quad(found, 0))
     assert board.shape[:2] == (vision.BOARD_PX[1], vision.BOARD_PX[0])
+
+
+def test_ink_coverage_is_near_zero_on_a_blank_board_and_grows_with_ink(exchange_start, exchange_human, exchange_robot):
+    blank, human, robot = (vision.ink_coverage(b) for b in (exchange_start, exchange_human, exchange_robot))
+    assert blank < 0.005 < human < robot < 0.1
+    assert vision.new_ink(exchange_robot, exchange_human)[1] == robot     # one definition of coverage

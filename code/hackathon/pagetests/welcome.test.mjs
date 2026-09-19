@@ -26,7 +26,16 @@ test('welcome styles: overlay under the panel, staggered pops, keyline word', ()
 
 test('ui.js wires the welcome: renderWelcome in renderAll, Start sends restart on a finished session', () => {
   const js = read('js/ui.js');
-  assert.match(js, /const renderAll = \(\) => \{ renderChips\(\); renderBubble\(\); renderPanel\(\); renderWelcome\(\); \}/);
+  assert.match(js, /const renderAll = \(\) => \{ renderChips\(\); renderPicker\(\); renderBubble\(\); renderPanel\(\); renderWelcome\(\); \}/);
   assert.ok(js.includes("sendCommand('restart')"), 'restart command');
-  assert.ok(js.includes('welcomeButton(') && js.includes('welcomeReturns(') && js.includes('WELCOME_RETURN_MS'), 'uses the pure rules');
+  assert.ok(js.includes('welcomeButton(') && js.includes('welcomeReturns(') && js.includes("$('home')"), 'uses the pure rules');
+});
+
+test('the welcome carries a what-to-do-next line and Start also restarts from the wipe state', () => {
+  const h = read('index.html');
+  assert.match(h, /<p class="welcome-line welcome-do hidden" id="welcome-do"/);
+  const js = read('js/ui.js');
+  assert.ok(js.includes('welcomePrompt('), 'uses the prompt rule');
+  assert.match(js, /state === 'finished' \|\| state === 'wipe'/);
+  assert.match(read('duet.css'), /\.welcome-do \{/);
 });

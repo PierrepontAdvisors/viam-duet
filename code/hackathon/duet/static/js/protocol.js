@@ -34,7 +34,7 @@ const PARSERS = {
       artist: str(m.artist, 'haring'), mode: str(m.mode, 'duet'), handoff: oneOf(m.handoff, ['held', 'dock'], 'held'),
       coverage: num(m.coverage, 0), error: strOrNull(m.error), at_look: bool(m.at_look), hand_guard: str(m.hand_guard, ''),
       session: strOrNull(m.session), artists: Array.isArray(m.artists) && m.artists.every(a => typeof a === 'string') && m.artists.length ? m.artists : ['haring'],
-      direction: num(m.direction, 0), energy: num(m.energy, 0.5),
+      direction: num(m.direction, 0), energy: num(m.energy, 0.5), ending: bool(m.ending),
     };
   },
   calib(m) {
@@ -49,17 +49,20 @@ const PARSERS = {
   human: (m) => ({ polylines: polylines(m.polylines), new: polylines(m.new), found: bool(m.found, true), turn: int(m.turn, null) }),
   interpretation(m) {
     return { sees: str(m.sees), adds: str(m.adds), thought: str(m.thought), quip: str(m.quip),
-      source: oneOf(m.source, ['claude', 'fallback'], 'claude'), latency_s: num(m.latency_s, null), error: strOrNull(m.error), turn: int(m.turn, null) };
+      source: oneOf(m.source, ['claude', 'fallback', 'ink'], 'claude'), latency_s: num(m.latency_s, null), error: strOrNull(m.error), turn: int(m.turn, null),
+      artist: strOrNull(m.artist) };
   },
-  plan: (m) => ({ polylines: polylines(m.polylines), color: /^#[0-9a-fA-F]{6}$/.test(m.color || '') ? m.color : '#1b8f3a', budget_mm: num(m.budget_mm, 0), turn: int(m.turn, null) }),
+  plan: (m) => ({ polylines: polylines(m.polylines), color: /^#[0-9a-fA-F]{6}$/.test(m.color || '') ? m.color : '#1b8f3a', budget_mm: num(m.budget_mm, 0), turn: int(m.turn, null),
+    artist: strOrNull(m.artist) }),
   progress(m) { const s = int(m.stroke); return s === null ? null : { stroke: s, drawn_mm: num(m.drawn_mm, 0), turn: int(m.turn, null) }; },
   shot(m) {
     if (typeof m.url !== 'string') return null;
     const p = parseShotUrl(m.url) || {};
     const who = oneOf(m.who, SHOT_WHO, p.who || 'human');
-    return { url: m.url, frame_url: strOrNull(m.frame_url), turn: int(m.turn, p.turn ?? 0), who, session: p.session || null };
+    return { url: m.url, frame_url: strOrNull(m.frame_url), turn: int(m.turn, p.turn ?? 0), who, session: p.session || null, artist: strOrNull(m.artist) };
   },
   video: (m) => (typeof m.url === 'string' ? { url: m.url } : null),
+  feed: (m) => ({ source: oneOf(m.source, ['live', 'held', 'stale'], 'live') }),
   dock: (m) => ({ slots: m.slots && typeof m.slots === 'object' ? m.slots : {}, reseat: Array.isArray(m.reseat) ? m.reseat.filter(s => typeof s === 'string') : [] }),
   error: (m) => (typeof m.message === 'string' ? { message: m.message } : null),
 };
@@ -76,7 +79,7 @@ export function parseMessage(text) {
 }
 
 export const SETTINGS = ['artist', 'length', 'exchanges', 'mode', 'handoff', 'energy', 'direction'];
-const COMMANDS = ['pause', 'resume', 'pass', 'clear_error', 'restart'];   // restart: start a new session in place (the backend may not know it yet)
+const COMMANDS = ['pause', 'resume', 'pass', 'clear_error', 'restart', 'reset_arm', 'end', 'relaunch'];   // restart: a new session in place; end: sign at the next safe point; relaunch: exit the run so demo.sh restarts it
 
 export function setCommand(changes) {
   const out = { type: 'set' };

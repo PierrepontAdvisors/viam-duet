@@ -7,14 +7,16 @@ import { fileURLToPath } from 'node:url';
 const DIR = fileURLToPath(new URL('../../../docs/duet/pitch/', import.meta.url));
 const read = (name) => readFileSync(DIR + name, 'utf8');
 
+const TURNS = 10;
 const FLIPBOOK = ['turn-00-start.jpg',
-  ...[1, 2, 3, 4, 5, 6].flatMap((n) => [`turn-0${n}-human.jpg`, `turn-0${n}-robot.jpg`])];
+  ...Array.from({ length: TURNS }, (_, i) => String(i + 1).padStart(2, '0'))
+    .flatMap((nn) => [`turn-${nn}-human.jpg`, `turn-${nn}-robot.jpg`])];
 const PLATES = [1, 2, 3, 4, 5, 6, 7].map((n) => `plate-${n}.jpg`);
 const HEROES = ['hero-thesis.jpg', 'hero-duet.jpg', 'hero-build.jpg'];
 
-test('the 13 flipbook photos from session 20260918-190258 are in img/', () => {
-  for (const f of FLIPBOOK) assert.ok(existsSync(DIR + 'img/' + f), `missing img/${f}`);
-  assert.equal(readdirSync(DIR + 'img').filter((f) => /^turn-.*\.jpg$/.test(f)).length, 13);
+test('the 21 flipbook photos and the final piece from session 20260919-151119 are in img/', () => {
+  for (const f of [...FLIPBOOK, 'turn-10-final.jpg']) assert.ok(existsSync(DIR + 'img/' + f), `missing img/${f}`);
+  assert.equal(readdirSync(DIR + 'img').filter((f) => /^turn-.*\.jpg$/.test(f)).length, 22);
 });
 
 test('fredoka.css embeds the variable font as a data URI, so file:// in Chrome can use it', () => {
@@ -90,19 +92,44 @@ test('parseHash reads #n and falls back to card 1', () => {
   assert.equal(D.parseHash(undefined), 1);
 });
 
-test('the flipbook lists the 13 photos in turn order, labels them, and holds on the last', () => {
+test('the flipbook lists the 21 photos in turn order, labels them, and holds on the last', () => {
   const D = loadDeck();
   assert.deepEqual(D.FLIPBOOK, FLIPBOOK);
   assert.equal(D.flipLabel(0), 'start');
-  assert.equal(D.flipLabel(1), 'turn 1 of 6 · you');
-  assert.equal(D.flipLabel(2), 'turn 1 of 6 · Duet');
-  assert.equal(D.flipLabel(11), 'turn 6 of 6 · you');
-  assert.equal(D.flipLabel(12), 'turn 6 of 6 · Duet');
+  assert.equal(D.flipLabel(1), 'turn 1 of 10 · you');
+  assert.equal(D.flipLabel(2), 'turn 1 of 10 · Duet');
+  assert.equal(D.flipLabel(19), 'turn 10 of 10 · you');
+  assert.equal(D.flipLabel(20), 'turn 10 of 10 · Duet');
   assert.equal(D.flipDelay(0), 700);
-  assert.equal(D.flipDelay(5), 700);
-  assert.equal(D.flipDelay(12), 2000);
+  assert.equal(D.flipDelay(12), 700);
+  assert.equal(D.flipDelay(20), 2000);
   assert.equal(D.nextFlip(3), 4);
-  assert.equal(D.nextFlip(12), 0);
+  assert.equal(D.nextFlip(20), 0);
+});
+
+test('autoplay: cycle wraps to card 1, playDelay follows reveals, cards and speed', () => {
+  const D = loadDeck();
+  assert.deepEqual(D.SPEEDS, [0.5, 1, 1.5, 2]);
+  assert.deepEqual(D.cycle({ card: 1, build: 0 }), { card: 1, build: 1 });
+  assert.deepEqual(D.cycle({ card: 6, build: 0 }), { card: 7, build: 0 });
+  assert.deepEqual(D.cycle({ card: 7, build: 0 }), { card: 1, build: 0 });
+  assert.equal(D.playDelay({ card: 1, build: 0 }, 1), 2000);
+  assert.equal(D.playDelay({ card: 1, build: 3 }, 1), 6000);
+  assert.equal(D.playDelay({ card: 4, build: 0 }, 1), 12000);
+  assert.equal(D.playDelay({ card: 2, build: 0 }, 2), 3000);
+  assert.equal(D.playDelay({ card: 2, build: 0 }, 0.5), 12000);
+});
+
+test('the play button and speed dropdown sit inside the stage, and the pops follow --speed and --stagger', () => {
+  const h = read('index.html');
+  const stage = h.slice(h.indexOf('<div class="stage"'), h.indexOf('<div class="dev-badge"'));
+  assert.ok(/<button id="play"[^>]*class="pill"/.test(stage), 'play button is a pill');
+  assert.ok(/<select id="speed"/.test(stage), 'speed dropdown');
+  for (const v of ['0.5', '1', '1.5', '2']) assert.ok(stage.includes(`<option value="${v}"`), `speed option ${v}`);
+  const css = read('deck.css');
+  assert.ok(css.includes('.playbar'), 'playbar styles');
+  assert.ok(css.includes('.stage.playing { --stagger:'), 'play mode slows the stagger');
+  assert.match(css, /animation-delay: calc\(var\(--i, 2\) \* var\(--stagger, 80ms\) \/ var\(--speed, 1\)\)/);
 });
 
 test('deck.css defines the seven plates, the drifting pattern, and respects reduced motion', () => {
@@ -123,27 +150,22 @@ test('the deck has seven cards in order carrying the agreed copy, with plain apo
   const cards = [...h.matchAll(/<section class="card [^"]*" data-card="(\d)"/g)].map((m) => Number(m[1]));
   assert.deepEqual(cards, [1, 2, 3, 4, 5, 6, 7]);
   const copy = [
-    'Anyone can now study with the greatest minds in history.',
+    'Anyone can now study with the greatest minds.',
     'Nobody could make art with them.',
     'Until <span class="key">today</span>.',
     'A robot arm that draws <span class="key">with</span> you.',
-    'You make a mark.', 'It looks, understands, and answers.', 'In the hand of an artist you choose.',
-    'A big bold amoeba-like creature with loops and eye-holes sprawls across the board.',
-    "I'll add a small green spiral accent inside the lower loop body to give the creature a pulsing core.",
-    '8 s to look and decide',
-    'Everyone leaves with a one-of-a-kind piece, made with a <span class="key">partner</span>.',
-    'Six exchanges. Two artists. One of them was a robot.',
-    'And you learn their language by <span class="key">answering back</span>.',
-    'One continuous outline, then motion ticks. Your blob becomes a figure.',
-    "Your mark's edges run out to a grid. You start seeing the rectangle in everything.",
-    'Dashes stream around your mark like water around a rock.',
-    "You don't study the technique. You have a conversation in it.",
-    'Look. Understand. Answer. Draw.', '<span class="key">Viam</span> under every step.',
-    'The camera on the wrist photographs the board.', 'Viam · the camera component streams colour and depth from the wrist.',
-    'Claude reads the drawing and decides what to add.', 'Viam · the frame reaches Claude through the Python SDK.',
-    "The artist's style turns that idea into strokes.", "Viam · board millimetres map into the machine's world frame.",
-    'The arm draws them, planned safely around the table.', 'Viam · the motion service plans every move around the table and wall.',
-    'Your own artist', 'Bold comic-book lines with halftone dots', 'Describe a style in one sentence. Duet answers in it.',
+    'You make a mark. It answers back.',
+    'A crowded world of creatures, flowers and dancing figures.',
+    'A small green dancing figure in the open lower-right space to balance the crowd.',
+    '8 s to look and decide', 'Your mark', 'Duet answers',
+    'Everyone leaves with a piece made with a <span class="key">partner</span>.',
+    'Ten exchanges. Two artists. One of them was a robot.',
+    'You learn their language by <span class="key">answering back</span>.',
+    'Your blob becomes a figure.', 'Your edges run out to a grid.', 'Dashes stream around your mark.',
+    'Your own artist', 'Describe a style. Duet draws in it.',
+    'Look. Think. Answer. Draw.', '<span class="key">Viam</span> under every step.',
+    'The camera takes a photo of the board.', 'Claude decides what to add.',
+    "The artist's style becomes strokes.", 'The Viam motion service draws them.',
     '<span class="key">One person.</span> Two days. Claude and Viam.',
     'Nicholas Fjellberg Swerdlowe', 'Draw one mark. Duet answers.',
   ];
@@ -157,9 +179,10 @@ test('every local file the deck references exists, and the four support files ar
   assert.ok(refs.length >= 8, 'expected local references');
   for (const r of refs) assert.ok(existsSync(DIR + r), `referenced but missing: ${r}`);
   for (const f of ['fredoka.css', 'deck.css', 'deck.js', 'dev.js']) assert.ok(refs.includes(f), `${f} not linked`);
-  assert.ok(refs.includes('img/turn-01-human.jpg') && refs.includes('img/turn-01-robot.jpg'), 'card 3 photos');
+  assert.ok(refs.includes('img/turn-07-human.jpg') && refs.includes('img/turn-07-robot.jpg'), 'card 3 photos are the Haring turn of the latest run');
+  assert.ok(refs.includes('img/turn-10-final.jpg'), 'card 7 shows the finished piece');
   for (let n = 1; n <= 7; n++) assert.ok(refs.includes(`img/plate-${n}.jpg`), `plate ${n} not referenced`);
-  for (const hero of ['hero-thesis', 'hero-duet', 'hero-build']) assert.ok(refs.includes(`img/${hero}.jpg`), `${hero} not referenced`);
+  for (const hero of ['hero-thesis', 'hero-duet']) assert.ok(refs.includes(`img/${hero}.jpg`), `${hero} not referenced`);
   assert.ok(!/type="module"/.test(h), 'module scripts do not load over file:// in Chrome');
 });
 
@@ -192,6 +215,7 @@ test('every card carries the master page: frame, kicker, wordmark, footer with a
 
 test('deck.css is built on the tokens: four type sizes, three templates, no stray font sizes', () => {
   const css = read('deck.css');
+  assert.match(css, /--display: 8cqw; --headline: 5\.4cqw; --body: 3\.1cqw; --caption: 1\.9cqw;/, 'big-room type scale');
   for (const t of ['--display', '--headline', '--body', '--caption', '--s1', '--s4', '--paper-radius', '--paper-border', '--paper-pad', '--gutter', '--frame-inset']) {
     assert.ok(css.includes(t + ':'), `token ${t} is defined`);
   }
@@ -222,7 +246,7 @@ test('the toy logo replaces the Duet word in the header and on card 2, footers c
   assert.ok(css.includes('.plate-black .logo'), 'logo turns white on black');
 });
 
-test('card 6 steps carry icons and Viam lines, card 5 has four modules, motion is defined', () => {
+test('card 6 steps carry icons, card 5 has four modules, motion is defined', () => {
   const h = read('index.html');
   for (const id of ['i-look', 'i-think', 'i-answer', 'i-draw', 'i-own']) {
     assert.ok(h.includes(`<symbol id="${id}"`), `symbol ${id}`);
@@ -231,7 +255,9 @@ test('card 6 steps carry icons and Viam lines, card 5 has four modules, motion i
   const sections = h.split(/<section class="card /).slice(1);
   assert.equal((sections[4].match(/class="paper mod/g) || []).length, 4, 'card 5 has four modules');
   assert.ok(sections[4].includes('Your own artist') && sections[4].includes('>Next<'), 'fourth module is marked Next');
-  assert.equal((sections[5].match(/class="viam caption"/g) || []).length, 4, 'card 6 has four Viam lines');
+  assert.equal((sections[5].match(/class="viam caption"/g) || []).length, 0, 'card 6 Viam lines folded into the boxes for the big room');
+  assert.ok(sections[5].includes('<span class="key">Viam</span> under every step.'), 'card 6 still credits Viam');
+  assert.ok(!sections[4].includes('class="pill prompt"'), 'card 5 prompt pill dropped for the big room');
   assert.ok(!sections[5].includes('class="paper mod num"'), 'numbers row removed');
   const css = read('deck.css');
   assert.match(css, /@keyframes pop/);

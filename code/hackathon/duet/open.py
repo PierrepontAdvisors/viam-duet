@@ -24,6 +24,11 @@ def _is_dot(pl: Polyline) -> bool:
     return len(pl) < 2 or length(pl) < cfg.DOT_EXEMPT_MM
 
 
+def is_dot(pl: Polyline) -> bool:
+    """A stipple dot as `stipple` makes them: two points, DOT_MM apart. Crumbs from clipping are not dots."""
+    return len(pl) == 2 and abs(length(pl) - cfg.DOT_MM) < 0.05
+
+
 def enlarge(polylines: list[Polyline], min_mm: float = cfg.MIN_SHAPE_MM, target_mm: float = cfg.TARGET_SHAPE_MM) -> list[Polyline]:
     """Shapes smaller than `min_mm` across are scaled about their centroid to `target_mm`."""
     out: list[Polyline] = []

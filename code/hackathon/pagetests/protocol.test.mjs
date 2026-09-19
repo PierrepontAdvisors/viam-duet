@@ -68,6 +68,8 @@ test('commands are built with only allowed settings', () => {
   assert.deepEqual(setCommand({ length: 'short', bogus: 1, direction: 45 }), { type: 'set', length: 'short', direction: 45 });
   assert.equal(setCommand({ bogus: 1 }), null);
   assert.deepEqual(command('pause'), { type: 'pause' });
+  assert.deepEqual(command('reset_arm'), { type: 'reset_arm' });
+  assert.deepEqual(command('relaunch'), { type: 'relaunch' });
   assert.throws(() => command('launch'));
 });
 
@@ -76,4 +78,28 @@ test('shot urls round-trip', () => {
   assert.equal(shotUrl('s1', 4, 'human', true), '/sessions/s1/turn-04-human-frame.jpg');
   assert.deepEqual(parseShotUrl('/sessions/s1/turn-04-human-frame.jpg'), { session: 's1', turn: 4, who: 'human', frame: true });
   assert.equal(parseShotUrl('/sessions/s1/session.mp4'), null);
+});
+
+test('feed carries a known source and state carries ending', () => {
+  assert.equal(parseMessage(JSON.stringify({ type: 'feed', source: 'held' })).source, 'held');
+  assert.equal(parseMessage(JSON.stringify({ type: 'feed', source: 'stale' })).source, 'stale');
+  assert.equal(parseMessage(JSON.stringify({ type: 'feed', source: 'frozen' })).source, 'live');
+  assert.equal(parseMessage(JSON.stringify({ type: 'state', state: 'human_turn', turn: 0, ending: true })).ending, true);
+  assert.equal(parseMessage(JSON.stringify({ type: 'state', state: 'human_turn', turn: 0 })).ending, false);
+});
+
+test('end is a command', () => {
+  assert.deepEqual(command('end'), { type: 'end' });
+});
+
+test('interpretation, plan, and shot carry the turn artist when the backend sends one; ink is a known source', () => {
+  const i = parseMessage(JSON.stringify({ type: 'interpretation', sees: 'x', adds: 'y', source: 'ink', artist: 'mimic', latency_s: 0 }));
+  assert.equal(i.source, 'ink'); assert.equal(i.artist, 'mimic');
+  assert.equal(parseMessage(JSON.stringify({ type: 'interpretation', sees: 'x', adds: 'y' })).artist, null);
+  const p = parseMessage(JSON.stringify({ type: 'plan', polylines: [[[0, 0], [1, 1]]], color: '#1b8f3a', artist: 'shader' }));
+  assert.equal(p.artist, 'shader');
+  assert.equal(parseMessage(JSON.stringify({ type: 'plan', polylines: [] })).artist, null);
+  const s = parseMessage(JSON.stringify({ type: 'shot', url: '/sessions/s/turn-01-robot.jpg', turn: 1, who: 'robot', artist: 'architect' }));
+  assert.equal(s.artist, 'architect');
+  assert.equal(parseMessage(JSON.stringify({ type: 'shot', url: '/sessions/s/turn-00-start.jpg', who: 'start', artist: 7 })).artist, null);
 });

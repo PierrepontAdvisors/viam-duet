@@ -73,8 +73,8 @@ def test_cap_keeps_the_first_strokes_and_never_counts_dots():
     strokes = [[(0.0, float(i)), (40.0, float(i))] for i in range(6)]
     dots = [[(5.0, 5.0), (6.5, 5.0)], [(15.0, 5.0), (16.5, 5.0)]]
     out = op.cap(dots + strokes, "short")
-    assert out == dots + strokes[:2]
-    assert len(op.cap(strokes, "long")) == 5
+    assert out == dots + strokes[:cfg.STROKE_CAP["short"]]
+    assert len(op.cap(strokes * 3, "long")) == cfg.STROKE_CAP["long"]
 
 
 def test_stipple_fills_a_square_with_sparse_dots_inside_it_repeatably():
@@ -93,3 +93,9 @@ def test_stipple_widens_the_grid_to_respect_the_dot_cap():
     board = [(0.0, 0.0), (176.0, 0.0), (176.0, 240.0), (0.0, 240.0)]
     dots = op.stipple(board, seed=1)
     assert 30 <= len(dots) <= cfg.DOTS_MAX
+
+
+def test_is_dot_recognizes_stipple_dots_only():
+    assert op.is_dot([(5.0, 5.0), (6.5, 5.0)])
+    assert not op.is_dot([(5.0, 5.0), (6.0, 5.0)])           # a clipped leftover
+    assert not op.is_dot([(5.0, 5.0), (6.5, 5.0), (7.0, 5.0)])

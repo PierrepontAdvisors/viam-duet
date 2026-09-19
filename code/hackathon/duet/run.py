@@ -8,7 +8,8 @@
     python -m duet.run --fake --replay 20260918-185927 --exchanges 1
     python -m duet.run --length medium --exchanges 3 --handoff dock --port 8080
 
-Stop with Ctrl-C. Every event is also printed to the terminal, so the loop can be watched without the page.
+Stop with Ctrl-C. Every event is also printed to the terminal, so the loop can be watched without the page. New session
+on the page starts a fresh piece without a restart.
 """
 from __future__ import annotations
 
@@ -28,7 +29,8 @@ from duet import claude_turn
 from duet import config as cfg
 from duet import vision
 from duet.recorder import Recorder
-from duet.session import EventBus, HandGuard, Session, Settings
+from duet.session import ARTISTS, EventBus, HandGuard, Session, Settings
+from duet.tasks import watch
 from duet.web import make_app
 
 
@@ -39,10 +41,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--replay", default="20260918-190258", help="with --fake: the session folder whose boards are replayed")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--host", default="127.0.0.1", help="the page accepts arm commands from any client, so stay on loopback unless a second screen needs it")
-    p.add_argument("--artist", choices=("abstract", "haring", "mondrian", "vangogh"), default=cfg.ARTIST)
+    p.add_argument("--artist", choices=ARTISTS, default=cfg.ARTIST)
     p.add_argument("--length", choices=tuple(cfg.BUDGET_MM), default="short")
     p.add_argument("--exchanges", type=int, default=5)
     p.add_argument("--handoff", choices=("held", "dock"), default="held" if cfg.HELD_MODE else "dock")
+    p.add_argument("--no-guard", action="store_true",
+                   help="no camera hand check before the arm moves: for a venue where the Viam link drops frames, "
+                        "so that 'no frame' would read as a hand and block every turn; the operator, Pause, "
+                        "Reset arm, and the E-stop are the guard")
     return p
 
 
@@ -56,6 +62,9 @@ def replay_paths(folder: Path) -> tuple[Path, list[Path], list[Path]]:
     humans = sorted(folder.glob("turn-*-human.jpg"), key=turn)
     robots = sorted(folder.glob("turn-*-robot.jpg"), key=turn)
     return start, humans, robots
+
+
+VISITOR_WAITS = (2.0, 0.6, 1.0)   # the fake visitor: settle, hand over the board, look at the mark, then Go
 
 
 class ClaudeBrain:
@@ -80,15 +89,6 @@ class QuietShutdownCancels(logging.Filter):
         return not isinstance(exc, asyncio.CancelledError)
 
 
-def watch(task: asyncio.Task) -> asyncio.Task:
-    """A background loop that dies silently is worse than one that dies loudly."""
-    def died(t: asyncio.Task) -> None:
-        if not t.cancelled() and t.exception() is not None:
-            print(f"[task died] {t.get_name()}: {t.exception()!r}", flush=True)
-    task.add_done_callback(died)
-    return task
-
-
 async def log_events(bus: EventBus) -> None:
     q = bus.subscribe()
     try:
@@ -106,30 +106,40 @@ async def log_events(bus: EventBus) -> None:
                 print(f"[plan] {len(m['polylines'])} strokes, budget {m['budget_mm']} mm", flush=True)
             elif t == "shot":
                 print(f"[shot] {m['url']}  turn {m['turn']}  {m['who']}", flush=True)
-            elif t in ("error", "dock", "video", "human"):
+            elif t in ("error", "dock", "video", "human", "feed"):
                 print(f"[{t}] " + json.dumps({k: v for k, v in m.items() if k not in ("type", "polylines", "new")}), flush=True)
     finally:
         bus.unsubscribe(q)
 
 
-async def fake_visitor(bus: EventBus, frames, humans: list[Path], session) -> None:
+async def fake_visitor(bus: EventBus, frames, start: Path, humans: list[Path], robots: list[Path], session) -> None:
     """Each human turn: wait a moment, move a hand over the board for a second, show the next real
-    human-turn board, then press Go (the pass command), as a visitor would."""
+    human-turn board, then press Go (the pass command), as a visitor would. A new session id (New
+    session on the page) puts the recorded piece back: the blank board and every turn again."""
     q = bus.subscribe()
-    boards = list(humans)
+    boards: list[Path] = []
+    session_id = None
+    settle, hand, look = VISITOR_WAITS
     try:
         while True:
             m = await q.get()
-            if m["type"] == "state" and m["state"] == "human_turn":
-                await asyncio.sleep(2.0)
+            if m["type"] != "state":
+                continue
+            if m.get("session") != session_id:
+                session_id = m.get("session")
+                boards = list(humans)
+                frames.show_board(cv2.imread(str(start)))
+                frames.robot_boards = [cv2.imread(str(p)) for p in robots]
+            if m["state"] == "human_turn":
+                await asyncio.sleep(settle)
                 if not boards:
                     print("[visitor] out of recorded turns; the board is yours", flush=True)
-                    return
+                    continue
                 frames.jitter(1.2)
-                await asyncio.sleep(0.6)
+                await asyncio.sleep(hand)
                 frames.show_board(cv2.imread(str(boards.pop(0))))
                 print("[visitor] drew a mark", flush=True)
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(look)
                 session.pass_turn()
                 print("[visitor] pressed Go", flush=True)
     finally:
@@ -168,20 +178,24 @@ async def main(args: argparse.Namespace) -> None:
     warm = np.zeros((8, 8), np.uint8)          # skan's first import costs 1.5 s; pay it before the first exchange
     warm[3, 1:7] = 255                         # a line, so Skeleton is built too and not just imported
     vision.trace(warm)
-    guard = HandGuard(frames, cal)
+    guard = None if args.no_guard else HandGuard(frames, cal)
     session = Session(settings, frames, ctl, brain, rec, bus, cal, guard=guard)
     if args.fake:
-        tasks.append(watch(asyncio.create_task(fake_visitor(bus, frames, humans, session), name="visitor")))
-    app = make_app(session, frames, bus, calibration=cal)
+        tasks.append(watch(asyncio.create_task(fake_visitor(bus, frames, start, humans, robots, session), name="visitor")))
+    def relaunch() -> None:
+        """The page's Relaunch run: uvicorn stops serving, the finally below stops the arm, the process
+        exits, and demo.sh starts it again with the code now on disk."""
+        server.should_exit = True
+    app = make_app(session, frames, bus, calibration=cal, relaunch=relaunch)
     # the MJPEG stream never ends by itself, so an open page would hold a graceful shutdown forever
     server = uvicorn.Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning",
                                            timeout_graceful_shutdown=1))
     logging.getLogger("uvicorn.error").addFilter(QuietShutdownCancels())
     print(f"Duet on http://localhost:{args.port}  source={'fake replay of ' + args.replay if args.fake else 'armfarm22'} "
-          f"brain={type(brain).__name__} hand_check={guard.mode} session={rec.dir}", flush=True)
+          f"brain={type(brain).__name__} hand_check={'off' if guard is None else guard.mode} session={rec.dir}", flush=True)
     # the logger first: it subscribes before the loop's first emit, so `start` is printed too
     tasks += [watch(asyncio.create_task(log_events(bus), name="log")),
-              watch(asyncio.create_task(session.run(), name="session"))]
+              watch(asyncio.create_task(session.run_forever(), name="session"))]
     try:
         await server.serve()
     finally:

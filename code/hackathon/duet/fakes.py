@@ -39,6 +39,7 @@ class FakeFrames:
         self.depth = None
         self.jitter_until = 0.0
         self.n = 0
+        self.t = monotonic()
         self._compose()
 
     def _compose(self) -> None:
@@ -46,6 +47,7 @@ class FakeFrames:
         img = self.frame.copy()
         img[self.mask] = back[self.mask]
         self.image = img
+        self.t = monotonic()
 
     def show_board(self, board_bgr: np.ndarray) -> None:
         self.board = board_bgr.copy()
@@ -75,6 +77,7 @@ class FakeFrames:
     def show_hand(self, present: bool) -> None:
         """A hand-sized patch of medium skin over the board center, on the camera image only."""
         self.hand = present
+        self.t = monotonic()
 
     def _frame(self) -> Frame:
         img = self.image
@@ -85,7 +88,8 @@ class FakeFrames:
         if monotonic() < self.jitter_until:
             self.n += 1
             img = cv2.add(img, np.full_like(img, 12 if self.n % 2 else 0))
-        return Frame(img, self.depth, monotonic())
+            self.t = monotonic()          # each jittered frame is a different picture
+        return Frame(img, self.depth, self.t)
 
     def latest(self) -> Frame:
         return self._frame()
@@ -110,6 +114,10 @@ class FakeController:
         self.held_mode = cfg.HELD_MODE
         self.last_error: str | None = None
         self.needs_lift = False
+
+    async def lift_if_low(self) -> bool:
+        self.calls.append(("lift_if_low",))
+        return False
 
     async def go_look(self) -> None:
         self.calls.append(("go_look",))

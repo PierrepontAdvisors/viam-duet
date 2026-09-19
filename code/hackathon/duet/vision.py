@@ -130,11 +130,15 @@ def new_ink(current: np.ndarray, previous: np.ndarray, thresh: int = 40) -> tupl
     darker = np.clip(prev.astype(np.int16) - cur.astype(np.int16), 0, 255).astype(np.uint8)
     _, mask = cv2.threshold(darker, thresh, 255, cv2.THRESH_BINARY)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    mask = mask * drawable_mask()
+    return mask, ink_coverage(current)
+
+
+def ink_coverage(board: np.ndarray) -> float:
+    """The fraction of the drawable area that is inked (dark) in a board photo."""
+    cur = cv2.GaussianBlur(cv2.cvtColor(board, cv2.COLOR_BGR2GRAY), (5, 5), 0)
     area = drawable_mask()
-    mask = mask * area
-    ink_now = (cur < 90).astype(np.uint8) * area
-    coverage = float(ink_now.sum()) / float(area.sum())
-    return mask, coverage
+    return float(((cur < 90).astype(np.uint8) * area).sum()) / float(area.sum())
 
 
 def trace(mask: np.ndarray, simplify_mm: float = 0.5, min_len_mm: float = 3.0) -> list[list[Point]]:

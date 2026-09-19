@@ -37,6 +37,9 @@ QUIPS = ["I'll give it a tiny heartbeat!", "Let's make that head glow!", "One mo
          "Wake up, little cell!", "Lost my words. Drawing anyway!", "Time to dance! Wonderful work!"]
 PATH_RE = re.compile(r'<path d="([^"]+)"[^>]*stroke="([^"]+)"')
 NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
+# The states the real session lets New session act in: the arm is at the look pose and not in a
+# sequence, or it has been stopped. The state message does not carry it; `restart` refuses outside it.
+RESTARTABLE = ("finished", "human_turn", "capture", "interpret", "paused")
 
 
 def polylines_from_svg(text: str) -> tuple[list, list]:
@@ -57,7 +60,7 @@ def load_session() -> tuple[list[dict], dict[int, tuple[list, list]]]:
 
 
 class Bus:
-    SNAPSHOT = ("calib", "state", "dock", "human", "interpretation", "plan", "progress", "shot", "video", "error")
+    SNAPSHOT = ("calib", "state", "feed", "dock", "human", "interpretation", "plan", "progress", "shot", "video", "error")
 
     def __init__(self) -> None:
         self.last: dict[str, dict] = {}
@@ -85,11 +88,15 @@ class Replay:
         self.state, self.turn, self.error = "idle", 0, None
         self.paused = asyncio.Event()
         self.passed = asyncio.Event()
+        self.ending = False
+        self.ended = asyncio.Event()       # End or New session, so a scripted human turn ends at once
+        self.again = asyncio.Event()       # New session: stop waiting on the finished piece
 
     def emit_state(self) -> None:
         self.bus.emit("state", state=self.state, turn=self.turn, coverage=round(0.05 * self.turn, 3), error=self.error,
                       at_look=self.state in ("look", "human_turn", "capture", "interpret", "plan"),
-                      hand_guard="color at the look pose", session=SESSION_ID, artists=["haring"], **self.settings)
+                      hand_guard="color at the look pose", session=SESSION_ID, artists=["haring"],
+                      ending=self.ending, **self.settings)
 
     def go(self, state: str) -> None:
         self.state = state
@@ -106,18 +113,32 @@ class Replay:
         self.bus.emit("shot", url=f"/sessions/{SESSION_ID}/turn-{turn:02d}-{who}.jpg", turn=turn, who=who,
                       frame_url=f"/sessions/{SESSION_ID}/{frame.name}" if frame.exists() else None)
 
+    async def wait_for_go(self) -> None:
+        """The scripted human turn ends on Go, on End or New session, or when the turn times out."""
+        waits = [asyncio.ensure_future(self.passed.wait()), asyncio.ensure_future(self.ended.wait())]
+        try:
+            await asyncio.wait(waits, timeout=HUMAN_TURN_S / SPEED, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for w in waits:
+                w.cancel()
+
     async def run(self) -> None:
         while True:
             self.turn, self.error = 0, None
-            self.go("idle"); await self.wait(1.0)
+            self.ending = False
+            self.ended.clear()
+            self.go("idle"); self.bus.emit("feed", source="live"); await self.wait(1.0)
             self.go("look"); self.shot(0, "start"); await self.wait(1.0)
             all_ink: list = []
             for t in sorted(self.plans):
+                if self.ending:
+                    break
                 ink, robot = self.plans[t]
                 self.go("human_turn")
                 self.passed.clear()
-                with contextlib.suppress(asyncio.TimeoutError):
-                    await asyncio.wait_for(self.passed.wait(), HUMAN_TURN_S / SPEED)
+                await self.wait_for_go()
+                if self.ending:
+                    break
                 self.go("capture"); self.shot(t, "human")
                 all_ink = all_ink + ink
                 self.bus.emit("human", turn=t, polylines=all_ink, new=ink, found=True); await self.wait(1.0)
@@ -130,17 +151,20 @@ class Replay:
                               quip="Lost my words. Drawing anyway!" if fallback else QUIPS[(t - 1) % len(QUIPS)])
                 self.go("plan"); self.bus.emit("plan", turn=t, polylines=robot, color="#1b8f3a", budget_mm=4000); await self.wait(2.0)
                 self.go("robot_draw")
+                self.bus.emit("feed", source="held")
                 drawn = 0.0
                 for i, pl in enumerate(robot):
                     await self.wait(0.4)
                     drawn += sum(((pl[k][0] - pl[k - 1][0]) ** 2 + (pl[k][1] - pl[k - 1][1]) ** 2) ** 0.5 for k in range(1, len(pl)))
                     self.bus.emit("progress", turn=t, stroke=i, drawn_mm=round(drawn))
-                self.shot(t, "robot"); self.turn = t; self.go("look"); await self.wait(1.0)
-            self.go("finish"); await self.wait(1.5)
-            self.go("finished")
+                self.shot(t, "robot"); self.turn = t; self.go("look"); self.bus.emit("feed", source="live"); await self.wait(1.0)
+            self.go("finish"); self.bus.emit("feed", source="held"); await self.wait(1.5)
+            self.go("finished"); self.bus.emit("feed", source="live")
             if (SESSIONS / SESSION_ID / "session.mp4").exists():
                 self.bus.emit("video", url=f"/sessions/{SESSION_ID}/session.mp4")
-            await self.wait(15.0)
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(self.again.wait(), 15.0 / SPEED)
+            self.again.clear()
 
     def handle(self, cmd: dict) -> dict | None:
         kind = cmd.get("type")
@@ -156,8 +180,25 @@ class Replay:
             self.paused.clear(); self.go("human_turn" if self.turn == 0 else "look")
         elif kind == "pass":
             self.passed.set()
+        elif kind == "end":
+            self.ending = True
+            self.ended.set()          # a scripted human turn ends now, not after its full eight seconds
+            self.emit_state()
+        elif kind == "restart":
+            if self.state not in RESTARTABLE:   # the real server latches a restart until the piece finishes; the harness says no instead
+                return {"type": "error", "message": "restart refused: the robot is moving; pause first or wait for it to finish"}
+            self.paused.clear()       # a restart from `paused` must not leave the script parked in wait()
+            self.again.set()
+            if self.state != "finished":
+                self.ending = True    # cut the running piece short; the loop then starts a fresh one
+                self.ended.set()
+                self.emit_state()
         elif kind == "clear_error":
             self.error = None; self.emit_state()
+        elif kind == "relaunch":                 # no run to relaunch here; the page keeps its socket and shows this
+            return {"type": "error", "message": "relaunch refused: the harness has no run to relaunch"}
+        elif kind == "reset_arm":                # no arm here: the script just carries on, so the button does not error
+            self.paused.clear(); self.error = None; self.emit_state()
         else:
             return {"type": "error", "message": f"unknown command {kind!r}"}
         return None

@@ -11,7 +11,7 @@ from duet import config as cfg
 from duet import open as op
 from duet.strokes import Polyline, cut_to_budget, length
 
-MIN_PIECE_MM = 1.0   # below a dot (config.DOT_MM), so dots survive the crumb filter
+MIN_PIECE_MM = 10.0  # shorter leftovers from clipping and clearance are crumbs; stipple dots are kept by identity
 
 
 def drawable_area() -> Polygon:
@@ -89,7 +89,7 @@ def validate(strokes: list[dict], existing_ink: list[Polyline], budget_mm: float
     for s in strokes:
         for pl in op.enlarge(stroke_to_polylines(s)):          # small shapes grow before they are clipped and cleared
             parts = keep_clear(clip_to(pl, area), existing_ink, clearance_mm)
-            result.extend(p for p in parts if length(p) >= MIN_PIECE_MM)
+            result.extend(p for p in parts if op.is_dot(p) or length(p) >= MIN_PIECE_MM)
     return cut_to_budget(result, budget_mm)
 
 
@@ -100,5 +100,5 @@ def finalize(styled: list[Polyline], existing_ink: list[Polyline], budget_mm: fl
     from existing ink, keep at most the length setting's stroke count, drop crumbs, cut to the budget."""
     clipped = [p for pl in styled for p in clip_to(pl, drawable_area())]
     opened = op.thin([op.uncross(p) for p in clipped])
-    clear = [p for p in keep_clear(opened, existing_ink, clearance_mm) if length(p) >= min_piece_mm]
+    clear = [p for p in keep_clear(opened, existing_ink, clearance_mm) if op.is_dot(p) or length(p) >= min_piece_mm]
     return cut_to_budget(op.cap(clear, length_setting), budget_mm)

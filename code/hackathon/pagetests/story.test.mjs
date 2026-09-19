@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { welcomeButton, welcomeReturns, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor } from '../duet/static/js/story.js';
+import { welcomeButton, welcomeReturns, welcomePrompt, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor, feedLabel, ARTIST_INFO, artistName, pickerText } from '../duet/static/js/story.js';
 
 test('chipFor gives the storybook words and tone per state, and a readable fallback', () => {
   assert.deepEqual(chipFor('human_turn'), { text: 'Your turn!', tone: 'green' });
@@ -22,7 +22,7 @@ test('bubbleForState: thinking shows a placeholder until the thought lands, then
   assert.deepEqual(bubbleForState('robot_draw', null, {}), { kind: 'speech', text: FIXED.noQuip });
   assert.deepEqual(bubbleForState('human_turn', null, {}), { kind: 'speech', text: FIXED.start });
   assert.deepEqual(bubbleForState('human_turn', null, { reseat: true }), { kind: 'speech', text: FIXED.reseat });
-  assert.deepEqual(bubbleForState('finished', null, {}), { kind: 'speech', text: 'That was fun. Play it back?' });
+  assert.deepEqual(bubbleForState('finished', null, {}), { kind: 'speech', text: 'The end! Wipe the board for the next artist.' });
 });
 
 test('bubbleForShot follows the photo: thought on the human, speech on the robot', () => {
@@ -83,9 +83,57 @@ test('welcomeButton: ready only at your turn or after the end; waiting after Sta
 
 test('welcomeReturns: a fresh state after a finished or running session, never at first load or between fresh states', () => {
   assert.equal(welcomeReturns('finished', 'idle'), true);
-  assert.equal(welcomeReturns('human_turn', 'look'), true);
+  assert.equal(welcomeReturns('human_turn', 'look'), false);      // look follows every robot turn, it is not a new session
   assert.equal(welcomeReturns(null, 'idle'), false);
   assert.equal(welcomeReturns('idle', 'look'), false);
   assert.equal(welcomeReturns('finished', 'human_turn'), false);
   assert.equal(WELCOME_RETURN_MS, 8000);
+});
+
+test('welcomeReturns: look after a robot turn is not a fresh session', () => {
+  assert.equal(welcomeReturns('robot_draw', 'look'), false);
+  assert.equal(welcomeReturns('finished', 'start'), true);
+  assert.equal(welcomeReturns('finished', 'idle'), true);
+});
+
+test('feedLabel names the picture source', () => {
+  assert.equal(feedLabel('live'), 'live · wrist camera');
+  assert.equal(feedLabel('held'), 'still · the robot is drawing');
+  assert.equal(feedLabel('stale'), 'camera reconnecting…');
+  assert.equal(feedLabel(undefined), 'live · wrist camera');
+});
+
+test('every artist has a name and a one-line description; unknown ids read as a capitalised id', () => {
+  assert.deepEqual(Object.keys(ARTIST_INFO), ['abstract', 'mimic', 'haring', 'mondrian', 'vangogh', 'architect', 'designer', 'shader']);
+  for (const [name, blurb] of Object.values(ARTIST_INFO)) { assert.ok(name.length >= 5); assert.ok(blurb.split(' ').length <= 6, blurb); }
+  assert.equal(artistName('vangogh'), 'Van Gogh'); assert.equal(artistName('zorn'), 'Zorn'); assert.equal(artistName(''), '');
+});
+
+test('pickerText: opens on the human turn, labels the robot states with the turn artist, hides otherwise', () => {
+  assert.deepEqual(pickerText('human_turn', 'abstract', null, null), { text: 'as Abstract ▾', open: true });
+  assert.deepEqual(pickerText('human_turn', 'shader', 'mimic', null), { text: 'as Shader ▾', open: true });   // the setting, not the last turn
+  assert.deepEqual(pickerText('capture', 'abstract', 'mimic', null), { text: 'Mimic is looking…', open: false });
+  assert.deepEqual(pickerText('interpret', 'abstract', null, null), { text: 'Abstract is looking…', open: false });  // not known yet: the setting
+  assert.deepEqual(pickerText('plan', 'abstract', 'shader', null), { text: 'Shader is drawing', open: false });
+  assert.deepEqual(pickerText('robot_draw', 'abstract', 'architect', null), { text: 'Architect is drawing', open: false });
+  for (const s of ['idle', 'start', 'look', 'finish', 'finished', 'paused']) assert.equal(pickerText(s, 'abstract', 'mimic', null), null, s);
+});
+
+test('pickerText while browsing: a robot photo names who drew it, anything else hides the picker', () => {
+  assert.deepEqual(pickerText('human_turn', 'abstract', null, { who: 'robot', artist: 'designer' }), { text: 'Designer drew this', open: false });
+  assert.equal(pickerText('human_turn', 'abstract', null, { who: 'robot', artist: null }), null);
+  assert.equal(pickerText('human_turn', 'abstract', null, { who: 'human', artist: 'designer' }), null);
+  assert.equal(pickerText('robot_draw', 'abstract', 'mimic', { who: 'start', artist: null }), null);
+});
+
+test('a full board at start: the wipe state instructs, the welcome prompts, and Start stays live', () => {
+  assert.deepEqual(chipFor('wipe'), { text: 'Wipe the board', tone: 'red' });
+  assert.deepEqual(bubbleForState('wipe', null, {}), { kind: 'speech', text: FIXED.wipe });
+  assert.match(FIXED.wipe, /wipe/i); assert.match(FIXED.wipe, /Start/);
+  assert.deepEqual(welcomeButton('wipe'), { label: 'Start', enabled: true });
+  assert.equal(welcomePrompt('wipe', 0.348), 'The board is still 35% full. Wipe it clean, then press Start.');
+  assert.equal(welcomePrompt('finished', 0.4), 'Wipe the board clean for the next artist, then press Start.');
+  for (const s of ['idle', 'start', 'human_turn', 'robot_draw', 'paused', null]) assert.equal(welcomePrompt(s, 0.4), null, String(s));
+  assert.match(bubbleForState('finished', null, {}).text, /wipe/i);
+  assert.equal(welcomeReturns('start', 'wipe'), false);
 });

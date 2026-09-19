@@ -1,10 +1,14 @@
 /** The storybook layer's words and bookkeeping: what the chips and bubbles say in each state, and the
  *  per-turn record of thoughts, quips, ink, plans, and photos. No DOM here. */
-import { centroid, BOARD_CENTER } from './geometry.js?v=ds3';
-import { shotUrl } from './protocol.js?v=ds3';
+import { centroid, BOARD_CENTER } from './geometry.js?v=ds7';
+import { shotUrl } from './protocol.js?v=ds7';
 
 export const PLACEHOLDERS = ['Hmm…', 'Looking closely…', 'What could it be?', 'I see lines…'];
 export const PLACEHOLDER_MS = 1500;
+
+/** What the stream is showing, from the `feed` event; the panel's position line reads it. */
+export const FEED_LABELS = { live: 'live · wrist camera', held: 'still · the robot is drawing', stale: 'camera reconnecting…' };
+export function feedLabel(source) { return FEED_LABELS[source] || FEED_LABELS.live; }
 
 export const FIXED = {
   start: 'Your turn! Draw one mark, then press Go.',
@@ -12,7 +16,36 @@ export const FIXED = {
   noQuip: 'Here we go!',
   oldThought: 'Hmm, what was this?',
   oldQuip: 'I remember this one!',
+  wipe: 'The board is still full. Wipe it clean, then press Start.',
 };
+
+/* ---- artists: the picker's names and one-line descriptions, in the backend's display order ---- */
+export const ARTIST_INFO = {
+  abstract: ['Abstract', 'Clean shapes that answer yours'],
+  mimic: ['Mimic', 'Copies what you just drew'],
+  haring: ['Haring', 'Bold outlines and motion ticks'],
+  mondrian: ['Mondrian', 'Straight lines, grids, boxes'],
+  vangogh: ['Van Gogh', 'Swirls of curved dashes'],
+  architect: ['Architect', 'Walls, doors, stairs, rooflines'],
+  designer: ['Designer', 'Rounded housings and parts'],
+  shader: ['Shader', 'Fills your shapes with dots'],
+};
+export function artistName(id) {
+  if (ARTIST_INFO[id]) return ARTIST_INFO[id][0];
+  return id ? id.charAt(0).toUpperCase() + id.slice(1) : '';
+}
+const LOOKING = ['capture', 'interpret'], DRAWING = ['plan', 'robot_draw'];
+/** The artist picker's label and whether it opens. `setting` is the current artist setting, `turnArtist`
+ *  the artist fixed for the exchange in progress (null until the backend has said), `shot` the browsed
+ *  photo or null when the live picture shows. Null hides the picker. */
+export function pickerText(state, setting, turnArtist, shot) {
+  if (shot) return shot.who === 'robot' && shot.artist ? { text: `${artistName(shot.artist)} drew this`, open: false } : null;
+  if (state === 'human_turn') return { text: `as ${artistName(setting)} ▾`, open: true };
+  const who = artistName(turnArtist || setting);
+  if (LOOKING.includes(state)) return { text: `${who} is looking…`, open: false };
+  if (DRAWING.includes(state)) return { text: `${who} is drawing`, open: false };
+  return null;
+}
 
 // chip: [text, tone]; bubble: [kind, text | null for "thought or placeholder" | 'quip' for the turn's quip]
 const TABLE = {
@@ -24,7 +57,8 @@ const TABLE = {
   plan: { chip: ['I have an idea!', 'yellow'], bubble: ['speech', 'quip'] },
   robot_draw: { chip: ['My turn! Hands off, please', 'red'], bubble: ['speech', 'quip'] },
   finish: { chip: ['Signing…', 'green'], bubble: ['speech', 'All done! Thank you.'] },
-  finished: { chip: ['The end', 'yellow'], bubble: ['speech', 'That was fun. Play it back?'] },
+  finished: { chip: ['The end', 'yellow'], bubble: ['speech', 'The end! Wipe the board for the next artist.'] },
+  wipe: { chip: ['Wipe the board', 'red'], bubble: ['speech', FIXED.wipe] },
   paused: { chip: ['Paused', 'red'], bubble: ['speech', 'One moment, please.'] },
 };
 
@@ -101,17 +135,24 @@ export function anchorFor(kind, record) {
 }
 
 /* ---- welcome page ---- */
-export const FRESH_STATES = ['idle', 'look', 'start'];
+export const FRESH_STATES = ['idle', 'start'];   // not look: the loop passes through look after every robot turn
 export const WELCOME_RETURN_MS = 8000;
 /** The welcome page's button for a state: its label and whether it can be pressed. `waiting` is set after
  *  Start was pressed on a finished session, until a new session's state arrives. */
 export function welcomeButton(state, waiting = false) {
   if (waiting) return { label: 'Starting soon…', enabled: false };
-  if (state === 'human_turn' || state === 'finished') return { label: 'Start', enabled: true };
+  if (state === 'human_turn' || state === 'finished' || state === 'wipe') return { label: 'Start', enabled: true };
   return { label: 'Getting ready…', enabled: false };
 }
+/** The welcome's what-to-do-next line: after a piece, and while the start photo still shows the last
+ *  visitor's ink (`coverage` is the state's inked fraction). Null when there is nothing to ask. */
+export function welcomePrompt(state, coverage) {
+  if (state === 'wipe') return `The board is still ${Math.round((coverage || 0) * 100)}% full. Wipe it clean, then press Start.`;
+  if (state === 'finished') return 'Wipe the board clean for the next artist, then press Start.';
+  return null;
+}
 /** The welcome returns when a fresh session begins after a session that was under way or finished:
- *  a restarted process or a reconnect looks like idle/look/start arriving after anything else. */
+ *  a restarted process or a restart in place looks like idle or start arriving after anything else. */
 export function welcomeReturns(prev, next) {
   return FRESH_STATES.includes(next) && prev != null && !FRESH_STATES.includes(prev);
 }
