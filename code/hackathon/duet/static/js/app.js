@@ -10,14 +10,16 @@ import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometr
 const $ = (id) => document.getElementById(id);
 export const app = {
   book: new TurnBook(),
-  state: null, calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
+  state: null, currentTurn: null, calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
   ws: null, connected: false,
   viewer: null,
   listeners: [],
 };
 export const on = (fn) => app.listeners.push(fn);
 const notify = (msg) => app.listeners.forEach(fn => fn(msg, app));
-const turnOf = (msg) => (msg.turn ?? (app.state ? app.state.turn : 0));
+/** The exchange a per-turn message belongs to. The backend's state.turn counts completed exchanges, so
+ *  messages carry their own turn; without it the message is taken to be the current state's. */
+const turnOf = (msg) => { const t = msg.turn ?? (app.state ? app.state.turn : 0); app.currentTurn = t; return t; };
 
 export function send(msg) { if (msg && app.ws && app.ws.readyState === 1) app.ws.send(JSON.stringify(msg)); }
 export const sendSet = (changes) => send(setCommand(changes));
@@ -30,7 +32,7 @@ function handle(msg) {
     case 'human': app.human = msg; app.viewer.setInk(msg.polylines); app.book.note(turnOf(msg), { new: msg.new }); break;
     case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s }); break;
     case 'plan': app.plan = msg; app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); app.ghost.play(msg.polylines); break;
-    case 'progress': app.progress = msg.stroke; if (app.plan) app.viewer.setPlan(app.plan.polylines, msg.stroke); break;
+    case 'progress': app.progress = msg.stroke; if (app.plan) app.viewer.setPlan(app.plan.polylines, msg.stroke); turnOf(msg); break;
     case 'shot': {
       const known = app.book.shots.length;
       if (!known) app.book.backfill(msg).forEach(s => app.book.addShot(s));
@@ -76,7 +78,7 @@ export function boot() {
       s.hum(msg.state === 'capture' || msg.state === 'interpret');
       if (msg.state === 'human_turn' && app.prevState !== 'human_turn') s.chime('yours');
       if (msg.state === 'robot_draw' && app.prevState !== 'robot_draw') s.chime('mine');
-      if (msg.state === 'plan' && app.prevState !== 'plan') { const rec = app.book.get(msg.turn); if (rec) s.speak(rec.quip); }
+      if (msg.state === 'plan' && app.prevState !== 'plan') { const rec = app.book.get(app.currentTurn ?? msg.turn); if (rec) s.speak(rec.quip); }
       app.prevState = msg.state;
     }
   });

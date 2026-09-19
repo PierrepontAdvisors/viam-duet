@@ -118,7 +118,6 @@ class Replay:
                 self.passed.clear()
                 with contextlib.suppress(asyncio.TimeoutError):
                     await asyncio.wait_for(self.passed.wait(), HUMAN_TURN_S / SPEED)
-                self.turn = t
                 self.go("capture"); self.shot(t, "human")
                 all_ink = all_ink + ink
                 self.bus.emit("human", turn=t, polylines=all_ink, new=ink, found=True); await self.wait(1.0)
@@ -136,7 +135,7 @@ class Replay:
                     await self.wait(0.4)
                     drawn += sum(((pl[k][0] - pl[k - 1][0]) ** 2 + (pl[k][1] - pl[k - 1][1]) ** 2) ** 0.5 for k in range(1, len(pl)))
                     self.bus.emit("progress", turn=t, stroke=i, drawn_mm=round(drawn))
-                self.shot(t, "robot"); self.go("look"); await self.wait(1.0)
+                self.shot(t, "robot"); self.turn = t; self.go("look"); await self.wait(1.0)
             self.go("finish"); await self.wait(1.5)
             self.go("finished")
             if (SESSIONS / SESSION_ID / "session.mp4").exists():

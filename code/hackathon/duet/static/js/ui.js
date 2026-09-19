@@ -54,7 +54,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (shot) return { ...bubbleForShot(shot.who, app.book.get(shot.turn)), record: app.book.get(shot.turn), who: shot.who, thinking: false };
     const st = app.state;
     if (!st) return { kind: 'speech', text: 'One moment…', record: null, who: 'start', thinking: false };
-    const rec = app.book.get(st.turn), reseat = !!(app.dock && app.dock.reseat.length);
+    const rec = app.book.get(app.currentTurn ?? st.turn), reseat = !!(app.dock && app.dock.reseat.length);
     const b = bubbleForState(st.state, rec, { reseat, elapsedMs: Date.now() - view.thinkingSince });
     const who = st.state === 'human_turn' || st.state === 'idle' || st.state === 'look' ? 'start' : (b.kind === 'thought' ? 'human' : 'robot');
     return { ...b, record: rec, who, thinking: b.kind === 'thought' && !(rec && rec.thought) };
@@ -188,7 +188,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   // ---- messages ----
   on((msg) => {
     if (msg.type === 'state') {
-      if (msg.state === 'capture' && !(app.book.get(msg.turn) || {}).thought) view.thinkingSince = Date.now();
+      if (msg.state === 'capture') view.thinkingSince = Date.now();
       if (msg.state === 'finished' && view.autoplayed !== msg.session) { view.autoplayed = msg.session; setTimeout(() => { if (view.source === 'live') play(); }, 3000); }
       if (msg.state === 'human_turn' && msg.turn === 0 && view.source !== 'live') showLive();
     }
