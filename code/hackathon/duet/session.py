@@ -1,9 +1,11 @@
 """The turn loop: one asyncio task, one method per state, the only module that calls the others in
-sequence. The human turn ends when the Go button on the page sends `pass`, and every dependency comes
-in through the constructor so tests and `run.py --fake` can swap the camera, the arm, and Claude."""
+sequence. The human turn ends when the Go button on the page sends `pass`, or End sends `end` (the
+piece then signs and finishes), and every dependency comes in through the constructor so tests and
+`run.py --fake` can swap the camera, the arm, and Claude."""
 from __future__ import annotations
 
 import asyncio
+import itertools
 from dataclasses import asdict, dataclass, replace
 from time import monotonic
 
@@ -26,6 +28,7 @@ STYLERS = {"abstract": abstract, "haring": haring, "mondrian": mondrian, "vangog
 RECOVER_TIMEOUT_S = 45.0      # a recover that hangs on a dropped connection must not hold the loop forever
 RETRY_AFTER_FAULT = {"start": "start", "look": "look", "human_turn": "human_turn", "capture": "human_turn",
                      "interpret": "interpret", "plan": "plan", "robot_draw": "look", "finish": "finish"}
+HELD_IDS = itertools.count(1)   # every held still gets a fresh id, unique for the process, so the stream's key never repeats
 HAND_WAIT_S = 30
 HAND_WAIT_MESSAGE_S = 5        # how often the "still waiting" line is repeated while the arm is held back
 SETTLE_AFTER_LOOK_S = 0.8      # the camera image settles after the arm stops, as in duet.turn
@@ -67,7 +70,7 @@ class Settings:
 
 class EventBus:
     """Fan-out of session events to any number of subscribers (the page's sockets, tests, the log)."""
-    SNAPSHOT = ("calib", "state", "dock", "human", "interpretation", "plan", "progress", "shot", "video", "error")
+    SNAPSHOT = ("calib", "state", "feed", "dock", "human", "interpretation", "plan", "progress", "shot", "video", "error")
 
     def __init__(self):
         self.subs: list[asyncio.Queue] = []
@@ -157,6 +160,9 @@ class Session:
         self.states_seen: list[str] = []
         self.turn = 0                       # completed exchanges
         self.at_look = False
+        self.held_frame: np.ndarray | None = None   # the raw look-pose frame the stream shows while the arm is away
+        self.held_id = 0
+        self.ending = False                        # End was pressed: sign at the next safe point
         self.previous_photo: np.ndarray | None = None
         self.coverage = 0.0
         self.human_ink: list[Polyline] = []      # robot-board mm, all of the visitor's strokes so far
@@ -200,6 +206,12 @@ class Session:
     def pass_turn(self) -> None:
         self._pass.set()
 
+    def end(self) -> None:
+        """Finish the piece at the next safe point: now if it is the visitor's turn, after the look
+        photo if the robot is drawing. The arm is never interrupted here; Pause does that."""
+        self.ending = True
+        self.emit_state()
+
     async def reset_arm(self) -> None:
         """Hard reset to the observe pose: stop whatever the arm is doing, then (in the loop) clear its
         error, lift if it was left low, go to the look pose, and hand the turn back to the visitor.
@@ -220,6 +232,7 @@ class Session:
         per-piece messages in the snapshot. Settings, calibration, and the hand guard carry over."""
         self.rec = Recorder(root=self.rec.dir.parent, settings=self.settings.record())
         self.state, self.turn, self.at_look, self.previous_photo, self.coverage = "idle", 0, False, None, 0.0
+        self.ending = False          # End finished the last piece; the new one runs its exchanges
         self.human_ink, self.robot_ink, self.human_new_cam, self.human_new = [], [], [], []
         self.history, self.plan, self.result, self.last_error, self._signed = [], [], None, None, False
         self._pass.clear(); self._restart.clear(); self._running.set()
@@ -244,6 +257,7 @@ class Session:
         guard = "off" if self.guard is None else f"{self.guard.mode} at the look pose"
         self.bus.emit("state", state=self.state, turn=self.turn, coverage=round(self.coverage, 3),
                       error=self.last_error, at_look=self.at_look, hand_guard=guard, session=self.rec.id,
+                      ending=self.ending,
                       artists=list(ARTISTS), camera_errors=getattr(self.frames, "errors", 0),
                       camera_error=getattr(self.frames, "last_error", None), **asdict(self.settings))
 
@@ -266,6 +280,10 @@ class Session:
         self.at_look = value
         if self.guard is not None:
             self.guard.at_look = value
+
+    def _hold(self, frame: np.ndarray) -> None:
+        """The still the stream shows while the arm is away from the look pose."""
+        self.held_frame, self.held_id = frame, next(HELD_IDS)
 
     # ---- the loop ------------------------------------------------------------------------------
     async def run(self) -> None:
@@ -313,6 +331,9 @@ class Session:
             self.rec.write()
 
     async def _state_start(self) -> str:
+        live = self.frames.latest()
+        if live is not None:
+            self._hold(live.color)          # the first move is held on this, not shown live
         await self.ctl.lift_if_low()        # a tool left low by a dropped connection rises before it travels
         await self.ctl.go_look()
         self._set_look(True)
@@ -328,12 +349,14 @@ class Session:
         return self._homography
 
     async def _state_human_turn(self) -> str:
-        """The visitor draws, then presses Go on the page (the `pass` command). Nothing ends the turn
-        by itself: the stillness, hand, and marker-dot trigger was removed on day 2."""
+        """The visitor draws, then presses Go on the page (the `pass` command), or the operator presses
+        End (`end`). Nothing else ends the turn: the stillness, hand, and marker-dot trigger was removed on day 2."""
         self._pass.clear()
         while True:
             if not self._running.is_set():
                 return "human_turn"
+            if self.ending:
+                return "finish"
             if self._pass.is_set():
                 self._pass.clear()
                 return "capture"
@@ -348,10 +371,12 @@ class Session:
         drift = max(float(np.hypot(*(np.asarray(q) - np.asarray(e)))) for q, e in zip(quad, self.cal["marks_image"]))
         if drift > 70:
             self.bus.emit("error", message=f"board shifted {drift * self._mm_per_px():.0f} mm since calibration; re-run calibrate")
-        if self.guard is not None:
-            if self.guard.reading(Frame(frame, None, monotonic())) is True:
-                self.bus.emit("error", message="a hand was in the capture; keeping the previous reference frame")
-            else:
+        hand = self.guard is not None and self.guard.reading(Frame(frame, None, monotonic())) is True
+        if hand:
+            self.bus.emit("error", message="a hand was in the capture; keeping the previous reference frame")
+        else:
+            self._hold(frame)                  # a still with a hand in it would be held through the robot's whole turn
+            if self.guard is not None:
                 self.guard.reference = frame
         return vision.warp_to_board(frame, vision.board_quad(quad, self.cal["board_tl_index"])), frame
 
@@ -493,7 +518,7 @@ class Session:
         self.rec.record_turn(self.turn, coverage=round(self.coverage, 3))
         self.rec.set_turn(self.turn)
         self.rec.write()
-        if self.turn >= self.settings.exchanges or self.coverage >= cfg.COVERAGE_END:
+        if self.ending or self.turn >= self.settings.exchanges or self.coverage >= cfg.COVERAGE_END:
             return "finish"
         return "human_turn"
 
@@ -501,6 +526,7 @@ class Session:
         ox, oy = cfg.BOARD_W_MM - cfg.INSET_MM - 12, cfg.BOARD_H_MM - cfg.INSET_MM - 12
         signature = [[(ox + x, oy + y) for x, y in pl] for pl in cfg.SIGNATURE_MM]
         if not self._signed:
+            self.plan = signature  # what the stream overlays while the arm signs
             self.bus.emit("plan", polylines=signature, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=100,
                           turn=self.turn)
             await self._draw(signature, 100.0, 20.0, self.turn)

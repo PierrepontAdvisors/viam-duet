@@ -234,13 +234,16 @@ def test_a_hand_in_the_capture_does_not_become_the_reference(tmp_path, look_fram
         task = asyncio.create_task(s.run())
         await until_state(s, "human_turn")
         ref0 = s.guard.reference
+        held_id0, held_frame0 = s.held_id, s.held_frame
         frames.show_hand(True)
         frames.show_board(exchange_human)
         await s._capture_board()
         assert s.guard.reference is ref0                # the hand frame was refused
+        assert s.held_id == held_id0 and s.held_frame is held_frame0   # the held still is unchanged too
         frames.show_hand(False)
         await s._capture_board()
         assert s.guard.reference is not ref0            # a clean frame refreshes it
+        assert s.held_id != held_id0                    # ...and so does the held still
         await cancel(task)
         return s, drain(q)
     s, events = asyncio.run(scenario())
@@ -329,3 +332,94 @@ def test_reset_arm_also_works_while_paused(tmp_path, look_frame, exchange_start,
     s, ctl = asyncio.run(scenario())
     kinds = [c[0] for c in ctl.calls]
     assert kinds.count("go_look") == 2 and s.state == "human_turn" and s.turn == 0
+
+
+def test_the_bus_snapshots_feed_right_after_state():
+    bus = EventBus()
+    bus.emit("state", state="idle", turn=0)
+    bus.emit("feed", source="live")
+    bus.emit("plan", polylines=[])
+    assert [m["type"] for m in bus.snapshot()] == ["state", "feed", "plan"]
+
+
+def test_the_first_move_is_held_on_the_latest_live_frame(tmp_path, look_frame, exchange_start, calibration):
+    s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1)
+    seen = []
+
+    async def go_look():
+        seen.append(s.held_frame is not None)
+    ctl.go_look = go_look
+    asyncio.run(s._state_start())
+    assert seen == [True] and s.held_frame is not None
+
+
+def test_end_during_the_human_turn_signs_and_finishes(tmp_path, look_frame, exchange_start, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=3, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        assert s.held_frame is not None
+        before = drain(q)          # everything up to human_turn, none of it carrying the End flag yet
+        s.end()
+        await asyncio.wait_for(task, 60)
+        return s, ctl, before, drain(q)
+    s, ctl, before, events = asyncio.run(scenario())
+    assert s.states_seen == ["start", "human_turn", "finish", "finished"]
+    assert [c[0] for c in ctl.calls].count("draw") == 1            # the signature only
+    assert any(e["type"] == "state" and e["ending"] for e in events)
+    assert not any(e["type"] == "state" and e["ending"] for e in before)   # the flag is off until End
+    assert (s.rec.dir / "turn-00-final.jpg").exists()
+
+
+def test_end_during_the_robot_turn_finishes_after_the_look_photo(tmp_path, look_frame, exchange_start, exchange_human, exchange_robot, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=3, handoff="held", artist="haring")
+        ctl.stroke_s = 0.15
+        frames.robot_boards = [exchange_robot]
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        frames.show_board(exchange_human)
+        s.pass_turn()
+        await until_state(s, "robot_draw")
+        s.end()
+        await asyncio.wait_for(task, 60)
+        return s, ctl, drain(q)
+    s, ctl, events = asyncio.run(scenario())
+    assert s.states_seen == ["start", "human_turn", "capture", "interpret", "plan", "robot_draw", "look", "finish", "finished"]
+    assert [c[0] for c in ctl.calls].count("draw") == 2            # the plan, then the signature
+    assert s.turn == 1
+
+
+def test_end_while_paused_acts_on_resume(tmp_path, look_frame, exchange_start, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=3, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        await s.pause()
+        await until_state(s, "paused")
+        s.end()
+        s.resume()
+        await asyncio.wait_for(task, 60)
+        return s
+    s = asyncio.run(scenario())
+    # the doubled human_turn is the existing pause bookkeeping: the state returns "human_turn" when
+    # the loop notices it is paused, and only then does the run loop itself set "paused".
+    assert s.states_seen == ["start", "human_turn", "human_turn", "paused", "human_turn", "finish", "finished"]
+
+
+def test_reset_clears_the_end_flag_so_the_next_piece_runs_its_exchanges(tmp_path, look_frame, exchange_start, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=3, handoff="held")
+        task = asyncio.create_task(s.run_forever())
+        await until_state(s, "human_turn")
+        s.end()
+        await until_state(s, "finished")
+        s.restart()
+        await until_seen(s, "human_turn", count=2)
+        await asyncio.sleep(0.1)                        # the new piece stays in the human turn; it does not finish at once
+        state, ending = s.state, s.ending
+        await cancel(task)
+        return s, state, ending
+    s, state, ending = asyncio.run(scenario())
+    assert ending is False and state == "human_turn"
+    assert s.states_seen[-2:] == ["start", "human_turn"]
