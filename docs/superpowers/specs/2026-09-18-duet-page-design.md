@@ -15,7 +15,7 @@ Decisions made during brainstorming, in order:
 - **Layers, sources, loop.** Plan strokes, human ink, bubble, chips, and a board outline can each be toggled. The base image can be the live stream or any turn photo, and the turn photos play as a flipbook loop with the stitched video's timing.
 - **Claude speaks in a few storybook words.** A white thought cloud while it looks, a yellow speech bubble when it answers. The full sentences move to the operator panel.
 - **Full view or crop to board.** A zoom that keeps registration.
-- **Six additions**, all page-side: thinking animation, animated path preview, vector view with the person's drawing vectorized, a pen-down button, sound and voice with a mute, and a light-direction chooser.
+- **Eight additions**, all page-side: thinking animation, animated path preview, vector view with the person's drawing vectorized, a pen-down button, sound and voice with a mute, a light-direction chooser, a clean-board layer (pure white paper, vivid marker, frame and corner tape hidden), and bubbles placed beside the strokes they talk about.
 - **Out of scope for the demo:** shading and hatching, Mondrian and Van Gogh grammars (backend work, the page shows them greyed until the backend reports them), the public tunnel and token, the live-data particle panel, the gallery, captions burned into the video.
 
 File ownership tonight: this design owns `code/hackathon/duet/static/` only. The overnight backend session owns every `duet/*.py`, `tests/`, and `config.py`. The protocol below was agreed with that session message by message and is the contract.
@@ -28,7 +28,7 @@ Layers, bottom to top:
 
 1. **Picture layer** (`.pic`): the base image, the projected turn photo, and the overlay SVG. This whole layer is what "crop to board" zooms.
 2. **Chips**: top-left a yellow "Duet" badge tilted three degrees and the state pill; top-right the exchange counter pill, "Exchange 3 of 5" with the number in red.
-3. **Bubble**: in the desk margin left of the board, vertically centered, tail or thought-dots pointing at the board. In crop mode it shrinks and sits bottom-left. When the panel is open it lifts above the panel.
+3. **Bubble**: beside the board on the side nearer to what it talks about, at that height, with the tail or thought-dots pointing toward it (section 7, item 8). In crop mode it shrinks. It never overlaps the chips at the top or the panel when open.
 4. **Go button** (held mode, human turn only): a large green pill under the state chip reading "Go, robot!"; sends `pass`.
 5. **Corner button** bottom-right, translucent, "Controls". Hidden while the panel is open.
 6. **Panel**: translucent black over the bottom of the picture, rows described in section 8.
@@ -88,6 +88,7 @@ Toggles in the panel, each remembered in `localStorage`:
 - **Ink**: every human polyline from `human.polylines`, in ink black. This is the person's drawing, vectorized, and it is what the vector view shows.
 - **Bubble**, **Chips**: the storybook layer. Off gives a clean picture for a photo.
 - **Board**: yellow outline of the board and the dashed 15 mm inset. Off by default; a calibration check.
+- **Clean board**: on by default. A levels filter on the picture (`feComponentTransfer`, linear slope 1.9 and intercept -0.38 on each channel, then `saturate(1.7)`) stretches the gray paper to pure white and makes the marker vivid, and a white mask with an even-odd hole covers everything outside the 15 mm inset: frame, corner tape, desk, arm. The hole is the inset rectangle mapped through the same homography as the strokes, drawn as an untransformed SVG inside the picture layer, so it follows crop and recalibration and never suffers a perspective flip. With it off the raw camera shows.
 - **Ink only** (the vector view): hides the base image and the projected photo and paints the board area paper-white with a soft gray outside, so only vectors remain: the person's ink and the robot's strokes, registered as before. Two color pickers, one for ink and one for the robot's strokes, change the display only; the robot holds one green marker regardless. Defaults: ink `#111`, strokes `plan.color`.
 
 **Full view or crop to board**: crop zooms the picture layer so the board's bounding box fills 90 % of the frame, centered, with a 0.45 s ease. Because the photo and strokes live inside the picture layer, they stay registered. `Z` toggles.
@@ -100,13 +101,15 @@ Toggles in the panel, each remembered in `localStorage`:
 4. **Pen down.** The "Go, robot!" button on the stage and "Pass turn" in the panel both send `{type: "pass"}`. Shown only when `state.handoff` is `held` and the state is `human_turn`. The backend still refuses while a hand is over the board; the page shows its `error` text in the panel.
 5. **Sound and voice.** Off by default. A small speaker pill top-right beside the counter toggles it (the panel's Sound button mirrors it), and the first click also unlocks audio for the browser's autoplay policy. Voice: `speechSynthesis`, one utterance for `thought` when it arrives and one for `quip` at `plan`, rate 0.95, a warm English system voice chosen by a preference list (`Samantha`, `Karen`, `Moira`, else the default). Tones: WebAudio oscillators only, no files: a soft two-note chime on `human_turn` and on `robot_draw`, a short click per `progress`, a quiet slow pulse while thinking. The choice persists in `localStorage`.
 6. **Light chooser.** In the panel, a dial from 0 to 359 degrees drawn as a small sun that the operator drags around a miniature board; sends `{type: "set", direction: n}` on release and shows the value the server echoes in `state.direction`. The server validates the value, refuses bad ones with an `error` message, and echoes `direction` (default 0) and `energy` (default 0.5) in every `state`. An `energy` slider (0 to 1) sits beside the dial and works the same way.
+7. **Clean board.** Section 6. The filter constants are tuned once on the real frame at the look pose and kept in `duet.css`; the mask needs no tuning.
+8. **Bubbles in context.** Each bubble anchors to a point in board millimeters: the thought cloud to the centroid of `human.new` (this turn's ink), the speech bubble to the centroid of `plan.polylines`, the start line to the board center. The anchor goes through the same homography and crop transform as the strokes to a stage point. The bubble sits on the side of the board nearer to that point, its outer edge 3.6 % of the frame width from the board's bounding box, vertically centered on the point and clamped between the chips and the panel. Right-side bubbles mirror their tail and dots. Position changes ease over 0.35 s.
 
 ## 8. The operator panel
 
 Opened by the corner button, `C`, or `/?view=console`. Rows, all in frame units:
 
 - **Image**: Live · ◀ position ▶ · Play loop / Stop · Full view | Crop to board · Video (when available) · Hide controls at the far right.
-- **Layers**: Plan · Ink · Bubble · Chips · Board · Ink only · ink color · stroke color · Sound.
+- **Layers**: Plan · Ink · Bubble · Chips · Board · Clean board · Ink only · ink color · stroke color · Sound.
 - **Session**: Short | Medium | Long · exchanges − n + · Held | Dock · artist buttons (greyed unless `state.artists` lists them; `["haring"]` until the other grammars land) · Pause / Resume · Pass turn · Clear arm error (red) · light dial · energy slider.
 - **Status line 1** (monospace): `state` · `turn n of N` · `length` · `handoff` · `hand guard` · `error` · `ws connected | reconnecting`.
 - **Status line 2**: `claude <latency> s` · `sees …` · `adds …`, or `fallback grammar · <error>`.
@@ -130,7 +133,7 @@ Unknown message types are ignored. Every incoming field is checked for type befo
 
 ## 10. Files
 
-Preferred: `static/index.html` (markup only, plus the strings the backend's `test_web.py` asserts on: `<title>Duet`, `data-el="`, `dev-badge`, `/stream.mjpg`, `/ws`), `static/duet.css`, and `static/duet.js`, served from a `/static` mount the backend has been asked to add. If the mount is not present at swap-in time, the CSS and JS are inlined into `index.html` by hand and the split is kept in the working tree for later.
+`static/index.html` (markup only, plus the strings the backend's `test_web.py` asserts on: `<title>Duet`, `data-el="`, `dev-badge`, `/stream.mjpg`, `/ws`), `static/duet.css`, and `static/duet.js`, served from the `/static` mount the backend is adding tonight. If the mount is missing at swap-in time, the CSS and JS are inlined into `index.html` by hand and the split is kept in the working tree for later.
 
 `duet.js` is organized as small modules in one file with clear seams: `geometry` (board order, homography, displayed rect), `viewer` (sources, loop, crop), `layers`, `story` (state table, bubbles, thinking animation, path preview), `audio`, `panel`, `socket`. Each is a plain object with functions; no framework, no build step, no external scripts.
 
@@ -139,7 +142,8 @@ Every meaningful element carries a specific `data-el` name and the page includes
 ## 11. Testing
 
 - **Against the fakes**: `python -m duet.run --fake` (backend, tonight) serves the real protocol with a fake camera, arm, and canned proposals. The acceptance walk: open `/?view=console`; watch a full exchange; confirm each row of the state table in section 3, the ghost preview then solid fill, the loop after `finished`, Go sending `pass`, a refused setting showing in red, and reconnect after killing and restarting the server.
-- **Registration**: with the fake camera, turn on Board and confirm the outline sits on the four corner marks; step to a robot photo and confirm the green strokes sit on the green ink; toggle crop and confirm nothing slides.
+- **Registration**: with the fake camera, turn on Board and confirm the outline sits on the four corner marks; step to a robot photo and confirm the green strokes sit on the green ink; toggle crop and confirm nothing slides. With Clean board on, the white mask's hole must coincide with the dashed inset of the Board layer.
+- **Bubble placement**: on a turn whose plan sits in the board's left half the speech bubble is on the left with its tail pointing right, and the reverse on the right half; opening the panel moves a low bubble up above it.
 - **Self-test**: `/?selftest=1` runs the geometry functions in the console: the calibration's four corners must map to the SVG corners within 0.5 px, `boardOrder` must agree with `vision.board_quad` on the shipped `calibration.json`, and the contain-rect math must be exact for 16:9 and 4:3 stages. Failures print in red; nothing else changes on the page.
 - **Backend tests** that touch the page keep passing: `tests/test_web.py` checks the served page for the strings listed in section 10.
 - **Sound**: with the mute off nothing plays and no `AudioContext` is created; with it on, the first click unlocks audio and the chime plays on the next state change.
@@ -159,4 +163,4 @@ The approved interactive mockup is reproducible from `docs/duet/mockups/stage-vi
 | `set direction` and `set energy`, validated and echoed in `state` | landing tonight |
 | `state.artists` list | landing tonight, `["haring"]` at first |
 | Mondrian and Van Gogh grammars | optional, last task of the night |
-| `/static` mount | asked |
+| `/static` mount | landing tonight |
