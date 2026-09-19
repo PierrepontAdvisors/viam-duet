@@ -146,8 +146,8 @@ def make_client() -> anthropic.Anthropic:
 def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Polyline], history: list[dict],
             length_setting: str, exchange: int, exchange_total: int, artist: str = "haring") -> TurnResult:
     budget = cfg.BUDGET_MM[length_setting]
-    asks = ({"short": "one or two abstract shapes", "medium": "up to three abstract shapes",
-             "long": "up to five large abstract shapes spread across the free space"} if artist == "abstract" else
+    asks = ({"short": f"one to {cfg.STROKE_CAP['short']} abstract shapes", "medium": f"up to {cfg.STROKE_CAP['medium']} abstract shapes",
+             "long": f"up to {cfg.STROKE_CAP['long']} large abstract shapes spread across the free space, a full composition"} if artist == "abstract" else
             {"short": "one small addition: a detail or an accent",
             "medium": "one full element that extends the drawing",
             "long": "a full scene: six to twelve bold elements, such as figures, creatures, a setting and "

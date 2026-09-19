@@ -73,8 +73,8 @@ def test_cap_keeps_the_first_strokes_and_never_counts_dots():
     strokes = [[(0.0, float(i)), (40.0, float(i))] for i in range(6)]
     dots = [[(5.0, 5.0), (6.5, 5.0)], [(15.0, 5.0), (16.5, 5.0)]]
     out = op.cap(dots + strokes, "short")
-    assert out == dots + strokes[:2]
-    assert len(op.cap(strokes, "long")) == 5
+    assert out == dots + strokes[:cfg.STROKE_CAP["short"]]
+    assert len(op.cap(strokes * 3, "long")) == cfg.STROKE_CAP["long"]
 
 
 def test_stipple_fills_a_square_with_sparse_dots_inside_it_repeatably():

@@ -30,7 +30,7 @@ DOCK_ENTRY_MM = 60.0          # free planned moves end this far above the approa
 RELEASE_DROP_MM = 5.0         # on return, open this far above the seat pose so the marker drops into its cap
 
 BUDGET_MM = {"short": 400.0, "medium": 1200.0, "long": 4000.0}
-BUDGET_S = {"short": 15.0, "medium": 45.0, "long": 180.0}   # long is the "big scene" setting
+BUDGET_S = {"short": 30.0, "medium": 120.0, "long": 540.0}  # long is the "big scene" setting; tripled on day 2, the drawing ran short
 
 MOVE_TIMEOUT_S = 30.0
 LINE_TOLERANCE_MM = 1.0
@@ -72,7 +72,7 @@ MIN_SHAPE_MM = 30.0             # a proposed shape smaller than this across is e
 TARGET_SHAPE_MM = 40.0          # ...to this span, about its center
 SELF_GAP_MM = 5.0               # a stroke is cut where it comes back within this of its own path
 PARALLEL_GAP_MM = 6.0           # a stroke running alongside an earlier one within this is dropped
-STROKE_CAP = {"short": 2, "medium": 3, "long": 5}   # strokes kept per turn, dots not counted
+STROKE_CAP = {"short": 3, "medium": 8, "long": 15}  # strokes kept per turn, dots not counted (tripled on day 2)
 DOT_SPACING_MM = 9.0            # pointillist fill: grid spacing, jitter, tick length, cap per turn
 DOT_JITTER_MM = 1.5
 DOT_MM = 1.5
