@@ -54,6 +54,18 @@ ul, ol { padding: 0; list-style: none; }
 .frame { position: absolute; inset: var(--frame-inset); border: var(--frame-stroke) solid var(--ink); border-radius: var(--paper-radius); pointer-events: none; }
 .plate-black .frame { border-color: #fff; }
 
+/* wash: the inside of the frame is calmer than the margin */
+.wash { position: absolute; inset: var(--frame-inset); border-radius: var(--paper-radius); background: rgba(255, 255, 255, .22); pointer-events: none; }
+.plate-cream .wash { background: rgba(255, 255, 255, .12); }
+.plate-black .wash { background: rgba(0, 0, 0, .35); }
+
+/* logo: four toy blocks, ink parts in currentColor */
+.logo { display: block; color: var(--ink); }
+.plate-black .logo { color: #fff; }
+.wordmark .logo { height: 3.2cqw; width: auto; }
+.foot-logo { height: 2.4cqw; width: auto; }
+.name .logo { width: 22cqw; height: auto; }
+
 /* bands */
 .band { position: relative; display: flex; justify-content: space-between; align-items: center; gap: var(--s2); min-width: 0; }
 .kicker { font-size: var(--caption); font-weight: 700; line-height: 1; letter-spacing: .12em; text-transform: uppercase;

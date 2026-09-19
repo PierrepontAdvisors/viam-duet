@@ -198,3 +198,26 @@ test('deck.css is built on the tokens: four type sizes, three templates, no stra
   assert.ok(sizes.length >= 8, 'font sizes are set through the tokens');
   for (const v of sizes) assert.match(v, /^var\(--(display|headline|body|caption)\)$/, `font-size "${v}" is not a token`);
 });
+
+test('the toy logo replaces the Duet word, and every frame has a wash', () => {
+  const h = read('index.html');
+  const sym = h.slice(h.indexOf('<symbol id="logo"'), h.indexOf('</symbol>', h.indexOf('<symbol id="logo"')));
+  assert.ok(sym.length > 0, 'symbol #logo exists');
+  assert.equal((sym.match(/<rect /g) || []).length, 4, 'four blocks');
+  for (const ch of ['>D<', '>U<', '>E<', '>T<']) assert.ok(sym.includes(ch), `block letter ${ch}`);
+  assert.ok(sym.includes('currentColor'), 'ink parts use currentColor');
+  const sections = h.split(/<section class="card /).slice(1);
+  sections.forEach((s, i) => {
+    assert.ok(/class="wordmark"[^>]*>\s*<svg class="logo/.test(s), `card ${i + 1} header logo`);
+    assert.ok(s.includes('class="wash"'), `card ${i + 1} wash`);
+    if (i !== 5) {
+      assert.ok(/class="band foot">\s*<svg class="logo foot-logo/.test(s), `card ${i + 1} footer logo`);
+      assert.ok(!s.includes('Viam Fine Motor Skills · 2026'), `card ${i + 1} footer line replaced`);
+    }
+  });
+  assert.ok(sections[5].includes('viam-server owns the arm'), 'card 6 keeps the strip');
+  assert.ok(/class="name"[^>]*>\s*<svg class="logo/.test(sections[1]), 'card 2 large logo');
+  const css = read('deck.css');
+  assert.ok(css.includes('.wash {') && css.includes('.plate-black .wash'), 'wash rules');
+  assert.ok(css.includes('.plate-black .logo'), 'logo turns white on black');
+});
