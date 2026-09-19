@@ -16,11 +16,13 @@ from duet.camera import Frame
 from duet.claude_turn import TurnResult
 from duet.controller import Blocked
 from duet.strokes import Polyline, length
-from duet.styles import abstract, haring, mondrian, vangogh
+from duet.styles import abstract, architect, designer, haring, mimic, mondrian, shader, vangogh
+from duet.styles.ink import InkTurn
 from duet.turn import all_ink, map_strokes
 
-ARTISTS = ("abstract", "haring", "mondrian", "vangogh")
-STYLERS = {"abstract": abstract, "haring": haring, "mondrian": mondrian, "vangogh": vangogh}
+ARTISTS = ("abstract", "mimic", "haring", "mondrian", "vangogh", "architect", "designer", "shader")   # display order
+STYLERS = {"abstract": abstract, "mimic": mimic, "haring": haring, "mondrian": mondrian, "vangogh": vangogh,
+           "architect": architect, "designer": designer, "shader": shader}
 # Where Resume picks up after a fault. `interpret` and `plan` retry themselves: the visitor's strokes
 # are already consumed, so sending them back to `human_turn` would ask for the mark to be drawn again.
 RECOVER_TIMEOUT_S = 45.0      # a recover that hangs on a dropped connection must not hold the loop forever
@@ -167,6 +169,8 @@ class Session:
         self.plan: list[Polyline] = []
         self.color = cfg.DOCK_SLOTS[0]
         self.result: TurnResult | None = None
+        self.turn_artist = self.settings.artist  # fixed when the mark is captured; the setting may change mid-turn
+        self.ink_turn: InkTurn | None = None     # an ink artist's answer for the exchange in progress
         self.last_error: str | None = None
         self.dock_status: dict[str, str] = {}
         self.dot_displacement: dict[str, tuple[float, float]] = {}
@@ -222,6 +226,7 @@ class Session:
         self.state, self.turn, self.at_look, self.previous_photo, self.coverage = "idle", 0, False, None, 0.0
         self.human_ink, self.robot_ink, self.human_new_cam, self.human_new = [], [], [], []
         self.history, self.plan, self.result, self.last_error, self._signed = [], [], None, None, False
+        self.turn_artist, self.ink_turn = self.settings.artist, None
         self._pass.clear(); self._restart.clear(); self._running.set()
         for kind in ("human", "interpretation", "plan", "progress", "shot", "video", "error", "dock"):
             self.bus.last.pop(kind, None)
@@ -252,15 +257,17 @@ class Session:
         self.states_seen.append(state)
         self.emit_state()
 
-    def _emit_shot(self, who: str, turn: int) -> None:
+    def _emit_shot(self, who: str, turn: int, artist: str | None = None) -> None:
         """`who` is "start", "human", "robot" or "final", so the page can label thumbnails without parsing
         the URL, and `turn` is the photo's own turn number, the one in its filename. `frame_url` is the
-        raw landscape camera frame of the same capture, when one was saved."""
+        raw landscape camera frame of the same capture, when one was saved. `artist` is the exchange's
+        artist for the human and robot photos of an exchange."""
         p = self.rec.latest_photo
         if p is not None:
             f = self.rec.latest_frame
+            extra = {"artist": artist} if artist else {}
             self.bus.emit("shot", url=f"/sessions/{self.rec.id}/{p.name}", turn=turn, who=who,
-                          frame_url=f"/sessions/{self.rec.id}/{f.name}" if f is not None else None)
+                          frame_url=f"/sessions/{self.rec.id}/{f.name}" if f is not None else None, **extra)
 
     def _set_look(self, value: bool) -> None:
         self.at_look = value
@@ -372,43 +379,60 @@ class Session:
             return "human_turn"
         self.human_new_cam = new_cam
         self.human_new = vision.cam_to_robot(new_cam, self.cal)
+        self.turn_artist = self.settings.artist       # whoever is chosen now answers this mark
         self.human_ink = self.human_ink + self.human_new
         self.coverage = coverage
         self.previous_photo = photo
         self.rec.save_photo(self.turn + 1, "human", photo, frame)
-        self._emit_shot("human", self.turn + 1)
+        self._emit_shot("human", self.turn + 1, artist=self.turn_artist)
         self.bus.emit("human", polylines=self.human_ink, new=self.human_new, found=True, turn=self.turn + 1)
         return "interpret"
 
     async def _state_interpret(self) -> str:
+        styler = STYLERS[self.turn_artist]
+        if getattr(styler, "FROM_INK", False):
+            # an ink artist answers from the visitor's strokes at once; Claude is not asked
+            self.result = None
+            self.ink_turn = styler.respond(self.human_new, self.settings.energy, self.settings.direction,
+                                           self.turn + 1, self.settings.length)
+            it = self.ink_turn
+            self.bus.emit("interpretation", sees=it.sees, adds=it.adds, thought=it.thought, quip=it.quip,
+                          source="ink", latency_s=0.0, error=None, turn=self.turn + 1, artist=self.turn_artist)
+            return "plan"
+        self.ink_turn = None
         self.result = await self.brain.propose(self.previous_photo, self.human_new_cam, self.history,
                                                self.settings.length, self.turn + 1, self.settings.exchanges,
-                                               artist=self.settings.artist)
+                                               artist=self.turn_artist)
         p = self.result.proposal
         self.bus.emit("interpretation", sees=p.sees if p else "", adds=p.adds if p else "",
                       thought=(getattr(p, "thought", "") or FALLBACK_THOUGHT) if p else FALLBACK_THOUGHT,
                       quip=(getattr(p, "quip", "") or FALLBACK_QUIP) if p else FALLBACK_QUIP,
                       source=self.result.source, latency_s=round(self.result.latency_s, 2), error=self.result.error,
-                      turn=self.turn + 1)
+                      turn=self.turn + 1, artist=self.turn_artist)
         return "plan"
 
     async def _state_plan(self) -> str:
         budget = cfg.BUDGET_MM[self.settings.length]
         ink = all_ink(self.previous_photo, self.cal)
-        r = self.result
-        if r is not None and r.proposal is not None:
+        styler = STYLERS[self.turn_artist]
+        clearance = getattr(styler, "CLEARANCE_MM", cfg.CLEARANCE_MM)    # Shader's dots may come closer to the ink
+        r, it = self.result, self.ink_turn
+        if it is not None:
+            styled, self.color = it.strokes, it.color
+            sees, adds, source = it.sees, it.adds, "ink"
+        elif r is not None and r.proposal is not None:
             strokes = map_strokes([s.model_dump() for s in r.proposal.strokes], self.cal)
-            styled, self.color = STYLERS[self.settings.artist].style(
+            styled, self.color = styler.style(
                 planner.validate(strokes, ink, budget),
                 energy=self.settings.energy, direction_deg=self.settings.direction)
             sees, adds, source = r.proposal.sees, r.proposal.adds, r.source
         else:
-            styled, self.color = STYLERS[self.settings.artist].fallback(self.human_new)
+            styled, self.color = styler.fallback(self.human_new)
             sees, adds, source = "(fallback)", "outline and ticks around your mark", "fallback"
-        self.plan = planner.finalize(styled, ink, budget, length_setting=self.settings.length)
-        if not self.plan and r is not None and r.proposal is not None:
-            # every stroke Claude proposed sat inside the 5 mm clearance: answer the visitor's mark instead
-            styled, self.color = STYLERS[self.settings.artist].fallback(self.human_new)
+        self.plan = planner.finalize(styled, ink, budget, clearance_mm=clearance, length_setting=self.settings.length)
+        if not self.plan and source != "fallback":
+            # every stroke sat inside the clearance or off the board: answer the visitor's mark instead
+            styled, self.color = styler.fallback(self.human_new)
             self.plan = planner.finalize(styled, ink, budget, length_setting=self.settings.length)
             source = "fallback"
         if not self.plan:
@@ -417,11 +441,13 @@ class Session:
         self.history = self.history + [{"sees": sees, "adds": adds, "source": source}]
         turn = self.turn + 1
         self.rec.save_svg(turn, svg.render(ink, self.robot_ink, self.plan, self.color))
-        self.rec.record_turn(turn, sees=sees, adds=adds, source=source, latency_s=round(r.latency_s, 2) if r else None,
+        self.rec.record_turn(turn, sees=sees, adds=adds, source=source, artist=self.turn_artist,
+                             latency_s=round(r.latency_s, 2) if r else (0.0 if it is not None else None),
                              error=r.error if r else None, color=self.color,
                              planned_mm=round(sum(length(pl) for pl in self.plan)))
         self.bus.emit("plan", polylines=self.plan, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=budget,
-                      turn=self.turn + 1)
+                      turn=self.turn + 1, artist=self.turn_artist)
+        self.ink_turn = None
         return "robot_draw"
 
     async def _wait_hands_clear(self) -> None:
@@ -489,7 +515,7 @@ class Session:
         _, self.coverage = vision.new_ink(photo, self.previous_photo)
         self.previous_photo = photo
         self.rec.save_photo(self.turn, "robot", photo, frame)
-        self._emit_shot("robot", self.turn)
+        self._emit_shot("robot", self.turn, artist=self.turn_artist)
         self.rec.record_turn(self.turn, coverage=round(self.coverage, 3))
         self.rec.set_turn(self.turn)
         self.rec.write()

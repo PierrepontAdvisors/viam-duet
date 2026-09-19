@@ -28,7 +28,7 @@ from duet import claude_turn
 from duet import config as cfg
 from duet import vision
 from duet.recorder import Recorder
-from duet.session import EventBus, HandGuard, Session, Settings
+from duet.session import ARTISTS, EventBus, HandGuard, Session, Settings
 from duet.web import make_app
 
 
@@ -39,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--replay", default="20260918-190258", help="with --fake: the session folder whose boards are replayed")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--host", default="127.0.0.1", help="the page accepts arm commands from any client, so stay on loopback unless a second screen needs it")
-    p.add_argument("--artist", choices=("abstract", "haring", "mondrian", "vangogh"), default=cfg.ARTIST)
+    p.add_argument("--artist", choices=ARTISTS, default=cfg.ARTIST)
     p.add_argument("--length", choices=tuple(cfg.BUDGET_MM), default="short")
     p.add_argument("--exchanges", type=int, default=5)
     p.add_argument("--handoff", choices=("held", "dock"), default="held" if cfg.HELD_MODE else "dock")

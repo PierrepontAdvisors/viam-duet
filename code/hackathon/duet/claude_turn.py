@@ -97,7 +97,40 @@ ARTIST_NOTES = {
     "vangogh": "The artist mode is Vincent van Gogh: flowing lines and swirls; your strokes will be redrawn as "
                "rows of short curved dashes streaming along them, so give long sweeping lines rather than small "
                "marks. Be generous: use the budget.",
+    "architect": "The artist mode is Architect: you draft in plan and elevation. Read the person's mark as a site "
+                 "or a building element and build around it: walls, a doorway with its quarter-circle swing, a "
+                 "stair run, a colonnade of posts, a roofline, a ground line. Straight lines and right angles; "
+                 "arcs only as door swings and arches. Your straight lines will be squared up for you, so give "
+                 "simple runs of horizontal and vertical segments.",
+    "designer": "The artist mode is Product Designer: you sketch objects. Read the person's mark as a component, "
+                "a button, a handle, a lens, a screen, and sketch the product it belongs to around it: a housing "
+                "with rounded corners, a second view or an exploded part set beside it, small circles for "
+                "controls. Sharp corners will be rounded for you, so give clean boxes and simple outlines.",
+    # Mimic and Shader work from the visitor's ink and never ask; these notes only cover a stray call.
+    "mimic": "The artist mode is Mimic: echo the person's shapes with copies of them set beside the originals.",
+    "shader": "The artist mode is Shader: fill the person's closed shapes with dots strokes; add nothing else.",
 }
+
+# What a turn should add, per artist and length setting; artists without their own entry use Haring's.
+ASKS = {
+    "haring": {"short": "one small addition: a detail or an accent",
+               "medium": "one full element that extends the drawing",
+               "long": "a full scene: six to twelve bold elements, such as figures, creatures, a setting and "
+                       "symbols, each a simple continuous outline, spread across the free space"},
+    "abstract": {"short": f"one to {cfg.STROKE_CAP['short']} abstract shapes",
+                 "medium": f"up to {cfg.STROKE_CAP['medium']} abstract shapes",
+                 "long": f"up to {cfg.STROKE_CAP['long']} large abstract shapes spread across the free space, a full composition"},
+    "architect": {"short": "one element: a wall, a doorway, or a post",
+                  "medium": "one room or one elevation that extends the drawing",
+                  "long": "a full plan or elevation: walls, doors, a stair, a colonnade, a roofline, spread across the free space"},
+    "designer": {"short": "one component: a button, a port, or a handle",
+                 "medium": "the housing around the part, one clean outline",
+                 "long": "the whole product: housing, controls, a second view or an exploded part beside it"},
+}
+
+
+def asks_for(artist: str, length_setting: str) -> str:
+    return ASKS.get(artist, ASKS["haring"])[length_setting]
 
 
 def grid_overlay(board_bgr: np.ndarray) -> np.ndarray:
@@ -146,12 +179,7 @@ def make_client() -> anthropic.Anthropic:
 def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Polyline], history: list[dict],
             length_setting: str, exchange: int, exchange_total: int, artist: str = "haring") -> TurnResult:
     budget = cfg.BUDGET_MM[length_setting]
-    asks = ({"short": f"one to {cfg.STROKE_CAP['short']} abstract shapes", "medium": f"up to {cfg.STROKE_CAP['medium']} abstract shapes",
-             "long": f"up to {cfg.STROKE_CAP['long']} large abstract shapes spread across the free space, a full composition"} if artist == "abstract" else
-            {"short": "one small addition: a detail or an accent",
-            "medium": "one full element that extends the drawing",
-            "long": "a full scene: six to twelve bold elements, such as figures, creatures, a setting and "
-                    "symbols, each a simple continuous outline, spread across the free space"})[length_setting]
+    asks = asks_for(artist, length_setting)
     hist = "\n".join(f"  exchange {i + 1}: saw \"{h['sees']}\"; added \"{h['adds']}\"" for i, h in enumerate(history)) or "  (this is the first exchange)"
     text = (f"{ARTIST_NOTES.get(artist, ARTIST_NOTES['haring'])}\n"
             f"Exchange {exchange} of {exchange_total}. Length setting: {length_setting}, so add {asks}. "

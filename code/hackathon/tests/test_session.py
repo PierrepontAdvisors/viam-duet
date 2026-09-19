@@ -6,7 +6,7 @@ import pytest
 from duet import config as cfg
 from duet.fakes import FakeBrain, FakeController, FakeFrames
 from duet.recorder import Recorder
-from duet.session import EventBus, HandGuard, Session, Settings
+from duet.session import ARTISTS, EventBus, HandGuard, Session, Settings
 
 
 def drain(q):
@@ -180,7 +180,9 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
     new = s.update_settings(length="medium", exchanges=4, energy=0.8, direction=45)
     assert (new.exchanges, new.energy, new.direction) == (4, 0.8, 45)
     state = s.bus.last["state"]
-    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == ["abstract", "haring", "mondrian", "vangogh"]
+    assert state["direction"] == 45 and state["energy"] == 0.8 and state["artists"] == list(ARTISTS)
+    for a in ARTISTS:
+        assert s.update_settings(artist=a).artist == a
     s.update_settings(handoff="dock")                     # the arm's held flag follows the page's Marker toggle
     assert ctl.held_mode is False
     s.update_settings(handoff="held")
@@ -329,3 +331,59 @@ def test_reset_arm_also_works_while_paused(tmp_path, look_frame, exchange_start,
     s, ctl = asyncio.run(scenario())
     kinds = [c[0] for c in ctl.calls]
     assert kinds.count("go_look") == 2 and s.state == "human_turn" and s.turn == 0
+
+
+def test_the_artist_is_fixed_when_the_mark_is_captured(tmp_path, look_frame, exchange_start, exchange_human, exchange_robot, calibration):
+    class WaitingBrain(FakeBrain):
+        def __init__(self):
+            super().__init__()
+            self.go, self.artists = asyncio.Event(), []
+
+        async def propose(self, board, human_cam, history, length, exchange, total, artist="haring"):
+            self.artists.append(artist)
+            await self.go.wait()
+            return await super().propose(board, human_cam, history, length, exchange, total, artist)
+
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held", artist="abstract")
+        s.brain = WaitingBrain()
+        frames.robot_boards = [exchange_robot]
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        frames.show_board(exchange_human)
+        s.pass_turn()
+        await until_state(s, "interpret")
+        s.update_settings(artist="haring")        # picked for the next turn while this one is being thought about
+        s.brain.go.set()
+        await asyncio.wait_for(task, 60)
+        return s, rec, drain(q)
+    s, rec, events = asyncio.run(scenario())
+    assert s.brain.artists == ["abstract"]
+    interp = next(e for e in events if e["type"] == "interpretation")
+    plan = next(e for e in events if e["type"] == "plan")
+    assert interp["artist"] == "abstract" and plan["artist"] == "abstract"
+    shots = {e["who"]: e for e in events if e["type"] == "shot"}
+    assert shots["human"]["artist"] == "abstract" and shots["robot"]["artist"] == "abstract" and "artist" not in shots["start"]
+    assert s.bus.last["state"]["artist"] == "haring"
+    meta = json.loads((rec.dir / "session.json").read_text())
+    assert next(t for t in meta["turns"] if t["turn"] == 1)["artist"] == "abstract"
+
+
+def test_an_ink_artist_answers_without_the_brain(tmp_path, look_frame, exchange_start, exchange_human, exchange_robot, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held", artist="mimic")
+        frames.robot_boards = [exchange_robot]
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        frames.show_board(exchange_human)
+        s.pass_turn()
+        await asyncio.wait_for(task, 60)
+        return s, rec, drain(q)
+    s, rec, events = asyncio.run(scenario())
+    assert s.brain.n == 0
+    interp = next(e for e in events if e["type"] == "interpretation")
+    assert interp["source"] == "ink" and interp["artist"] == "mimic" and interp["quip"] == "Copycat!" and interp["latency_s"] == 0.0
+    plan = next(e for e in events if e["type"] == "plan")
+    assert plan["artist"] == "mimic" and plan["polylines"]
+    meta = json.loads((rec.dir / "session.json").read_text())
+    assert meta["history"][0]["source"] == "ink" and meta["history"][0]["adds"].endswith("shifted")

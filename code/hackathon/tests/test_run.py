@@ -3,6 +3,7 @@ import os
 import signal
 
 from duet import recorder, run
+from duet.session import ARTISTS
 
 
 def test_parser_defaults_and_fake_flags():
@@ -46,3 +47,8 @@ def test_main_fake_wires_the_loop_and_shuts_down(tmp_path, monkeypatch):
 
     asyncio.run(scenario())
     assert seen[:3] == ["start", "human_turn", "capture"], seen
+
+
+def test_every_artist_is_a_choice_on_the_command_line():
+    for a in ARTISTS:
+        assert run.build_parser().parse_args(["--artist", a]).artist == a
