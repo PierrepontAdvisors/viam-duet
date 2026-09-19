@@ -933,9 +933,11 @@ class Recorder:
         return self.photos[-1] if self.photos else None
 
     def stitch(self, per_frame_s: float = 1.0, hold_last_s: float = 2.0) -> Path | None:
-        """One frame per turn, the last one held. Uses the landscape camera frames when every turn
-        has one, else the warped photos. The concat demuxer only honors the final duration when the
-        last file is listed once more after it."""
+        """One second per photo, the last one held. Uses the landscape camera frames when every
+        photo has one, else the warped photos. ffmpeg 9's concat demuxer overshoots the listed
+        durations by about a second (measured: 4.9 s for a 4.0 s listing), so the output is capped
+        at the exact frame count instead. Never raises: on failure the stills remain and None is
+        returned."""
         sources = self.frames if self.frames and len(self.frames) == len(self.photos) else self.photos
         if not sources:
             return None
@@ -947,9 +949,17 @@ class Recorder:
         lines += [f"file '{last}'", f"duration {hold_last_s}", f"file '{last}'"]
         listing.write_text("\n".join(lines) + "\n")
         out = self.dir / "session.mp4"
-        subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
-                        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p", "-r", "10",
-                        "-c:v", "libx264", "-movflags", "+faststart", str(out)], check=True)
+        fps = 10
+        total_frames = round((per_frame_s * (len(sources) - 1) + hold_last_s) * fps)
+        try:
+            subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
+                            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p", "-r", str(fps),
+                            "-frames:v", str(total_frames), "-c:v", "libx264", "-movflags", "+faststart", str(out)],
+                           check=True, capture_output=True, text=True)
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+            print(f"stitch failed, keeping the stills: {(getattr(exc, 'stderr', '') or str(exc)).strip()[:400]}")
+            return None
+        listing.unlink(missing_ok=True)
         return out
 
 
@@ -970,7 +980,7 @@ def video_size(path: Path) -> tuple[int, int]:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_recorder.py -q`
-Expected: `4 passed`. If the duration is off by a whole second, ffmpeg 9's concat handling changed: try dropping the repeated last-file line and re-measure; keep whichever gives 4 s.
+Expected: `4 passed`. (Measured on ffmpeg 9.0.1 during execution: the concat listing alone gives 4.9 s and dropping the repeated last file gives 2.8 s; the `-frames:v` cap gives exactly 4.0 s and 5.0 s, which is why the code above caps the frame count. A review follow-up added: stitch never raises, write failures raise `OSError`, `shutil.which` for the binaries, no history entry for turn 0, and `current.json` is only written by the session that owns it.)
 
 - [ ] **Step 5: Commit**
 
@@ -1131,6 +1141,26 @@ def test_held_trigger_fires_from_the_frames_alone(tmp_path, look_frame, exchange
     assert "capture" in s.states_seen
 
 
+def test_a_hand_over_the_board_blocks_the_capture_until_it_leaves(tmp_path, look_frame, exchange_start, exchange_human, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        frames.show_board(exchange_human)
+        frames.show_hand(True)
+        s.pass_turn()                                   # the operator passes while a hand is still over the board
+        await until_seen(s, "human_turn", count=2)      # capture refused, back to the human turn
+        assert not any(c[0] == "draw" for c in ctl.calls)
+        frames.show_hand(False)
+        s.pass_turn()
+        await until_seen(s, "interpret")                # now the capture went through
+        await cancel(task)
+        return s, drain(q)
+    s, events = asyncio.run(scenario())
+    assert any(e["type"] == "error" and "hand" in e["message"] for e in events)
+    assert s.states_seen.count("capture") == 2
+
+
 def test_pause_and_resume_recover_the_arm(tmp_path, look_frame, exchange_start, calibration):
     async def scenario():
         s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=1, handoff="held")
@@ -1272,11 +1302,19 @@ class FakeFrames:
     def jitter(self, seconds: float) -> None:
         self.jitter_until = monotonic() + seconds
 
+    def show_hand(self, present: bool) -> None:
+        """A hand-sized patch of medium skin over the board center, on the camera image only."""
+        self.hand = present
+
     def _frame(self) -> Frame:
         img = self.image
+        if getattr(self, "hand", False):
+            img = self.image.copy()
+            cx, cy = int(self.mask.nonzero()[1].mean()), int(self.mask.nonzero()[0].mean())
+            cv2.ellipse(img, (cx, cy), (100, 75), 20, 0, 360, (90, 120, 170), -1)
         if monotonic() < self.jitter_until:
             self.n += 1
-            img = cv2.add(self.image, np.full_like(self.image, 12 if self.n % 2 else 0))
+            img = cv2.add(img, np.full_like(img, 12 if self.n % 2 else 0))
         return Frame(img, self.depth, monotonic())
 
     def latest(self) -> Frame:
@@ -1691,6 +1729,11 @@ class Session:
         return float(self.cal.get("mm_per_px") or vision.mm_per_px(np.array(self.cal["marks_image"], np.float32)))
 
     async def _state_capture(self) -> str:
+        # The trigger's debounce can fire one poll after a hand was last seen; never photograph a
+        # hand (it would be traced as ink and become the hand check's reference).
+        if self.guard is not None and await self.guard():
+            self.bus.emit("error", message="a hand is still over the board; still your turn")
+            return "human_turn"
         photo, frame = await self._capture_board()
         mask, coverage = vision.new_ink(photo, self.previous_photo)
         new_cam = vision.trace(mask)
@@ -1812,14 +1855,17 @@ class Session:
         self._emit_shot("final")
         self.rec.write()
         video = await asyncio.to_thread(self.rec.stitch)
-        self.bus.emit("video", url=f"/sessions/{self.rec.id}/session.mp4", path=str(video))
+        if video is not None:
+            self.bus.emit("video", url=f"/sessions/{self.rec.id}/session.mp4", path=str(video))
+        else:
+            self.bus.emit("error", message="the video could not be stitched; the turn photos are in the session folder")
         return "finished"
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_session.py -q`
-Expected: `6 passed`. The full-exchange test runs the real trace and ffmpeg and takes several seconds. If the traced x-range assertion misses by a couple of millimeters, print `human["new"]` and adjust the bounds; large offsets mean `FakeFrames._compose` or the `cam_to_robot` step is wrong, not the bounds.
+Expected: `7 passed`. The full-exchange test runs the real trace and ffmpeg and takes several seconds. If the traced x-range assertion misses by a couple of millimeters, print `human["new"]` and adjust the bounds; large offsets mean `FakeFrames._compose` or the `cam_to_robot` step is wrong, not the bounds.
 
 - [ ] **Step 6: Commit**
 
