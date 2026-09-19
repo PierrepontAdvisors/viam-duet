@@ -33,11 +33,11 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     b.onclick = () => applyLayer(name, !b.classList.contains('on'));
   }
   const inkColor = $('ink-color'), strokeColor = $('stroke-color');
-  inkColor.value = store.get('color.ink', '#111111'); stage.style.setProperty('--ink', inkColor.value);
-  inkColor.oninput = () => { stage.style.setProperty('--ink', inkColor.value); store.set('color.ink', inkColor.value); };
+  inkColor.value = store.get('color.ink', '#111111'); stage.style.setProperty('--vec-ink', inkColor.value);
+  inkColor.oninput = () => { stage.style.setProperty('--vec-ink', inkColor.value); store.set('color.ink', inkColor.value); };
   const lockedStroke = store.get('color.stroke', null);
-  if (lockedStroke) { view.strokeLocked = true; strokeColor.value = lockedStroke; stage.style.setProperty('--stroke', lockedStroke); }
-  strokeColor.oninput = () => { view.strokeLocked = true; stage.style.setProperty('--stroke', strokeColor.value); store.set('color.stroke', strokeColor.value); };
+  if (lockedStroke) { view.strokeLocked = true; strokeColor.value = lockedStroke; stage.style.setProperty('--vec-stroke', lockedStroke); }
+  strokeColor.oninput = () => { view.strokeLocked = true; stage.style.setProperty('--vec-stroke', strokeColor.value); store.set('color.stroke', strokeColor.value); };
   const inkWidth = $('ink-width'), strokeWidth = $('stroke-width');
   function applyWidths() {
     stage.style.setProperty('--ink-w', inkWidth.value / 10); stage.style.setProperty('--stroke-w', strokeWidth.value / 10);
@@ -236,7 +236,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
       if (msg.state === 'human_turn' && msg.turn === 0 && view.source !== 'live') showLive();
     }
     if (msg.type === 'error') view.lastError = { message: msg.message, t: Date.now() };
-    if (msg.type === 'plan' && !view.strokeLocked) { stage.style.setProperty('--stroke', msg.color); strokeColor.value = msg.color; }
+    if (msg.type === 'plan' && !view.strokeLocked) { stage.style.setProperty('--vec-stroke', msg.color); strokeColor.value = msg.color; }
     renderAll();
   });
   if (new URLSearchParams(location.search).get('view') === 'console') toggleControls(true);

@@ -1,6 +1,6 @@
 /* Duet stage. Everything is sized in container-query width units (cqw) of the 16:9 stage. */
 /* colours, type, space and paper come from tokens.css; these are the page's own */
-:root { --stroke: #1b8f3a; --panel: var(--story); --mono: "SF Mono", Menlo, Consolas, monospace; }
+:root { --vec-stroke: #1b8f3a; --panel: var(--story); --mono: "SF Mono", Menlo, Consolas, monospace; }
 html, body { margin: 0; height: 100%; overflow: hidden; }
 body { display: flex; align-items: center; justify-content: center; background: var(--yellow) url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><g fill='none' stroke='%23111' stroke-opacity='.12' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'><path d='M0 24 q10 -14 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0'/><path d='M0 140 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14'/><path d='M96 56 l-10 -10 M110 50 l0 -14 M124 56 l10 -10 M90 70 l-14 0 M130 70 l14 0'/><path d='M30 70 l.01 0 M50 100 l.01 0' stroke-width='10'/><path d='M14 56 a18 18 0 0 1 36 0 M60 116 a14 14 0 0 0 28 0'/></g></svg>") 0 0 / 160px 160px repeat;
        animation: drift 27s linear infinite; }
@@ -31,11 +31,11 @@ body { display: flex; align-items: center; justify-content: center; background: 
 .paper { fill: var(--paper); visibility: hidden; }
 .stage.vector .paper { visibility: visible; }
 .ov path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.ov .ink path { stroke: var(--ink); stroke-width: var(--ink-w, 1.2); }
-.ov .robot path { stroke: var(--stroke); stroke-width: var(--stroke-w, 1.4); }
+.ov .ink path { stroke: var(--vec-ink, var(--ink)); stroke-width: var(--ink-w, 1.2); }
+.ov .robot path { stroke: var(--vec-stroke, var(--robot)); stroke-width: var(--stroke-w, 1.4); }
 .ov .robot path.queued { stroke-dasharray: 2 1.5; }
 .ov .board rect { fill: none; stroke: var(--yellow); stroke-width: .8; }
-.ov .ghost path { stroke: var(--stroke); stroke-width: 1.4; opacity: .35; }
+.ov .ghost path { stroke: var(--vec-stroke, var(--robot)); stroke-width: 1.4; opacity: .35; }
 .ov .ghost circle { fill: #000; stroke: var(--yellow); stroke-width: .8; }
 .ov .ghost.idle { display: none; }
 
