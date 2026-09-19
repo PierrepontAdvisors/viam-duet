@@ -74,16 +74,17 @@ def test_hand_present_color_on_the_real_look_frame(look_frame, calibration):
     region = vision.polygon_mask(look_frame.shape, [quad.tolist()])
     mm2 = vision.mm_per_px(quad) ** 2
     cx, cy = int(quad[:, 0].mean()), int(quad[:, 1].mean())
+    skin = (90, 120, 170)      # a medium skin tone: its gray level (140) is within 15 of the board's (127)
     assert vision.hand_present_color(look_frame, look_frame, region, mm2) is False
     inked = look_frame.copy()                                       # a visitor's marker lines: thin, must not count
     for k in range(6):
         cv2.line(inked, (cx - 100, cy - 60 + 20 * k), (cx + 100, cy - 40 + 20 * k), (30, 30, 170), 3)
     assert vision.hand_present_color(inked, look_frame, region, mm2) is False
     hand = inked.copy()                                             # a hand: about 65 x 45 mm of skin over the board
-    cv2.ellipse(hand, (cx, cy), (65, 45), 20, 0, 360, (150, 180, 230), -1)
+    cv2.ellipse(hand, (cx, cy), (65, 45), 20, 0, 360, skin, -1)
     assert vision.hand_present_color(hand, look_frame, region, mm2) is True
-    fingertip = look_frame.copy()                                   # a 9 mm dot: too small
-    cv2.circle(fingertip, (cx, cy), 9, (90, 120, 170), -1)
+    fingertip = look_frame.copy()                                   # a 9 mm dot of the same skin: too small
+    cv2.circle(fingertip, (cx, cy), 9, skin, -1)
     assert vision.hand_present_color(fingertip, look_frame, region, mm2) is False
 
 

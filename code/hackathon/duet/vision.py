@@ -285,11 +285,14 @@ def hand_present_color(current: np.ndarray, reference: np.ndarray, region_mask: 
                        thresh: int = cfg.HAND_DIFF_THRESH, open_px: int = cfg.HAND_OPEN_PX,
                        area_mm2: float = cfg.HAND_AREA_MM2) -> bool:
     """The backup when no depth plane is calibrated: compare the frame with the reference frame
-    taken at the look pose after the robot's last turn. New marker lines are thin and vanish under
-    the opening; a hand is a big changed blob."""
-    cur = cv2.GaussianBlur(cv2.cvtColor(current, cv2.COLOR_BGR2GRAY), (5, 5), 0)
-    ref = cv2.GaussianBlur(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY), (5, 5), 0)
-    changed = ((cv2.absdiff(cur, ref) > thresh) & (region_mask > 0)).astype(np.uint8)
+    taken at the look pose after the robot's last turn. The difference is the largest of the three
+    color channels, because on this camera's exposure the board reads mid-gray (about 127) and a
+    medium skin tone has nearly the same gray level while its blue channel is far lower. New marker
+    lines are thin and vanish under the opening; a hand is a big changed blob."""
+    cur = cv2.GaussianBlur(current, (5, 5), 0)
+    ref = cv2.GaussianBlur(reference, (5, 5), 0)
+    diff = cv2.absdiff(cur, ref).max(axis=2)
+    changed = ((diff > thresh) & (region_mask > 0)).astype(np.uint8)
     changed = cv2.morphologyEx(changed, cv2.MORPH_OPEN, np.ones((open_px, open_px), np.uint8))
     return _big_blob(changed, mm2_per_px, area_mm2)
 
