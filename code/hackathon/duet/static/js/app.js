@@ -5,12 +5,13 @@ import { Viewer } from './viewer.js';
 import { initUI } from './ui.js';
 import { GhostPen } from './preview.js';
 import { Sound } from './audio.js';
+import { polylinesFromSvg } from './picture.js';
 import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js';
 
 const $ = (id) => document.getElementById(id);
 export const app = {
   book: new TurnBook(),
-  state: null, currentTurn: null, calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
+  state: null, currentTurn: null, session: null, robotDone: [], calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
   ws: null, connected: false,
   viewer: null,
   listeners: [],
@@ -25,13 +26,52 @@ export function send(msg) { if (msg && app.ws && app.ws.readyState === 1) app.ws
 export const sendSet = (changes) => send(setCommand(changes));
 export const sendCommand = (kind) => send(command(kind));
 
+/** The current plan's strokes are done once the next plan arrives or the piece finishes; keep them. */
+function archivePlan() {
+  if (!app.plan) return;
+  app.robotDone = [...app.robotDone, ...app.plan.polylines];
+  app.plan = null; app.progress = -1;
+  app.viewer.setDone(app.robotDone); app.viewer.setPlan([], -1);
+}
+function startSession() {
+  app.robotDone = []; app.plan = null; app.progress = -1; app.book = new TurnBook(); app.backfilled = new Set();
+  app.viewer.setDone([]); app.viewer.setPlan([], -1);
+}
+
+/** A page that joins mid-session only gets the latest plan in the snapshot. The recorder saved every
+ *  earlier plan as plan-NN.svg, so fetch the completed turns' robot strokes from there, once each. */
+async function backfillPlans(session, completedTurns) {
+  app.backfilled = app.backfilled || new Set();
+  for (let t = 1; t <= completedTurns; t++) {
+    if (app.backfilled.has(t) || (app.book.get(t) || {}).plan) continue;
+    app.backfilled.add(t);
+    try {
+      const r = await fetch(`/sessions/${session}/plan-${String(t).padStart(2, '0')}.svg`);
+      if (!r.ok) continue;
+      const { robot } = polylinesFromSvg(await r.text());
+      if (!robot.length) continue;
+      app.book.note(t, { plan: robot, backfilled: true });
+      app.robotDone = [...app.robotDone, ...robot];
+      app.viewer.setDone(app.robotDone);
+    } catch { /* the file is optional; the live layer still works */ }
+  }
+}
+
 function handle(msg) {
   switch (msg.type) {
     case 'calib': app.calib = msg; app.viewer.setCalib(msg); break;
-    case 'state': app.state = msg; if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop(); break;
+    case 'state':
+      if (msg.session && app.session && msg.session !== app.session) startSession();   // a new piece: forget the last one's strokes
+      if (msg.session) app.session = msg.session;
+      app.state = msg;
+      if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop();
+      if (msg.state === 'finished') archivePlan();                                        // the signature joins the finished vector
+      if (msg.session && msg.turn > 0) backfillPlans(msg.session, msg.turn);
+      break;
     case 'human': app.human = msg; app.viewer.setInk(msg.polylines); app.book.note(turnOf(msg), { new: msg.new }); break;
     case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s }); break;
-    case 'plan': app.plan = msg; app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); app.ghost.play(msg.polylines); break;
+    case 'plan': archivePlan(); app.plan = msg;
+      if (app.state && app.state.state === 'finished') { app.book.note(turnOf(msg), { plan: msg.polylines }); archivePlan(); break; } app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); (app.backfilled = app.backfilled || new Set()).add(turnOf(msg)); app.ghost.play(msg.polylines); break;
     case 'progress': app.progress = msg.stroke; if (app.plan) app.viewer.setPlan(app.plan.polylines, msg.stroke); turnOf(msg); break;
     case 'shot': {
       const known = app.book.shots.length;
@@ -55,7 +95,7 @@ function connect() {
 
 export function boot() {
   app.viewer = new Viewer({ stage: $('stage'), pic: $('pic'), base: $('base'), photo: $('photo'), ov: $('ov'), fit: $('fit'),
-                            mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot') });
+                            mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot'), done: $('l-done') });
   app.ghost = new GhostPen($('l-ghost'), $('ghostpath'), $('ghostpen'));
   app.viewer.setStream('/stream.mjpg?overlay=0');
   app.ui = initUI(app, { sendSet, sendCommand, on });

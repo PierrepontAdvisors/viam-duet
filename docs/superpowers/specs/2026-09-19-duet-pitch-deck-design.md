@@ -1,0 +1,112 @@
+# Duet pitch deck: design
+
+Date: 2026-09-19. Status: approved in brainstorming, ready for an implementation plan.
+Related: `docs/duet/PRD-duet.md`, `docs/superpowers/specs/2026-09-18-duet-design.md`, `docs/superpowers/specs/2026-09-18-duet-page-design.md`.
+
+## 1. Purpose
+
+A seven-card HTML slide deck that Nicholas talks through for about two minutes at the Fine Motor Skills hackathon demos (2026-09-19, 3:30 PM), then walks to the board and draws. The deck carries the origin story; the robot carries the proof. The deck must open from disk with no network and look like the live Duet page, so the two read as one thing.
+
+Decisions made during brainstorming:
+
+- **Deck first, then live demo.** The deck is not a leave-behind and does not run while the arm draws.
+- **The companion claim is "a partner who answers in their hand."** Claude is the mind that looks and decides; the artist is the language it answers in. The deck never claims the painter is present. The word "with" carries the weight.
+- **The opening is the thesis as a line**, not a photo and not a blank board.
+- **Co-creation is the headline; learning is the second beat.** Inspiration and technique are said, not given a card.
+- **One technical card**, with Viam named in every step it touches.
+- **The close is the build itself** ("One person. Two days. Claude and Viam."), with the rig instruction as its footer so it stays on screen during the demo. "One person" is accurate.
+- **One self-contained HTML file**, no framework, no CDN, no build step.
+
+## 2. The cards
+
+Words in quotes are on the slide. Everything else is spoken.
+
+**Card 1, Thesis.** Black. Three lines, white, revealed one per advance:
+"Anyone can now study with the greatest minds in history."
+"Nobody could make art with them."
+"Until today."
+
+**Card 2, What Duet is.** The wordmark "Duet", then "A robot arm that draws with you." Three short lines: "You make a mark." / "It looks, understands, and answers." / "In the hand of an artist you choose." Three chips, each with a small drawn stroke sample: Van Gogh (curved dashes in a swirl), Mondrian (straight horizontal and vertical lines with a hatched cell), Keith Haring (a bold outline with radiating ticks). Spoken: Claude is the mind that looks at the photo and decides; the artist is the language it answers in.
+
+**Card 3, One turn.** Two photos side by side on white paper cards: `turn-01-human.jpg` (your mark) and `turn-01-robot.jpg` (the answer) from session `20260918-190258`. A speech bubble in the page's style holds Claude's two sentences exactly as recorded in that session's `session.json`:
+"A big bold amoeba-like creature with loops and eye-holes sprawls across the board."
+"I'll add a small green spiral accent inside the lower loop body to give the creature a pulsing core."
+A small badge: "8 s to look and decide." (day 1 measured 7.4 to 7.6 s live; the deck uses the same rounded number everywhere). Exchange 1 was chosen because later exchanges' sentences contain millimetre coordinates and quotes are not edited.
+
+**Card 4, Co-creation (the headline).** "Everyone leaves with a one-of-a-kind piece, made with a partner." Below it, a flipbook of the 13 photos from the same session (`turn-00-start.jpg`, then `turn-NN-human.jpg` and `turn-NN-robot.jpg` for NN 01 to 06), about 0.7 s per photo, a 2 s hold on the last, then loop. A small counter beside it reads "turn N of 6" (the start photo reads "start"). Under the flipbook: "Six exchanges. Two artists. One of them was a robot."
+
+**Card 5, Learning.** "And you learn their language by answering back." Three lines, each with its artist chip:
+Haring: "One continuous outline, then motion ticks. Your blob becomes a figure."
+Mondrian: "Your mark's edges run out to a grid. You start seeing the rectangle in everything."
+Van Gogh: "Dashes stream around your mark like water around a rock."
+Footer: "You don't study the technique. You have a conversation in it."
+
+**Card 6, How it works.** Title "Look. Understand. Answer. Draw." with the subtitle "Viam under every step." Four nodes in a row joined by arrows:
+Look: "Viam camera component. RealSense colour and depth, aligned, from the wrist. The board is found again every turn."
+Understand: "Claude Opus 5. One photo in, two sentences and strokes out."
+Answer: "The artist's grammar styles the strokes. The planner clips and budgets them, in board millimetres mapped into Viam's world frame."
+Draw: "Viam motion service. Every move planned around the table and wall obstacles, linear constraints on pen-down, arm and gripper components over the Python SDK."
+A strip along the bottom: "viam-server owns the arm's control box · machine configured in app.viam.com · Python SDK from a laptop · motion service with obstacles · camera, arm, gripper components."
+Four numbers in a row: "8 s to look and decide" · "2 mm calibration" · "120 tests" · "0 direct arm moves".
+The test count is confirmed against the suite on the day before the deck is final; if it differs, the slide changes, not the claim.
+
+**Card 7, The build.** "One person. Two days. Claude and Viam." Then "Nicholas Fjellberg Swerdlowe · Viam Fine Motor Skills Hackathon · September 2026". Footer, larger than a footer usually is: "Draw one mark. Duet answers." This card stays on screen while the demo runs.
+
+## 3. Look
+
+- The same black 16:9 stage as the live page, letterboxed in any window (`width: min(100vw, 177.78vh)`, `aspect-ratio: 16/9`), so a projector, a laptop, or a phone all show the whole card.
+- Typography is Fredoka from a local font file in `fonts/`, falling back to Chalkboard SE, Comic Sans MS, then sans-serif, the same stack as `duet.css`. Sizes scale with the stage using container units so the cards look the same at any window size.
+- Colours are the page's tokens: paper `#fff`, ink `#111`, yellow `#ffd400`, green `#1b8f3a`, red `#c62828`, stage black. One word per card takes the yellow; anything about the robot's ink is green; anything about the visitor's ink is red. Everything else is white on black.
+- Photos sit on white paper cards with rounded corners and a soft shadow. The speech bubble matches the page's bubble (white, rounded, a tail toward the photo it speaks about).
+- The three artist chips are inline SVG paths, no images: a swirl of short dashes, a small grid with one hatched cell, a bold outline with ticks. Colours follow the PRD's artist rules: Van Gogh dashes in blue, Mondrian lines in blue with one red hatched cell, Haring outline and ticks in green. The deck adds one token the page lacks, blue `#1f4fd6`, for the first two.
+- The flipbook is one `<img>` whose `src` a timer swaps; all 13 images are preloaded when the deck opens so the first loop is smooth.
+- Motion is limited to the card-1 line reveals (a short fade and rise), the flipbook, and a short cross-fade between cards. Nothing bounces.
+
+## 4. Controls
+
+| Input | Action |
+| --- | --- |
+| Right arrow, space, click on the right two thirds of the stage | Advance: on card 1, reveal the next line; otherwise next card |
+| Left arrow, click on the left third | Back: on card 1 with lines revealed, hide the most recent line; otherwise go to the previous card fully revealed |
+| 1 to 7 | Jump to that card |
+| Home, End | First card, last card |
+| F | Toggle fullscreen |
+| D | Toggle developer mode (see below) |
+
+- The URL hash mirrors the card (`#3`), so a refresh keeps the place and a link can open on a card.
+- A faint "3 / 7" sits bottom right, low contrast, small.
+- No presenter notes view. Nicholas rehearses from this spec.
+
+**Developer mode** follows `~/.claude/rules/common/preview-dev-mode.md`: every meaningful element carries a specific `data-el` name (for example `data-el="card 3 speech bubble — sees"`, `data-el="card 4 flipbook image"`, `data-el="card 6 node — Draw"`); D toggles a badge, hover shows the name, click copies it and shows a toast, and clicks in dev mode do not advance the deck. Key handling ignores keystrokes typed into inputs, of which the deck has none.
+
+## 5. Files
+
+```
+docs/duet/pitch/
+  index.html          the deck: markup, CSS, and script in one file
+  img/turn-00-start.jpg
+  img/turn-01-human.jpg ... img/turn-06-robot.jpg   (13 photos, longest side about 1200 px)
+  fonts/Fredoka.woff2                             fetched once while online (a .ttf only if no woff2 is available)
+```
+
+- The photos are copies of `code/hackathon/sessions/20260918-190258/turn-*.jpg`, downscaled with a one-line script or `sips` so the deck stays a few megabytes and opens instantly from disk. Originals are untouched.
+- The font is fetched once while online and committed; without it the fallback stack renders, which is acceptable but not the plan.
+- No API keys, machine credentials, or session JSON are copied into the deck folder. Claude's two sentences are typed into the HTML.
+- Opening the deck: `open docs/duet/pitch/index.html`. No server is needed; every reference is relative and works over `file://`.
+
+## 6. Verification
+
+- **Node test** `code/hackathon/pagetests/pitch.test.mjs`, run with the existing `node --test 'pagetests/*.test.mjs'`: reads `docs/duet/pitch/index.html`, asserts seven cards in order with the expected headline text, asserts every `src`, `href` and `url()` that points into `img/` or `fonts/` names a file that exists, asserts the 13 flipbook filenames are listed, and asserts the developer-mode badge, label, and toast elements are present.
+- **Browser pass** with the built-in browser: open the file, step through all seven cards with the keyboard, take one screenshot per card into `code/hackathon/captures/pitch-N.png`, confirm the card-1 reveals, the flipbook cycling, the hash updating, fullscreen, and developer mode copying a name. Screenshots are shown to Nicholas for review before 3:30.
+- **Offline check**: the browser pass is repeated once with the network off (or with Google Fonts blocked) to confirm the local font loads and nothing else is fetched.
+
+## 7. Out of scope
+
+- Speaker notes, timers, or a presenter view.
+- Video embeds, audio, or the session's stitched `session.mp4` (the flipbook covers it).
+- A public URL. The deck is opened from disk on the presenting laptop.
+- Any change under `code/hackathon/duet/`. The deck does not touch the running app.
+
+## 8. Git
+
+Built and committed on `feat/duet-design`, the branch the demo runs from, in small commits: the spec, the assets, the deck, the test. Nothing under `duet/` is staged.

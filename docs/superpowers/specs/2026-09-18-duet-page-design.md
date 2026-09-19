@@ -166,3 +166,15 @@ The approved interactive mockup is reproducible from `docs/duet/mockups/stage-vi
 | `state.artists` list | landing tonight, `["haring"]` at first |
 | Mondrian and Van Gogh grammars | optional, last task of the night |
 | `/static` mount | landing tonight |
+
+## 14. Addendum, 2026-09-19 morning: picture controls and the finished vector
+
+Asked for after the first demo run. All page-side, in `duet/static/js/picture.js` (pure, tested) plus wiring in `ui.js`, `viewer.js`, and `app.js`.
+
+- **Picture controls.** A Picture row in the panel with Brightness (-0.5 to 0.5), Contrast (0.5 to 3) and Exposure (-2 to 2 stops) sliders, a Neutral button and a Clean preset. They drive one linear levels map per channel on the `#levels` filter, `out = slope * in + intercept` with `slope = contrast * 2^exposure` and `intercept = 0.5 - 0.5 * contrast + brightness`, so contrast pivots on mid gray. The filter applies to the live frame and to every turn photo alike, so both boards respond. Clean board now only adds the saturation and the white mask; the tuned look (brightness 0.07, contrast 1.9) is the Clean preset and the default. Values persist in `localStorage`.
+- **Every robot stroke stays.** The current plan is drawn in `l-robot`; when the next plan arrives, or the piece finishes, its strokes move to `l-done`, a second robot group. The person's ink already accumulates from `human.polylines`. At `finished` the vector layer holds the whole piece: the person's ink and every robot stroke including the signature. A new session id resets both.
+- **Vectors without the picture.** Ink only hides the frame and the photos and shows paper behind the strokes. Two color pickers and two width sliders (0.4 to 4 mm) set the ink and the robot strokes through CSS variables, and persist. The stroke color follows `plan.color` until the operator picks one.
+- **Export SVG.** A button writes the drawing as a standalone SVG in board millimeters: a white rect, an `ink` group and a `robot` group with the chosen colors and widths, named `duet-<session>-turn-<n>.svg`.
+- **Late joiners.** The snapshot carries only the latest plan, so a page that connects after turn one fetches `plan-NN.svg` for every completed turn it has no record of and adds their green strokes to the kept layer (`polylinesFromSvg`, tested). A stroke count may differ by one from the live layer where the recorder's file and the plan message disagree; the live layer is authoritative.
+- **Panel grid.** The panel is a CSS grid: a label column plus twelve equal columns. Each control group spans a fixed number of columns (Image 3+3+2+2+1+1, Layers 6+5+1, Picture 3+3+3+3, Session 3+2+2+3+2, Light 3+3+4+2) and its buttons share the span equally, so edges line up across rows; status lines span the full width.
+- **Paint order.** The picture layers carry explicit z-indexes (frame 0, projected photo 1, mask 2, overlay 3); a filtered image otherwise paints above its later siblings in Chromium and hid the white mask.
