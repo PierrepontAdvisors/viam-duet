@@ -1,6 +1,6 @@
 /** The picture layer: the camera frame (live or a saved one), a turn photo projected onto the board,
  *  the overlay SVG registered through the calibration, the clean-board mask, and the crop zoom. */
-import { homography, applyH, matrix3d, boardOrder, containRect, cropTransform, insetMaskPath, fitInverse, BOARD_MM } from './geometry.js';
+import { homography, applyH, matrix3d, boardOrder, containRect, cropTransform, insetMaskPath, fitInverse, BOARD_MM } from './geometry.js?v=ds2';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const BOARD_RECT = [[0, 0], [BOARD_MM[0], 0], [BOARD_MM[0], BOARD_MM[1]], [0, BOARD_MM[1]]];
