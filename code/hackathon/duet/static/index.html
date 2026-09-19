@@ -45,10 +45,10 @@
     <span class="chip white" id="state" data-el="chip — state">Connecting…</span>
   </div>
   <div class="tr" data-el="chips — top right">
-    <span class="chip red hidden" id="cam" data-el="chip — camera reconnecting">camera reconnecting…</span>
     <span class="chip black" id="count" data-el="chip — exchange counter">Exchange <b>0</b> of 5</span>
     <button class="chip black" id="sound" title="Sound on or off" data-el="chip — sound toggle">Sound off</button>
   </div>
+  <div class="tr cam" data-el="chip — camera layer"><span class="chip red hidden" id="cam" data-el="chip — camera reconnecting">camera reconnecting…</span></div>
   <button class="go hidden" id="go" data-el="go robot button">Go, robot!</button>
   <button class="go home hidden" id="home" data-el="return to home button">Return to home</button>
 
@@ -108,7 +108,7 @@
 
     <span class="lbl">Run</span>
     <div class="g s2"><button id="pause" data-el="pause / resume button">Pause</button><button id="pass" data-el="pass turn button">Pass turn</button></div>
-    <div class="g s2"><button id="end" data-el="end session button">End session</button></div>
+    <div class="g s2"><button id="end" data-el="end session button" disabled>End session</button></div>
     <div class="g s4"></div>
     <div class="g s2"><button class="danger" id="reset-arm" title="Stop the arm, clear its error, lift, and return to the look pose" data-el="reset arm button">Reset arm</button></div>
     <div class="g s2"><button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button></div>

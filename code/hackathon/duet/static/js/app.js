@@ -36,7 +36,7 @@ function archivePlan() {
 }
 function startSession() {
   app.robotDone = []; app.plan = null; app.progress = -1; app.book = new TurnBook(); app.backfilled = new Set();
-  app.video = null; app.human = { polylines: [], new: [] }; app.interpretation = null;   // feed stays: it is about the rig, not the piece
+  app.video = null; app.human = { polylines: [], new: [] }; app.interpretation = null; app.dock = null;   // feed stays: it is about the rig, not the piece
   app.viewer.setInk([]); app.viewer.setDone([]); app.viewer.setPlan([], -1);
 }
 
@@ -63,7 +63,7 @@ function handle(msg) {
   switch (msg.type) {
     case 'calib': app.calib = msg; app.viewer.setCalib(msg); break;
     case 'state':
-      if (msg.session && app.session && msg.session !== app.session) startSession();   // a new piece: forget the last one's strokes
+      if (msg.session && app.session && msg.session !== app.session) { startSession(); msg.fresh = true; }   // a new piece: forget the last one's strokes, and tell the listeners
       if (msg.session) app.session = msg.session;
       app.state = msg;
       if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop();

@@ -38,7 +38,7 @@ QUIPS = ["I'll give it a tiny heartbeat!", "Let's make that head glow!", "One mo
 PATH_RE = re.compile(r'<path d="([^"]+)"[^>]*stroke="([^"]+)"')
 NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
 # The states the real session lets New session act in: the arm is at the look pose and not in a
-# sequence, or it has been stopped. One constant, so the state message and `restart` cannot drift.
+# sequence, or it has been stopped. The state message does not carry it; `restart` refuses outside it.
 RESTARTABLE = ("finished", "human_turn", "capture", "interpret", "paused")
 
 
@@ -96,7 +96,7 @@ class Replay:
         self.bus.emit("state", state=self.state, turn=self.turn, coverage=round(0.05 * self.turn, 3), error=self.error,
                       at_look=self.state in ("look", "human_turn", "capture", "interpret", "plan"),
                       hand_guard="color at the look pose", session=SESSION_ID, artists=["haring"],
-                      ending=self.ending, restartable=self.state in RESTARTABLE, **self.settings)
+                      ending=self.ending, **self.settings)
 
     def go(self, state: str) -> None:
         self.state = state

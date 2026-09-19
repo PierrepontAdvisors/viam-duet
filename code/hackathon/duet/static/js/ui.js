@@ -13,13 +13,13 @@ const LAYER_NODES = { ink: 'l-ink', board: 'l-board' };
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 export function initUI(app, { sendSet, sendCommand, on }) {
-  const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null, shownSession: null };
+  const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null };
   const stage = $('stage'), viewer = app.viewer;
 
   // ---- layers and colors ----
   function applyLayer(name, onOff) {
     if (name === 'caption') $('caption').classList.toggle('hidden', !onOff);
-    else if (name === 'chips') { $('chips').classList.toggle('hidden', !onOff); $('count').parentElement.classList.toggle('hidden', !onOff); }
+    else if (name === 'chips') { $('chips').classList.toggle('hidden', !onOff); for (const id of ['count', 'cam']) $(id).parentElement.classList.toggle('hidden', !onOff); }
     else if (name === 'clean') { stage.classList.toggle('clean', onOff); $('mask').classList.toggle('hidden', !onOff); }
     else if (name === 'vector') stage.classList.toggle('vector', onOff);
     else if (name === 'robot') for (const id of ['l-robot', 'l-done', 'l-ghost']) $(id).classList.toggle('hidden', !onOff);   // every robot stroke: earlier turns, this plan, the ghost pen
@@ -178,13 +178,14 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     $('b-prev').disabled = $('b-next').disabled = !app.book.shots.length;
     $('b-play').textContent = view.playing ? '■ Stop' : '▶ Play loop'; $('b-play').classList.toggle('on', view.playing);
     $('b-video').classList.toggle('hidden', !app.video); if (app.video) $('b-video').href = app.video.url;
+    $('end').disabled = !st || st.state === 'finished' || st.ending;   // nothing to end before the first state
     if (st) {
       markSeg('length-seg', st.length); markSeg('handoff-seg', st.handoff); markSeg('artist-seg', st.artist);
       for (const b of $('artist-seg').children) b.disabled = !st.artists.includes(b.dataset.v);
       $('ex').textContent = st.exchanges;
       $('pause').textContent = st.state === 'paused' ? 'Resume' : 'Pause'; $('pause').classList.toggle('on', st.state === 'paused');
       const ending = st.ending && st.state !== 'finished';                                 // "Ending…": pressed, the piece signs at the next safe point
-      $('end').disabled = st.state === 'finished' || st.ending; $('end').textContent = ending ? 'Ending…' : 'End session'; $('end').classList.toggle('on', ending);
+      $('end').textContent = ending ? 'Ending…' : 'End session'; $('end').classList.toggle('on', ending);
       if (document.activeElement !== dir) { dir.value = Math.round(st.direction); showDir(); }
       if (document.activeElement !== energy) { energy.value = Math.round(st.energy * 100); showEnergy(); }
     }
@@ -261,8 +262,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   // ---- messages ----
   on((msg) => {
     if (msg.type === 'state') {
-      if (msg.session && view.shownSession && msg.session !== view.shownSession) showLive();   // a new piece: stop the loop, back to the camera
-      if (msg.session) view.shownSession = msg.session;
+      if (msg.fresh) showLive();                                       // a new piece: stop the loop, back to the camera
       if (msg.state === 'capture') view.thinkingSince = Date.now();
       if (msg.state === 'finished' && view.autoplayed !== msg.session) { view.autoplayed = msg.session; setTimeout(() => { if (view.source === 'live') play(); }, 3000); }
       if (msg.state === 'human_turn' && msg.turn === 0 && view.source !== 'live') showLive();
