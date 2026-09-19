@@ -14,7 +14,7 @@ BOARD_W_MM = 176.0
 BOARD_H_MM = 240.0
 INSET_MM = 15.0        # drawable area starts this far inside the corners
 LIFT_MM = 20.0         # pen-up travel height above the board
-PEN_DOWN_OFFSET_MM = -1.0  # relative to the touched-off plane (negative: below); corners re-taught 2026-09-19 with the held marker, tuned with teach touch
+PEN_DOWN_OFFSET_MM = -1.5  # relative to the touched-off plane (negative: below); corners re-taught 2026-09-19 with the held marker, tuned with teach touch
 WAYPOINT_MM = 8.0      # spacing of planned moves along a stroke; set from the stage 2 measurement
 
 SPEED_TRAVEL = 30.0    # deg/s, matches the machine's configured speed
