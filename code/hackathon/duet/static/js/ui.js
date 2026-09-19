@@ -9,7 +9,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(`duet.${k}`, JSON.stringify(v)); } catch { /* private window: fine */ } },
 };
 const LAYER_DEFAULTS = { robot: true, ink: true, caption: true, chips: true, board: false, clean: true, vector: false };
-const LAYER_NODES = { robot: 'l-robot', ink: 'l-ink', board: 'l-board' };
+const LAYER_NODES = { ink: 'l-ink', board: 'l-board' };
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 export function initUI(app, { sendSet, sendCommand, on }) {
@@ -22,6 +22,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     else if (name === 'chips') { $('chips').classList.toggle('hidden', !onOff); $('count').parentElement.classList.toggle('hidden', !onOff); }
     else if (name === 'clean') { stage.classList.toggle('clean', onOff); $('mask').classList.toggle('hidden', !onOff); }
     else if (name === 'vector') stage.classList.toggle('vector', onOff);
+    else if (name === 'robot') for (const id of ['l-robot', 'l-done', 'l-ghost']) $(id).classList.toggle('hidden', !onOff);   // every robot stroke: earlier turns, this plan, the ghost pen
     else $(LAYER_NODES[name]).classList.toggle('hidden', !onOff);
     document.querySelector(`[data-layer="${name}"]`).classList.toggle('on', onOff);
     store.set(`layer.${name}`, onOff);
