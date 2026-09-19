@@ -11,6 +11,8 @@ The replay harness serves the page with tonight's session over the real protocol
 
 Keys on the page: arrows step photos, space plays the loop, L live, C controls, Z crop, D developer mode.
 
+Panel, Run row: Pause, Pass turn, End session (sign and finish at the next safe point), Reset arm, Clear arm error. The position line names the picture: live, the held still while the robot draws, or camera reconnecting. The harness reproduces the labels but its stream still moves; the freeze is only visible against the real server.
+
 ## Acceptance
 
 `?view=console` opens with the panel, `?selftest=1` prints the geometry checks in the console.
