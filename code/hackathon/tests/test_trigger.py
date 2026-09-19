@@ -1,3 +1,6 @@
+import pytest
+
+from duet import config as cfg
 from duet.trigger import Event, Reading, Trigger
 
 
@@ -22,7 +25,7 @@ def test_dock_does_not_fire_if_no_marker_ever_left():
     assert all(e is None for _, e in run(tr, [r(t, green="home") for t in range(10)]))
 
 
-def test_dock_hand_or_motion_restarts_the_quiet_timer():
+def test_dock_hand_longer_than_the_grace_restarts_the_quiet_timer():
     tr = Trigger("dock", quiet_s=1.5)
     events = run(tr, [r(0, green="missing"), r(1, green="home"), r(2, green="home", hand=True),
                       r(2.5, green="home", hand=True), r(3, green="home"), r(4, green="home"),
@@ -67,18 +70,21 @@ def test_one_noisy_poll_does_not_restart_the_timer():
 
 
 def test_defaults_come_from_config():
-    from duet import config as cfg
     assert Trigger("dock").quiet_s == cfg.STILL_S
     assert Trigger("held").quiet_s == cfg.HELD_QUIET_S
     assert Trigger("held").grace_s == cfg.TRIGGER_GRACE_S
 
 
 def test_invalid_handoff_and_negative_quiet_raise():
-    import pytest
     with pytest.raises(ValueError):
         Trigger("air")
     with pytest.raises(ValueError):
         Trigger("held", quiet_s=-1.0)
+    with pytest.raises(ValueError):
+        Trigger("held", quiet_s=2.0, grace_s=-0.1)
+    with pytest.raises(ValueError):
+        Trigger("held", quiet_s=1.0, grace_s=1.0)
+    Trigger("held", quiet_s=0.0, grace_s=0.0)
 
 
 def test_dock_needs_a_new_departure_after_a_fire():

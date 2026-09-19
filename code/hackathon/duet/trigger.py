@@ -41,6 +41,8 @@ class Trigger:
         if self.quiet_s < 0:
             raise ValueError("quiet_s must not be negative")
         self.grace_s = grace_s if grace_s is not None else cfg.TRIGGER_GRACE_S
+        if self.grace_s < 0 or (self.quiet_s > 0 and self.grace_s >= self.quiet_s):
+            raise ValueError("grace_s must be at least 0 and smaller than quiet_s")
         self.reset()
 
     def reset(self) -> None:
