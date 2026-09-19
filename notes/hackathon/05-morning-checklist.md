@@ -2,7 +2,7 @@
 
 Everything below needs the machine. Order matters; each line is a few minutes. E-stop within reach before the first arm move.
 
-- [ ] Decide whether to merge feat/duet-page into feat/duet-design before running the demo; keep its static/index.html; nothing in duet/*.py conflicts.
+- [x] feat/duet-page is merged into feat/duet-design (commit 1487ab7, 08:55): the designed page is what `python -m duet.run` serves. Run everything from the main checkout on feat/duet-design; the `.worktrees/duet-page` worktree is no longer needed. Page tests: `node --test 'pagetests/*.test.mjs'` from `code/hackathon` (32 pass).
 
 ## Before the arm moves (10 min)
 - [ ] `cd code/hackathon && source .venv/bin/activate` — every command below assumes it.
