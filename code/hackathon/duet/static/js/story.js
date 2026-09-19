@@ -1,7 +1,7 @@
 /** The storybook layer's words and bookkeeping: what the chips and bubbles say in each state, and the
  *  per-turn record of thoughts, quips, ink, plans, and photos. No DOM here. */
-import { centroid, BOARD_CENTER } from './geometry.js?v=ds6';
-import { shotUrl } from './protocol.js?v=ds6';
+import { centroid, BOARD_CENTER } from './geometry.js?v=ds7';
+import { shotUrl } from './protocol.js?v=ds7';
 
 export const PLACEHOLDERS = ['Hmm…', 'Looking closely…', 'What could it be?', 'I see lines…'];
 export const PLACEHOLDER_MS = 1500;
@@ -17,6 +17,34 @@ export const FIXED = {
   oldThought: 'Hmm, what was this?',
   oldQuip: 'I remember this one!',
 };
+
+/* ---- artists: the picker's names and one-line descriptions, in the backend's display order ---- */
+export const ARTIST_INFO = {
+  abstract: ['Abstract', 'Clean shapes that answer yours'],
+  mimic: ['Mimic', 'Copies what you just drew'],
+  haring: ['Haring', 'Bold outlines and motion ticks'],
+  mondrian: ['Mondrian', 'Straight lines, grids, boxes'],
+  vangogh: ['Van Gogh', 'Swirls of curved dashes'],
+  architect: ['Architect', 'Walls, doors, stairs, rooflines'],
+  designer: ['Designer', 'Rounded housings and parts'],
+  shader: ['Shader', 'Fills your shapes with dots'],
+};
+export function artistName(id) {
+  if (ARTIST_INFO[id]) return ARTIST_INFO[id][0];
+  return id ? id.charAt(0).toUpperCase() + id.slice(1) : '';
+}
+const LOOKING = ['capture', 'interpret'], DRAWING = ['plan', 'robot_draw'];
+/** The artist picker's label and whether it opens. `setting` is the current artist setting, `turnArtist`
+ *  the artist fixed for the exchange in progress (null until the backend has said), `shot` the browsed
+ *  photo or null when the live picture shows. Null hides the picker. */
+export function pickerText(state, setting, turnArtist, shot) {
+  if (shot) return shot.who === 'robot' && shot.artist ? { text: `${artistName(shot.artist)} drew this`, open: false } : null;
+  if (state === 'human_turn') return { text: `as ${artistName(setting)} ▾`, open: true };
+  const who = artistName(turnArtist || setting);
+  if (LOOKING.includes(state)) return { text: `${who} is looking…`, open: false };
+  if (DRAWING.includes(state)) return { text: `${who} is drawing`, open: false };
+  return null;
+}
 
 // chip: [text, tone]; bubble: [kind, text | null for "thought or placeholder" | 'quip' for the turn's quip]
 const TABLE = {

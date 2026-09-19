@@ -49,15 +49,17 @@ const PARSERS = {
   human: (m) => ({ polylines: polylines(m.polylines), new: polylines(m.new), found: bool(m.found, true), turn: int(m.turn, null) }),
   interpretation(m) {
     return { sees: str(m.sees), adds: str(m.adds), thought: str(m.thought), quip: str(m.quip),
-      source: oneOf(m.source, ['claude', 'fallback'], 'claude'), latency_s: num(m.latency_s, null), error: strOrNull(m.error), turn: int(m.turn, null) };
+      source: oneOf(m.source, ['claude', 'fallback', 'ink'], 'claude'), latency_s: num(m.latency_s, null), error: strOrNull(m.error), turn: int(m.turn, null),
+      artist: strOrNull(m.artist) };
   },
-  plan: (m) => ({ polylines: polylines(m.polylines), color: /^#[0-9a-fA-F]{6}$/.test(m.color || '') ? m.color : '#1b8f3a', budget_mm: num(m.budget_mm, 0), turn: int(m.turn, null) }),
+  plan: (m) => ({ polylines: polylines(m.polylines), color: /^#[0-9a-fA-F]{6}$/.test(m.color || '') ? m.color : '#1b8f3a', budget_mm: num(m.budget_mm, 0), turn: int(m.turn, null),
+    artist: strOrNull(m.artist) }),
   progress(m) { const s = int(m.stroke); return s === null ? null : { stroke: s, drawn_mm: num(m.drawn_mm, 0), turn: int(m.turn, null) }; },
   shot(m) {
     if (typeof m.url !== 'string') return null;
     const p = parseShotUrl(m.url) || {};
     const who = oneOf(m.who, SHOT_WHO, p.who || 'human');
-    return { url: m.url, frame_url: strOrNull(m.frame_url), turn: int(m.turn, p.turn ?? 0), who, session: p.session || null };
+    return { url: m.url, frame_url: strOrNull(m.frame_url), turn: int(m.turn, p.turn ?? 0), who, session: p.session || null, artist: strOrNull(m.artist) };
   },
   video: (m) => (typeof m.url === 'string' ? { url: m.url } : null),
   feed: (m) => ({ source: oneOf(m.source, ['live', 'held', 'stale'], 'live') }),

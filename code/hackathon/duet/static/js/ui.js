@@ -1,7 +1,7 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns } from './story.js?v=ds6';
-import { bubblePosition } from './geometry.js?v=ds6';
-import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds6';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns, ARTIST_INFO, artistName, pickerText } from './story.js?v=ds7';
+import { bubblePosition } from './geometry.js?v=ds7';
+import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds7';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -93,6 +93,42 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   /** Restart the design system's pop on an element whose content just changed. */
   function popIt(el) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 
+  // ---- artist picker: beside Go, one artist per turn ----
+  const pick = { open: false, roster: '' };
+  function buildMenu(ids) {
+    const key = ids.join(',');
+    if (key === pick.roster) return;
+    pick.roster = key;
+    $('artist-menu').replaceChildren(...ids.map(id => {
+      const b = document.createElement('button');
+      b.className = 'chip white'; b.dataset.v = id; b.dataset.el = `artist picker — ${artistName(id)}`;
+      const name = document.createElement('b'); name.textContent = artistName(id);
+      b.append(name, document.createTextNode((ARTIST_INFO[id] || [])[1] || ''));
+      return b;
+    }));
+  }
+  function openMenu(onOff) { pick.open = onOff; $('artist-menu').classList.toggle('hidden', !onOff); }
+  function renderPicker() {
+    const st = app.state;
+    const shot = view.source === 'shot' ? app.book.shots[view.index] : null;
+    const rec = st ? app.book.get(st.turn + 1) : null;                       // the exchange in progress
+    const p = st ? pickerText(st.state, st.artist, rec && rec.artist, shot) : null;
+    $('artist-pick').classList.toggle('hidden', !p);
+    if (!p) { openMenu(false); return; }
+    buildMenu(st.artists);
+    const btn = $('artist-btn');
+    if (btn.textContent !== p.text) { btn.textContent = p.text; popIt(btn); }
+    btn.disabled = !p.open;
+    if (!p.open) openMenu(false);
+    for (const b of $('artist-menu').children) b.classList.toggle('on', b.dataset.v === st.artist);
+  }
+  $('artist-btn').onclick = (e) => { e.stopPropagation(); if (!$('artist-btn').disabled) openMenu(!pick.open); };
+  $('artist-menu').onclick = (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    e.stopPropagation(); sendSet({ artist: b.dataset.v }); openMenu(false);
+  };
+  document.addEventListener('click', () => { if (pick.open) openMenu(false); });
+
   // ---- bubble ----
   function currentBubble() {
     const shot = view.source === 'shot' ? app.book.shots[view.index] : null;
@@ -108,7 +144,8 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (!viewer.h) return;
     const anchor = viewer.boardToStage(anchorFor(b.who === 'start' ? 'start' : b.kind, b.record));
     const sub = $('caption'), cq = viewer.W / 100;
-    const floor = document.body.classList.contains('controls') ? viewer.H - $('panel').offsetHeight - cq : viewer.H - 1.6 * cq;
+    const open = document.body.classList.contains('controls') ? $('panel') : document.body.classList.contains('diagnostics') ? $('diag') : null;
+    const floor = open ? viewer.H - open.offsetHeight - cq : viewer.H - 1.6 * cq;
     const pos = bubblePosition(anchor, viewer.quadStage, { W: viewer.W, H: viewer.H, bw: sub.offsetWidth, bh: sub.offsetHeight, topMin: 7 * cq, floor });
     sub.style.left = `${pos.x}px`; sub.style.top = `${pos.y}px`;
     $('bubble').classList.toggle('right', pos.onRight);
@@ -142,10 +179,19 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   // ---- panel ----
   function toggleControls(force) {
     const onOff = document.body.classList.toggle('controls', force);
+    if (onOff) closeDiag();
     $('gear').title = onOff ? '' : 'Show controls (C)';
     placeBubble(currentBubble());
   }
+  function closeDiag() { document.body.classList.remove('diagnostics'); app.diagView.setOpen(false); }
+  function toggleDiag(force) {
+    const onOff = document.body.classList.toggle('diagnostics', force);
+    if (onOff) document.body.classList.remove('controls');
+    app.diagView.setOpen(onOff);
+    placeBubble(currentBubble());
+  }
   $('gear').onclick = () => toggleControls(true); $('hide').onclick = () => toggleControls(false);
+  $('diag-gear').onclick = () => toggleDiag(true); $('diag-hide').onclick = () => toggleDiag(false);
   $('b-live').onclick = showLive;
   $('b-prev').onclick = () => { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); };
   $('b-next').onclick = () => { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); };
@@ -229,16 +275,18 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (state === 'finished') { welcome.waiting = true; welcome.pressed = true; sendCommand('restart'); renderWelcome(); return; }
     welcome.pressed = false; showWelcome(false);
   };
-  const renderAll = () => { renderChips(); renderBubble(); renderPanel(); renderWelcome(); };
+  const renderAll = () => { renderChips(); renderPicker(); renderBubble(); renderPanel(); renderWelcome(); };
 
   // ---- keys and developer mode ----
   document.addEventListener('keydown', (e) => {
     if (e.target instanceof Element && e.target.matches('input, textarea, select')) return;
-    if (e.key === 'ArrowLeft') { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); }
+    if (e.key === 'Escape') openMenu(false);
+    else if (e.key === 'ArrowLeft') { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); }
     else if (e.key === 'ArrowRight') { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); }
     else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key === 'l' || e.key === 'L') showLive();
     else if (e.key === 'c' || e.key === 'C') toggleControls();
+    else if (e.key === 'g' || e.key === 'G') toggleDiag();
     else if (e.key === 'z' || e.key === 'Z') viewer.setCrop(!viewer.crop);
     else if (e.key === 'd' || e.key === 'D') { document.body.classList.toggle('dev'); if (!document.body.classList.contains('dev')) $('devLabel').style.display = 'none'; }
   });
@@ -271,7 +319,9 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (msg.type === 'plan' && !view.strokeLocked) { stage.style.setProperty('--vec-stroke', msg.color); strokeColor.value = msg.color; }
     renderAll();
   });
-  if (new URLSearchParams(location.search).get('view') === 'console') toggleControls(true);
+  const view0 = new URLSearchParams(location.search).get('view') || '';
+  if (view0 === 'console') toggleControls(true);
+  if (view0 === 'diag') toggleDiag(true);
   renderAll();
-  return { showLive, showShot, play, stopLoop, toggleControls, renderAll };
+  return { showLive, showShot, play, stopLoop, toggleControls, toggleDiag, renderAll };
 }

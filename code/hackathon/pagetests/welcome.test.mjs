@@ -26,7 +26,7 @@ test('welcome styles: overlay under the panel, staggered pops, keyline word', ()
 
 test('ui.js wires the welcome: renderWelcome in renderAll, Start sends restart on a finished session', () => {
   const js = read('js/ui.js');
-  assert.match(js, /const renderAll = \(\) => \{ renderChips\(\); renderBubble\(\); renderPanel\(\); renderWelcome\(\); \}/);
+  assert.match(js, /const renderAll = \(\) => \{ renderChips\(\); renderPicker\(\); renderBubble\(\); renderPanel\(\); renderWelcome\(\); \}/);
   assert.ok(js.includes("sendCommand('restart')"), 'restart command');
   assert.ok(js.includes('welcomeButton(') && js.includes('welcomeReturns(') && js.includes("$('home')"), 'uses the pure rules');
 });

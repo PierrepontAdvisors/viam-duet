@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duet</title>
-<link rel="stylesheet" href="/static/fredoka.css?v=ds6">
-<link rel="stylesheet" href="/static/tokens.css?v=ds6">
-<link rel="stylesheet" href="/static/duet.css?v=ds6">
+<link rel="stylesheet" href="/static/fredoka.css?v=ds7">
+<link rel="stylesheet" href="/static/tokens.css?v=ds7">
+<link rel="stylesheet" href="/static/duet.css?v=ds7">
 </head>
 <body>
 <!-- Live stream: /stream.mjpg?overlay=0 (set by app.js); state over the WebSocket at /ws. -->
@@ -49,7 +49,13 @@
     <button class="chip black" id="sound" title="Sound on or off" data-el="chip — sound toggle">Sound off</button>
   </div>
   <div class="tr cam" data-el="chip — camera layer"><span class="chip red hidden" id="cam" data-el="chip — camera reconnecting">camera reconnecting…</span></div>
-  <button class="go hidden" id="go" data-el="go robot button">Go, robot!</button>
+  <div class="cta" id="cta" data-el="call to action row">
+    <button class="go hidden" id="go" data-el="go robot button">Go, robot!</button>
+    <div class="pick hidden" id="artist-pick" data-el="artist picker">
+      <button class="chip black" id="artist-btn" data-el="artist picker — button">as Abstract ▾</button>
+      <div class="menu hidden" id="artist-menu" data-el="artist picker — menu"></div>
+    </div>
+  </div>
   <button class="go home hidden" id="home" data-el="return to home button">Return to home</button>
 
   <div class="sub" id="caption" data-el="bubble">
@@ -66,7 +72,11 @@
     </div>
   </section>
 
-  <button class="gear" id="gear" title="Show controls (C)" data-el="controls toggle button">Controls</button>
+  <div class="corner" data-el="corner buttons">
+    <span class="light" id="light" title="Socket reconnecting" data-el="status light — socket"></span>
+    <button class="gear icon" id="diag-gear" title="Diagnostics (G)" aria-label="Diagnostics" data-el="diagnostics toggle button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
+    <button class="gear" id="gear" title="Show controls (C)" data-el="controls toggle button">Controls</button>
+  </div>
 
   <div class="panel" id="panel" data-el="controls panel">
     <span class="lbl">Image</span>
@@ -103,8 +113,10 @@
     <div class="g s3 seg" id="length-seg" data-el="length setting"><button data-v="short" data-el="length — short">Short</button><button data-v="medium" data-el="length — medium">Medium</button><button data-v="long" data-el="length — long">Long</button></div>
     <div class="g s2 count" data-el="exchanges"><button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button></div>
     <div class="g s2 seg" id="handoff-seg" data-el="handoff setting"><button data-v="held" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></div>
-    <div class="g s3 seg" id="artist-seg" data-el="artist setting"><button data-v="abstract" data-el="artist — abstract">Abstract</button><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" disabled data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" disabled data-el="artist — van gogh">Van Gogh</button></div>
-    <div class="g s2"></div>
+    <div class="g s5"></div>
+
+    <span class="lbl">Artist</span>
+    <div class="g s12 seg" id="artist-seg" data-el="artist setting"><button data-v="abstract" data-el="artist — abstract">Abstract</button><button data-v="mimic" data-el="artist — mimic">Mimic</button><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" data-el="artist — van gogh">Van Gogh</button><button data-v="architect" data-el="artist — architect">Architect</button><button data-v="designer" data-el="artist — designer">Designer</button><button data-v="shader" data-el="artist — shader">Shader</button></div>
 
     <span class="lbl">Run</span>
     <div class="g s2"><button id="pause" data-el="pause / resume button">Pause</button><button id="pass" data-el="pass turn button">Pass turn</button></div>
@@ -122,12 +134,23 @@
     <div class="status" id="status2" data-el="status line — claude"></div>
     <div class="status" id="status3" data-el="status line — dock and errors"></div>
   </div>
+  <section class="diag" id="diag" data-el="diagnostics drawer">
+    <div class="diag-head" data-el="diagnostics — header">
+      <span class="lbl">Diagnostics</span>
+      <span class="diag-summary" id="diag-summary" data-el="diagnostics — summary"></span>
+      <button id="diag-hide" data-el="hide diagnostics button">Hide</button>
+    </div>
+    <svg class="diag-timeline" id="diag-timeline" viewBox="0 0 1000 92" data-el="diagnostics — timeline"></svg>
+    <div class="diag-log" data-el="diagnostics — log">
+      <table class="log"><thead><tr><th>time</th><th>dir</th><th>type</th><th>turn</th><th>size</th><th>summary</th></tr></thead><tbody id="diag-rows"></tbody></table>
+    </div>
+  </section>
 </div>
 
   <div class="dev-badge">DEV MODE · click an element to copy its name · press D to exit</div>
   <div class="dev-label" id="devLabel"></div>
   <div class="dev-toast" id="devToast"></div>
 </div>
-<script type="module" src="/static/js/app.js?v=ds6"></script>
+<script type="module" src="/static/js/app.js?v=ds7"></script>
 </body>
 </html>

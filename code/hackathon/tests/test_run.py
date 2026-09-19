@@ -4,6 +4,7 @@ import signal
 from pathlib import Path
 
 from duet import recorder, run
+from duet.session import ARTISTS
 
 
 def test_parser_defaults_and_fake_flags():
@@ -89,3 +90,8 @@ def test_fake_visitor_reloads_the_recorded_piece_on_a_new_session(monkeypatch):
     frames, session = asyncio.run(scenario())
     assert frames.shown == ["turn-00-start.jpg", "turn-01-human.jpg", "turn-00-start.jpg", "turn-01-human.jpg"]
     assert session.passes == 2 and frames.robot_boards == ["turn-01-robot.jpg"]
+
+
+def test_every_artist_is_a_choice_on_the_command_line():
+    for a in ARTISTS:
+        assert run.build_parser().parse_args(["--artist", a]).artist == a

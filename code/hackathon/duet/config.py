@@ -78,3 +78,17 @@ DOT_JITTER_MM = 1.5
 DOT_MM = 1.5
 DOTS_MAX = 60
 DOT_EXEMPT_MM = 3.0             # polylines shorter than this are dots and skip the rules above
+
+# Artists that work from the visitor's ink (Mimic, Shader), plus the Architect and Designer stylers.
+INK_JOIN_MM = 10.0                          # traced fragments whose ends lie this close are one stroke
+MIMIC_GAP_MM = 4.0                          # beyond the clearance, between the original and its copy
+MIMIC_SCALE = (0.8, 1.6)                    # the copy's scale at energy 0 and 1
+SHADER_MIN_AREA_MM2 = 300.0                 # smaller closed shapes are not shaded
+SHADER_BAND_MM = 12.0                       # the shadow band beside a line with no interior
+SHADER_SPACING_MM = (12.0, 5.0)             # dot spacing at energy 0 and 1
+SHADER_LIT_KEEP = 0.25                      # keep probability on the lit edge (1.0 on the shadow edge)
+SHADER_DOTS_MAX = {"short": 30, "medium": 60, "long": 120}
+SHADER_CLEARANCE_MM = 4.0                   # Shader dots keep this far from ink; 8 mm would hollow out small shapes
+ARCH_SNAP_DEG = 15.0                        # a polyline this close to the axes everywhere is squared up
+DESIGNER_FILLET_MM = 8.0                    # rounding at a sharp corner, limited by the sides' length
+FILLET_MIN_DEG = 25.0                       # gentler bends are not rounded
