@@ -95,3 +95,30 @@ def test_fake_visitor_reloads_the_recorded_piece_on_a_new_session(monkeypatch):
 def test_every_artist_is_a_choice_on_the_command_line():
     for a in ARTISTS:
         assert run.build_parser().parse_args(["--artist", a]).artist == a
+
+
+def test_no_guard_runs_the_loop_with_the_hand_guard_off(tmp_path, monkeypatch):
+    monkeypatch.setattr(run, "Recorder", lambda **kw: recorder.Recorder(root=tmp_path, **kw))
+    guards: list[str] = []
+
+    class SpyBus(run.EventBus):
+        def emit(self, type, **data):
+            if type == "state":
+                guards.append(data["hand_guard"])
+            return super().emit(type, **data)
+
+    monkeypatch.setattr(run, "EventBus", SpyBus)
+    assert run.build_parser().parse_args([]).no_guard is False
+    args = run.build_parser().parse_args(["--fake", "--port", "0", "--exchanges", "1", "--no-guard"])
+
+    async def scenario():
+        task = asyncio.create_task(run.main(args))
+        async with asyncio.timeout(30):
+            while not guards:
+                await asyncio.sleep(0.05)
+        os.kill(os.getpid(), signal.SIGINT)
+        async with asyncio.timeout(15):
+            await task
+
+    asyncio.run(scenario())
+    assert set(guards) == {"off"}, guards

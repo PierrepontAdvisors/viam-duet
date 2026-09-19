@@ -45,6 +45,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--length", choices=tuple(cfg.BUDGET_MM), default="short")
     p.add_argument("--exchanges", type=int, default=5)
     p.add_argument("--handoff", choices=("held", "dock"), default="held" if cfg.HELD_MODE else "dock")
+    p.add_argument("--no-guard", action="store_true",
+                   help="no camera hand check before the arm moves: for a venue where the Viam link drops frames, "
+                        "so that 'no frame' would read as a hand and block every turn; the operator, Pause, "
+                        "Reset arm, and the E-stop are the guard")
     return p
 
 
@@ -174,7 +178,7 @@ async def main(args: argparse.Namespace) -> None:
     warm = np.zeros((8, 8), np.uint8)          # skan's first import costs 1.5 s; pay it before the first exchange
     warm[3, 1:7] = 255                         # a line, so Skeleton is built too and not just imported
     vision.trace(warm)
-    guard = HandGuard(frames, cal)
+    guard = None if args.no_guard else HandGuard(frames, cal)
     session = Session(settings, frames, ctl, brain, rec, bus, cal, guard=guard)
     if args.fake:
         tasks.append(watch(asyncio.create_task(fake_visitor(bus, frames, start, humans, robots, session), name="visitor")))
@@ -184,7 +188,7 @@ async def main(args: argparse.Namespace) -> None:
                                            timeout_graceful_shutdown=1))
     logging.getLogger("uvicorn.error").addFilter(QuietShutdownCancels())
     print(f"Duet on http://localhost:{args.port}  source={'fake replay of ' + args.replay if args.fake else 'armfarm22'} "
-          f"brain={type(brain).__name__} hand_check={guard.mode} session={rec.dir}", flush=True)
+          f"brain={type(brain).__name__} hand_check={'off' if guard is None else guard.mode} session={rec.dir}", flush=True)
     # the logger first: it subscribes before the loop's first emit, so `start` is printed too
     tasks += [watch(asyncio.create_task(log_events(bus), name="log")),
               watch(asyncio.create_task(session.run_forever(), name="session"))]
