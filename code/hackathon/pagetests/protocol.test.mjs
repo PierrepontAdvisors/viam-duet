@@ -68,6 +68,7 @@ test('commands are built with only allowed settings', () => {
   assert.deepEqual(setCommand({ length: 'short', bogus: 1, direction: 45 }), { type: 'set', length: 'short', direction: 45 });
   assert.equal(setCommand({ bogus: 1 }), null);
   assert.deepEqual(command('pause'), { type: 'pause' });
+  assert.deepEqual(command('reset_arm'), { type: 'reset_arm' });
   assert.throws(() => command('launch'));
 });
 

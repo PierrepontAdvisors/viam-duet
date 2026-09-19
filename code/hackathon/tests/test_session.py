@@ -293,3 +293,21 @@ def test_restart_after_finished_begins_a_new_piece_in_place(tmp_path, look_frame
     assert s.rec.dir != first_dir and s.turn == 0 and s.history == [] and s.human_ink == []
     assert "plan" not in snapshot and "interpretation" not in snapshot           # the finished piece left the snapshot
     assert "state" in snapshot and "shot" in snapshot                             # the new start photo is there
+
+
+def test_reset_arm_stops_recovers_returns_to_the_look_pose_and_keeps_the_turn(tmp_path, look_frame, exchange_start, calibration):
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_start, calibration, exchanges=3, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "human_turn")
+        await s.reset_arm()
+        async with asyncio.timeout(10):
+            while [c[0] for c in ctl.calls].count("go_look") < 2 or s.state != "human_turn":
+                await asyncio.sleep(0.01)
+        await cancel(task)
+        return s, ctl, drain(q)
+    s, ctl, events = asyncio.run(scenario())
+    kinds = [c[0] for c in ctl.calls]
+    assert kinds.index("stop") < kinds.index("recover") < len(kinds) - 1 - kinds[::-1].index("go_look")
+    assert s.turn == 0 and s.state == "human_turn" and s.at_look
+    assert not any(e["type"] == "error" for e in events)

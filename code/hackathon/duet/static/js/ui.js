@@ -158,6 +158,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   $('pause').onclick = () => sendCommand(app.state && app.state.state === 'paused' ? 'resume' : 'pause');
   $('pass').onclick = () => sendCommand('pass'); $('go').onclick = () => sendCommand('pass');
   $('clear').onclick = () => sendCommand('clear_error');
+  $('reset-arm').onclick = () => sendCommand('reset_arm');
   const dir = $('direction'), energy = $('energy');
   const showDir = () => { $('direction-val').textContent = `${dir.value}°`; $('sun').style.setProperty('--dir', `${dir.value}deg`); };
   const showEnergy = () => { $('energy-val').textContent = (energy.value / 100).toFixed(2); };

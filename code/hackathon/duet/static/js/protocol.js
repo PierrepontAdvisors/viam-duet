@@ -76,7 +76,7 @@ export function parseMessage(text) {
 }
 
 export const SETTINGS = ['artist', 'length', 'exchanges', 'mode', 'handoff', 'energy', 'direction'];
-const COMMANDS = ['pause', 'resume', 'pass', 'clear_error', 'restart'];   // restart: start a new session in place (the backend may not know it yet)
+const COMMANDS = ['pause', 'resume', 'pass', 'clear_error', 'restart', 'reset_arm'];   // restart: start a new session in place (the backend may not know it yet)
 
 export function setCommand(changes) {
   const out = { type: 'set' };

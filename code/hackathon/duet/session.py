@@ -176,6 +176,7 @@ class Session:
         self._pass = asyncio.Event()
         self._restart = asyncio.Event()
         self._resume_to = "human_turn"
+        self._reset_arm = False        # the page asked for a hard reset to the look pose
         self._homography: np.ndarray | None = None
 
     # ---- controls, called from the page ------------------------------------------------------
@@ -198,6 +199,14 @@ class Session:
 
     def pass_turn(self) -> None:
         self._pass.set()
+
+    async def reset_arm(self) -> None:
+        """Hard reset to the observe pose: stop whatever the arm is doing, then (in the loop) clear its
+        error, lift if it was left low, go to the look pose, and hand the turn back to the visitor.
+        The exchange count and the piece are kept."""
+        self._reset_arm = True
+        self._running.clear()
+        await self.ctl.stop()
 
     def restart(self) -> None:
         """After a piece is finished: begin a new one in place (the page's Start on the welcome)."""
@@ -264,9 +273,16 @@ class Session:
                     if self.state != "paused":
                         self._resume_to = RETRY_AFTER_FAULT.get(self.state, "human_turn")
                         self._set("paused")
-                    await self._running.wait()
+                    resetting, self._reset_arm = self._reset_arm, False
+                    if not resetting:
+                        await self._running.wait()
                     try:
                         await asyncio.wait_for(self.ctl.recover(), RECOVER_TIMEOUT_S)
+                        if resetting:
+                            await asyncio.wait_for(self.ctl.go_look(), RECOVER_TIMEOUT_S)
+                            self._set_look(True)
+                            self._resume_to = "human_turn"
+                            self._running.set()
                     except asyncio.TimeoutError:
                         self.last_error = "recover timed out: the machine connection may have dropped; press Resume again"
                         self.bus.emit("error", message=self.last_error)

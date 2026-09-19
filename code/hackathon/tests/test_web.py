@@ -32,6 +32,9 @@ class StubSession:
             raise RuntimeError("arm offline")
         self.actions.append("clear_error")
 
+    async def reset_arm(self):
+        self.actions.append("reset_arm")
+
 
 class StubFrames:
     def latest(self):
@@ -135,3 +138,16 @@ def test_calibration_is_served_and_leads_the_snapshot(tmp_path, calibration):
         assert cal["image_size"] == [1280, 720] and cal["cam_to_robot"] == calibration["cam_to_robot"]
         with client.websocket_connect("/ws") as ws:
             assert [ws.receive_json()["type"], ws.receive_json()["type"]] == ["calib", "state"]
+
+
+def test_reset_arm_command_reaches_the_session(tmp_path):
+    bus = EventBus()
+    bus.emit("state", state="human_turn", turn=1)
+    stub = StubSession()
+    app = web.make_app(stub, StubFrames(), bus, sessions_dir=tmp_path)
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            ws.send_json({"type": "reset_arm"})
+            ws.send_json({"type": "pass"})
+    assert stub.actions == ["reset_arm", "pass"]
