@@ -192,16 +192,17 @@ def test_hand_present_color_on_the_real_look_frame(look_frame, calibration):
     region = vision.polygon_mask(look_frame.shape, [quad.tolist()])
     mm2 = vision.mm_per_px(quad) ** 2
     cx, cy = int(quad[:, 0].mean()), int(quad[:, 1].mean())
+    skin = (90, 120, 170)      # a medium skin tone: its gray level (140) is within 15 of the board's (127)
     assert vision.hand_present_color(look_frame, look_frame, region, mm2) is False
     inked = look_frame.copy()                                       # a visitor's marker lines: thin, must not count
     for k in range(6):
         cv2.line(inked, (cx - 100, cy - 60 + 20 * k), (cx + 100, cy - 40 + 20 * k), (30, 30, 170), 3)
     assert vision.hand_present_color(inked, look_frame, region, mm2) is False
-    hand = inked.copy()                                             # a hand: about 45 x 30 mm of skin over the board
-    cv2.ellipse(hand, (cx, cy), (45, 30), 20, 0, 360, (90, 120, 170), -1)
+    hand = inked.copy()                                             # a hand: about 65 x 45 mm of skin over the board
+    cv2.ellipse(hand, (cx, cy), (65, 45), 20, 0, 360, skin, -1)
     assert vision.hand_present_color(hand, look_frame, region, mm2) is True
-    fingertip = look_frame.copy()                                   # a 9 mm dot: too small
-    cv2.circle(fingertip, (cx, cy), 9, (90, 120, 170), -1)
+    fingertip = look_frame.copy()                                   # a 9 mm dot of the same skin: too small
+    cv2.circle(fingertip, (cx, cy), 9, skin, -1)
     assert vision.hand_present_color(fingertip, look_frame, region, mm2) is False
 
 
@@ -449,11 +450,14 @@ def hand_present_color(current: np.ndarray, reference: np.ndarray, region_mask: 
                        thresh: int = cfg.HAND_DIFF_THRESH, open_px: int = cfg.HAND_OPEN_PX,
                        area_mm2: float = cfg.HAND_AREA_MM2) -> bool:
     """The backup when no depth plane is calibrated: compare the frame with the reference frame
-    taken at the look pose after the robot's last turn. New marker lines are thin and vanish under
-    the opening; a hand is a big changed blob."""
-    cur = cv2.GaussianBlur(cv2.cvtColor(current, cv2.COLOR_BGR2GRAY), (5, 5), 0)
-    ref = cv2.GaussianBlur(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY), (5, 5), 0)
-    changed = ((cv2.absdiff(cur, ref) > thresh) & (region_mask > 0)).astype(np.uint8)
+    taken at the look pose after the robot's last turn. The difference is the largest of the three
+    color channels, because on this camera's exposure the board reads mid-gray (about 127) and a
+    medium skin tone has nearly the same gray level while its blue channel is far lower. New marker
+    lines are thin and vanish under the opening; a hand is a big changed blob."""
+    cur = cv2.GaussianBlur(current, (5, 5), 0)
+    ref = cv2.GaussianBlur(reference, (5, 5), 0)
+    diff = cv2.absdiff(cur, ref).max(axis=2)
+    changed = ((diff > thresh) & (region_mask > 0)).astype(np.uint8)
     changed = cv2.morphologyEx(changed, cv2.MORPH_OPEN, np.ones((open_px, open_px), np.uint8))
     return _big_blob(changed, mm2_per_px, area_mm2)
 
@@ -1351,7 +1355,7 @@ class Settings:
 
 class EventBus:
     """Fan-out of session events to any number of subscribers (the page's sockets, tests, the log)."""
-    SNAPSHOT = ("state", "dock", "human", "interpretation", "plan", "progress", "shot", "video", "error")
+    SNAPSHOT = ("calib", "state", "dock", "human", "interpretation", "plan", "progress", "shot", "video", "error")
 
     def __init__(self):
         self.subs: list[asyncio.Queue] = []
@@ -1486,7 +1490,8 @@ class Session:
     def emit_state(self) -> None:
         guard = "off" if self.guard is None else f"{self.guard.mode} at the look pose"
         self.bus.emit("state", state=self.state, turn=self.turn, coverage=round(self.coverage, 3),
-                      error=self.last_error, at_look=self.at_look, hand_guard=guard, **asdict(self.settings))
+                      error=self.last_error, at_look=self.at_look, hand_guard=guard, session=self.rec.id,
+                      **asdict(self.settings))
 
     def _set(self, state: str) -> None:
         self.state = state
@@ -1828,6 +1833,18 @@ def test_session_files_and_health_are_served(tmp_path):
     with TestClient(app) as client:
         assert client.get("/sessions/s1/turn-01-human.jpg").status_code == 200
         assert client.get("/health").json()["state"] == "human_turn"
+
+
+def test_calibration_is_served_and_leads_the_snapshot(tmp_path, calibration):
+    bus = EventBus()
+    bus.emit("state", state="idle", turn=0)
+    app = web.make_app(StubSession(), StubFrames(), bus, sessions_dir=tmp_path, calibration=calibration)
+    with TestClient(app) as client:
+        cal = client.get("/calibration.json").json()
+        assert cal["marks_image"] == calibration["marks_image"] and cal["board_mm"] == [176.0, 240.0]
+        assert cal["image_size"] == [1280, 720] and cal["cam_to_robot"] == calibration["cam_to_robot"]
+        with client.websocket_connect("/ws") as ws:
+            assert [ws.receive_json()["type"], ws.receive_json()["type"]] == ["calib", "state"]
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -1851,7 +1868,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -1861,6 +1878,7 @@ from duet import vision
 STATIC = cfg.PACKAGE_DIR / "static"
 ALLOWED_SETTINGS = ("artist", "length", "exchanges", "mode", "handoff")
 STREAM_PERIOD_S = 0.2
+IMAGE_SIZE = (1280, 720)       # the RealSense color stream the calibration was made on
 
 
 def hex_to_bgr(color: str) -> tuple[int, int, int]:
@@ -1882,9 +1900,15 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
     sessions_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/sessions", StaticFiles(directory=str(sessions_dir)), name="sessions")
     h_inv = None
+    calib: dict = {}
     if calibration and "marks_image" in calibration:
         quad = vision.board_quad(np.array(calibration["marks_image"], np.float32), calibration["board_tl_index"])
         h_inv = np.linalg.inv(vision.board_homography(quad))
+        # The page registers its own layers onto the camera image with this; see the mockup session's protocol.
+        calib = {"marks_image": calibration["marks_image"], "board_tl_index": calibration["board_tl_index"],
+                 "board_mm": [cfg.BOARD_W_MM, cfg.BOARD_H_MM], "image_size": list(IMAGE_SIZE),
+                 "cam_to_robot": calibration.get("cam_to_robot")}
+        bus.emit("calib", **calib)
 
     @app.get("/")
     async def index():
@@ -1893,6 +1917,10 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
     @app.get("/health")
     async def health():
         return {"state": session.state, "turn": session.turn}
+
+    @app.get("/calibration.json")
+    async def calibration_json():
+        return calib
 
     async def handle(cmd: dict) -> dict | None:
         kind = cmd.get("type")
@@ -1955,16 +1983,17 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
             cv2.polylines(out, [cv2.perspectiveTransform(pts, h_inv)[0].astype(np.int32)], False, color, 2, cv2.LINE_AA)
         return out
 
-    async def mjpeg():
+    async def mjpeg(with_overlay: bool):
         while True:
             f = frames.latest()
             if f is not None:
-                yield mjpeg_part(overlay(f.color))
+                yield mjpeg_part(overlay(f.color) if with_overlay else f.color)
             await asyncio.sleep(STREAM_PERIOD_S)
 
     @app.get("/stream.mjpg")
-    async def stream():
-        return StreamingResponse(mjpeg(), media_type="multipart/x-mixed-replace; boundary=frame")
+    async def stream(overlay_on: int = Query(1, alias="overlay")):
+        """`?overlay=0` skips the server-side stroke overlay, for a page that draws its own layers."""
+        return StreamingResponse(mjpeg(bool(overlay_on)), media_type="multipart/x-mixed-replace; boundary=frame")
 
     return app
 ```
@@ -2222,7 +2251,7 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `python -m pytest tests/test_web.py -q`
-Expected: `4 passed`
+Expected: `5 passed`
 
 - [ ] **Step 6: Commit**
 
