@@ -117,3 +117,57 @@ test('deck.css defines the seven plates, the drifting pattern, and respects redu
   assert.ok(css.includes('.dev-badge'), 'developer-mode styles are in deck.css');
   assert.ok(css.includes('.plate-img') && css.includes('.card.plated .pattern'), 'plate image layer with SVG fallback');
 });
+
+test('the deck has seven cards in order carrying the agreed copy, with plain apostrophes', () => {
+  const h = read('index.html');
+  const cards = [...h.matchAll(/<section class="card [^"]*" data-card="(\d)"/g)].map((m) => Number(m[1]));
+  assert.deepEqual(cards, [1, 2, 3, 4, 5, 6, 7]);
+  const copy = [
+    'Anyone can now study with the greatest minds in history.',
+    'Nobody could make art with them.',
+    'Until <span class="key">today</span>.',
+    'A robot arm that draws <span class="key">with</span> you.',
+    'You make a mark.', 'It looks, understands, and answers.', 'In the hand of an artist you choose.',
+    'A big bold amoeba-like creature with loops and eye-holes sprawls across the board.',
+    "I'll add a small green spiral accent inside the lower loop body to give the creature a pulsing core.",
+    '8 s to look and decide',
+    'Everyone leaves with a one-of-a-kind piece, made with a <span class="key">partner</span>.',
+    'Six exchanges. Two artists. One of them was a robot.',
+    'And you learn their language by <span class="key">answering back</span>.',
+    'One continuous outline, then motion ticks. Your blob becomes a figure.',
+    "Your mark's edges run out to a grid. You start seeing the rectangle in everything.",
+    'Dashes stream around your mark like water around a rock.',
+    "You don't study the technique. You have a conversation in it.",
+    'Look. Understand. Answer. Draw.', '<span class="key">Viam</span> under every step.',
+    'Viam camera component.', 'Claude Opus 5.', 'Viam motion service.',
+    'viam-server owns the arm', 'app.viam.com',
+    '<span class="key">One person.</span> Two days. Claude and Viam.',
+    'Nicholas Fjellberg Swerdlowe', 'Draw one mark. Duet answers.',
+  ];
+  for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
+  assert.ok(!/[‘’]/.test(h), 'use plain apostrophes so quotes are searchable');
+});
+
+test('every local file the deck references exists, and the four support files are linked', () => {
+  const h = read('index.html');
+  const refs = [...h.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
+  assert.ok(refs.length >= 8, 'expected local references');
+  for (const r of refs) assert.ok(existsSync(DIR + r), `referenced but missing: ${r}`);
+  for (const f of ['fredoka.css', 'deck.css', 'deck.js', 'dev.js']) assert.ok(refs.includes(f), `${f} not linked`);
+  assert.ok(refs.includes('img/turn-01-human.jpg') && refs.includes('img/turn-01-robot.jpg'), 'card 3 photos');
+  for (let n = 1; n <= 7; n++) assert.ok(refs.includes(`img/plate-${n}.jpg`), `plate ${n} not referenced`);
+  for (const hero of ['hero-thesis', 'hero-duet', 'hero-build']) assert.ok(refs.includes(`img/${hero}.jpg`), `${hero} not referenced`);
+  assert.ok(!/type="module"/.test(h), 'module scripts do not load over file:// in Chrome');
+});
+
+test('developer mode is wired: badge, label, toast, and unique data-el names on the cards', () => {
+  const h = read('index.html');
+  for (const s of ['class="dev-badge"', 'id="devLabel"', 'id="devToast"']) assert.ok(h.includes(s), s);
+  const names = [...h.matchAll(/data-el="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(names.length >= 30, `only ${names.length} data-el names`);
+  assert.equal(new Set(names).size, names.length, 'data-el names must be unique');
+  for (let n = 1; n <= 7; n++) assert.ok(names.some((x) => x.startsWith(`card ${n} `)), `card ${n} has no data-el`);
+  const dev = read('dev.js');
+  assert.match(dev, /keydown/);
+  assert.match(dev, /classList\.toggle\('dev'\)/);
+});

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duet, a robot arm that draws with you</title>
+<link rel="stylesheet" href="fredoka.css">
+<link rel="stylesheet" href="deck.css">
+</head>
+<body>
+
+<svg class="defs" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- squiggle motifs on a 160 x 160 tile; the wave and zigzag meet their own ends at the tile edge -->
+    <path id="m-wave" d="M0 24 q10 -14 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0"/>
+    <path id="m-zig" d="M0 140 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14"/>
+    <path id="m-ticks" d="M96 56 l-10 -10 M110 50 l0 -14 M124 56 l10 -10 M90 70 l-14 0 M130 70 l14 0"/>
+    <path id="m-dots" d="M30 70 l.01 0 M50 100 l.01 0" stroke-width="10"/>
+    <path id="m-arcs" d="M14 56 a18 18 0 0 1 36 0 M60 116 a14 14 0 0 0 28 0"/>
+    <pattern id="squiggle" width="160" height="160" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#m-wave"/><use href="#m-zig"/><use href="#m-ticks"/><use href="#m-dots"/><use href="#m-arcs"/>
+      </g>
+    </pattern>
+    <pattern id="squiggle-bright" width="160" height="160" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#m-wave" stroke="#ffd400"/><use href="#m-zig" stroke="#e5322d"/><use href="#m-ticks" stroke="#1f4fd6"/>
+        <use href="#m-dots" stroke="#17a34a"/><use href="#m-arcs" stroke="#ff7a00"/>
+      </g>
+    </pattern>
+    <!-- artist stroke grammars, as chips -->
+    <symbol id="s-vangogh" viewBox="0 0 100 60">
+      <g fill="none" stroke="#1f4fd6" stroke-width="4" stroke-linecap="round">
+        <path d="M6 40 q7 -9 14 -3"/><path d="M24 32 q7 -9 14 -3"/><path d="M42 24 q7 -9 14 -3"/><path d="M60 18 q9 -4 13 5"/>
+        <path d="M76 30 q3 9 -4 13"/><path d="M66 46 q-9 3 -12 -4"/><path d="M54 36 q-3 -7 4 -11"/>
+        <path d="M8 54 q7 -9 14 -3"/><path d="M28 50 q7 -9 14 -3"/><path d="M80 52 q7 -9 14 -3"/><path d="M84 10 q7 -9 14 -3"/>
+      </g>
+    </symbol>
+    <symbol id="s-mondrian" viewBox="0 0 100 60">
+      <g fill="none" stroke="#1f4fd6" stroke-width="4" stroke-linecap="square"><path d="M30 0 V60 M70 0 V60 M0 20 H100 M0 42 H100"/></g>
+      <g fill="none" stroke="#e5322d" stroke-width="3" stroke-linecap="round"><path d="M32 40 L52 22 M42 40 L62 22 M52 40 L68 26 M32 30 L40 22"/></g>
+    </symbol>
+    <symbol id="s-haring" viewBox="0 0 100 60">
+      <g fill="none" stroke="#17a34a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 20 q10 -14 26 -6 q14 8 10 22 q-6 14 -22 14 q-16 -2 -18 -14 q-2 -10 4 -16 z"/>
+        <path d="M24 12 l-8 -6 M46 6 l-1 -6 M68 14 l8 -6 M76 36 l9 2 M22 44 l-8 6 M50 54 l2 6"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="stage" data-el="stage">
+
+  <section class="card plate-yellow" data-card="1" data-el="card 1 — thesis">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-1.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="content thesis">
+      <div class="words">
+        <p class="line" data-el="card 1 line 1">Anyone can now study with the greatest minds in history.</p>
+        <p class="line" data-el="card 1 line 2">Nobody could make art with them.</p>
+        <p class="line" data-el="card 1 line 3">Until <span class="key">today</span>.</p>
+      </div>
+      <figure class="paper hero" data-el="card 1 hero — figure with a book and a marker"><img src="img/hero-thesis.jpg" alt=""></figure>
+    </div>
+  </section>
+
+  <section class="card plate-red" data-card="2" data-el="card 2 — what Duet is">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-2.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="content what">
+      <div class="words">
+        <h1 class="wordmark" data-el="card 2 wordmark">Duet</h1>
+        <p class="sub" data-el="card 2 subtitle">A robot arm that draws <span class="key">with</span> you.</p>
+        <ul class="beats">
+          <li data-el="card 2 beat 1">You make a mark.</li>
+          <li data-el="card 2 beat 2">It looks, understands, and answers.</li>
+          <li data-el="card 2 beat 3">In the hand of an artist you choose.</li>
+        </ul>
+        <div class="chips">
+          <figure class="paper chip" data-el="card 2 chip — Van Gogh"><svg class="sample" viewBox="0 0 100 60"><use href="#s-vangogh" width="100" height="60"/></svg><figcaption>Van Gogh</figcaption></figure>
+          <figure class="paper chip" data-el="card 2 chip — Mondrian"><svg class="sample" viewBox="0 0 100 60"><use href="#s-mondrian" width="100" height="60"/></svg><figcaption>Mondrian</figcaption></figure>
+          <figure class="paper chip" data-el="card 2 chip — Keith Haring"><svg class="sample" viewBox="0 0 100 60"><use href="#s-haring" width="100" height="60"/></svg><figcaption>Keith Haring</figcaption></figure>
+        </div>
+      </div>
+      <figure class="paper hero" data-el="card 2 hero — person and robot arm drawing together"><img src="img/hero-duet.jpg" alt=""></figure>
+    </div>
+  </section>
+
+  <section class="card plate-blue" data-card="3" data-el="card 3 — one turn">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-3.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="content turn">
+      <figure class="paper photo" data-el="card 3 photo — your mark">
+        <img src="img/turn-01-human.jpg" alt="The visitor's red mark on the board">
+        <figcaption>Your mark</figcaption>
+      </figure>
+      <div class="bubble" data-el="card 3 speech bubble">
+        <p class="sees" data-el="card 3 speech bubble — sees">A big bold amoeba-like creature with loops and eye-holes sprawls across the board.</p>
+        <p class="adds" data-el="card 3 speech bubble — adds">I'll add a small green spiral accent inside the lower loop body to give the creature a pulsing core.</p>
+        <span class="badge" data-el="card 3 badge — latency">8 s to look and decide</span>
+      </div>
+      <figure class="paper photo" data-el="card 3 photo — the answer">
+        <img src="img/turn-01-robot.jpg" alt="The board after the robot's green spiral">
+        <figcaption>Duet answers</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="card plate-green" data-card="4" data-el="card 4 — co-creation">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-4.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="content cocreate">
+      <div class="words">
+        <h2 data-el="card 4 headline">Everyone leaves with a one-of-a-kind piece, made with a <span class="key">partner</span>.</h2>
+        <p class="under" data-el="card 4 line">Six exchanges. Two artists. One of them was a robot.</p>
+      </div>
+      <div class="flipwrap">
+        <figure class="paper photo flip" data-el="card 4 flipbook image"><img id="flip" src="img/turn-00-start.jpg" alt="The board, turn by turn"></figure>
+        <span class="chip-label" id="flipLabel" data-el="card 4 flipbook counter">start</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card plate-orange" data-card="5" data-el="card 5 — learning">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-5.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="content learn">
+      <h2 data-el="card 5 headline">And you learn their language by <span class="key">answering back</span>.</h2>
+      <ul class="lessons">
+        <li data-el="card 5 lesson — Haring">
+          <figure class="paper chip"><svg class="sample" viewBox="0 0 100 60"><use href="#s-haring" width="100" height="60"/></svg><figcaption>Haring</figcaption></figure>
+          <p>One continuous outline, then motion ticks. Your blob becomes a figure.</p>
+        </li>
+        <li data-el="card 5 lesson — Mondrian">
+          <figure class="paper chip"><svg class="sample" viewBox="0 0 100 60"><use href="#s-mondrian" width="100" height="60"/></svg><figcaption>Mondrian</figcaption></figure>
+          <p>Your mark's edges run out to a grid. You start seeing the rectangle in everything.</p>
+        </li>
+        <li data-el="card 5 lesson — Van Gogh">
+          <figure class="paper chip"><svg class="sample" viewBox="0 0 100 60"><use href="#s-vangogh" width="100" height="60"/></svg><figcaption>Van Gogh</figcaption></figure>
+          <p>Dashes stream around your mark like water around a rock.</p>
+        </li>
+      </ul>
+      <p class="footer" data-el="card 5 footer">You don't study the technique. You have a conversation in it.</p>
+    </div>
+  </section>
+
+  <section class="card plate-cream" data-card="6" data-el="card 6 — how it works">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-6.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="content how">
+      <h2 data-el="card 6 title">Look. Understand. Answer. Draw.</h2>
+      <p class="sub" data-el="card 6 subtitle"><span class="key">Viam</span> under every step.</p>
+      <ol class="nodes">
+        <li class="paper node" data-el="card 6 node — Look"><h3>Look</h3><p>Viam camera component. RealSense colour and depth, aligned, from the wrist. The board is found again every turn.</p></li>
+        <li class="arrow" aria-hidden="true">&rarr;</li>
+        <li class="paper node" data-el="card 6 node — Understand"><h3>Understand</h3><p>Claude Opus 5. One photo in, two sentences and strokes out.</p></li>
+        <li class="arrow" aria-hidden="true">&rarr;</li>
+        <li class="paper node" data-el="card 6 node — Answer"><h3>Answer</h3><p>The artist's grammar styles the strokes. The planner clips and budgets them, in board millimetres mapped into Viam's world frame.</p></li>
+        <li class="arrow" aria-hidden="true">&rarr;</li>
+        <li class="paper node" data-el="card 6 node — Draw"><h3>Draw</h3><p>Viam motion service. Every move planned around the table and wall obstacles, linear constraints on pen-down, arm and gripper components over the Python SDK.</p></li>
+      </ol>
+      <ul class="numbers">
+        <li class="paper num" data-el="card 6 number — 8 s"><b>8 s</b><span>to look and decide</span></li>
+        <li class="paper num" data-el="card 6 number — 2 mm"><b>2 mm</b><span>calibration</span></li>
+        <li class="paper num" data-el="card 6 number — tests"><b>120</b><span>tests</span></li>
+        <li class="paper num" data-el="card 6 number — direct moves"><b>0</b><span>direct arm moves</span></li>
+      </ul>
+      <p class="strip" data-el="card 6 Viam strip">viam-server owns the arm's control box &middot; machine configured in app.viam.com &middot; Python SDK from a laptop &middot; motion service with obstacles &middot; camera, arm, gripper components</p>
+    </div>
+  </section>
+
+  <section class="card plate-black" data-card="7" data-el="card 7 — the build">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle-bright)"/></svg>
+    <img class="plate-img" src="img/plate-7.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="content build">
+      <div class="words">
+        <h2 data-el="card 7 headline"><span class="key">One person.</span> Two days. Claude and Viam.</h2>
+        <p class="credit" data-el="card 7 credit">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; September 2026</p>
+        <p class="cta" data-el="card 7 footer — rig instruction">Draw one mark. Duet answers.</p>
+      </div>
+      <figure class="paper hero" data-el="card 7 hero — dancing figure beside the arm"><img src="img/hero-build.jpg" alt=""></figure>
+    </div>
+  </section>
+
+  <div class="counter" id="counter" data-el="slide counter">1 / 7</div>
+</div>
+
+<div class="dev-badge">DEV MODE &middot; click an element to copy its name &middot; press D to exit</div>
+<div class="dev-label" id="devLabel"></div>
+<div class="dev-toast" id="devToast"></div>
+
+<script src="deck.js"></script>
+<script src="dev.js"></script>
+</body>
+</html>
