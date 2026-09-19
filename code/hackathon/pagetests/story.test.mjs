@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { welcomeButton, welcomeReturns, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor } from '../duet/static/js/story.js';
+import { welcomeButton, welcomeReturns, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor, ARTIST_INFO, artistName, pickerText } from '../duet/static/js/story.js';
 
 test('chipFor gives the storybook words and tone per state, and a readable fallback', () => {
   assert.deepEqual(chipFor('human_turn'), { text: 'Your turn!', tone: 'green' });
@@ -94,4 +94,27 @@ test('welcomeReturns: look after a robot turn is not a fresh session', () => {
   assert.equal(welcomeReturns('robot_draw', 'look'), false);
   assert.equal(welcomeReturns('finished', 'start'), true);
   assert.equal(welcomeReturns('finished', 'idle'), true);
+});
+
+test('every artist has a name and a one-line description; unknown ids read as a capitalised id', () => {
+  assert.deepEqual(Object.keys(ARTIST_INFO), ['abstract', 'mimic', 'haring', 'mondrian', 'vangogh', 'architect', 'designer', 'shader']);
+  for (const [name, blurb] of Object.values(ARTIST_INFO)) { assert.ok(name.length >= 5); assert.ok(blurb.split(' ').length <= 6, blurb); }
+  assert.equal(artistName('vangogh'), 'Van Gogh'); assert.equal(artistName('zorn'), 'Zorn'); assert.equal(artistName(''), '');
+});
+
+test('pickerText: opens on the human turn, labels the robot states with the turn artist, hides otherwise', () => {
+  assert.deepEqual(pickerText('human_turn', 'abstract', null, null), { text: 'as Abstract ▾', open: true });
+  assert.deepEqual(pickerText('human_turn', 'shader', 'mimic', null), { text: 'as Shader ▾', open: true });   // the setting, not the last turn
+  assert.deepEqual(pickerText('capture', 'abstract', 'mimic', null), { text: 'Mimic is looking…', open: false });
+  assert.deepEqual(pickerText('interpret', 'abstract', null, null), { text: 'Abstract is looking…', open: false });  // not known yet: the setting
+  assert.deepEqual(pickerText('plan', 'abstract', 'shader', null), { text: 'Shader is drawing', open: false });
+  assert.deepEqual(pickerText('robot_draw', 'abstract', 'architect', null), { text: 'Architect is drawing', open: false });
+  for (const s of ['idle', 'start', 'look', 'finish', 'finished', 'paused']) assert.equal(pickerText(s, 'abstract', 'mimic', null), null, s);
+});
+
+test('pickerText while browsing: a robot photo names who drew it, anything else hides the picker', () => {
+  assert.deepEqual(pickerText('human_turn', 'abstract', null, { who: 'robot', artist: 'designer' }), { text: 'Designer drew this', open: false });
+  assert.equal(pickerText('human_turn', 'abstract', null, { who: 'robot', artist: null }), null);
+  assert.equal(pickerText('human_turn', 'abstract', null, { who: 'human', artist: 'designer' }), null);
+  assert.equal(pickerText('robot_draw', 'abstract', 'mimic', { who: 'start', artist: null }), null);
 });

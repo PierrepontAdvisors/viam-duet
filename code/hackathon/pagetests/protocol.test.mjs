@@ -78,3 +78,15 @@ test('shot urls round-trip', () => {
   assert.deepEqual(parseShotUrl('/sessions/s1/turn-04-human-frame.jpg'), { session: 's1', turn: 4, who: 'human', frame: true });
   assert.equal(parseShotUrl('/sessions/s1/session.mp4'), null);
 });
+
+test('interpretation, plan, and shot carry the turn artist when the backend sends one; ink is a known source', () => {
+  const i = parseMessage(JSON.stringify({ type: 'interpretation', sees: 'x', adds: 'y', source: 'ink', artist: 'mimic', latency_s: 0 }));
+  assert.equal(i.source, 'ink'); assert.equal(i.artist, 'mimic');
+  assert.equal(parseMessage(JSON.stringify({ type: 'interpretation', sees: 'x', adds: 'y' })).artist, null);
+  const p = parseMessage(JSON.stringify({ type: 'plan', polylines: [[[0, 0], [1, 1]]], color: '#1b8f3a', artist: 'shader' }));
+  assert.equal(p.artist, 'shader');
+  assert.equal(parseMessage(JSON.stringify({ type: 'plan', polylines: [] })).artist, null);
+  const s = parseMessage(JSON.stringify({ type: 'shot', url: '/sessions/s/turn-01-robot.jpg', turn: 1, who: 'robot', artist: 'architect' }));
+  assert.equal(s.artist, 'architect');
+  assert.equal(parseMessage(JSON.stringify({ type: 'shot', url: '/sessions/s/turn-00-start.jpg', who: 'start', artist: 7 })).artist, null);
+});

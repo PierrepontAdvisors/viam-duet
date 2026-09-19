@@ -1,12 +1,12 @@
 /** Boot: the WebSocket with snapshot and reconnect, message dispatch, and the modules. */
-import { parseMessage, setCommand, command } from './protocol.js?v=ds4';
-import { TurnBook } from './story.js?v=ds4';
-import { Viewer } from './viewer.js?v=ds4';
-import { initUI } from './ui.js?v=ds4';
-import { GhostPen } from './preview.js?v=ds4';
-import { Sound } from './audio.js?v=ds4';
-import { polylinesFromSvg } from './picture.js?v=ds4';
-import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds4';
+import { parseMessage, setCommand, command } from './protocol.js?v=ds6';
+import { TurnBook } from './story.js?v=ds6';
+import { Viewer } from './viewer.js?v=ds6';
+import { initUI } from './ui.js?v=ds6';
+import { GhostPen } from './preview.js?v=ds6';
+import { Sound } from './audio.js?v=ds6';
+import { polylinesFromSvg } from './picture.js?v=ds6';
+import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds6';
 
 const $ = (id) => document.getElementById(id);
 export const app = {
@@ -69,13 +69,15 @@ function handle(msg) {
       if (msg.session && msg.turn > 0) backfillPlans(msg.session, msg.turn);
       break;
     case 'human': app.human = msg; app.viewer.setInk(msg.polylines); app.book.note(turnOf(msg), { new: msg.new }); break;
-    case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s }); break;
+    case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s, ...(msg.artist ? { artist: msg.artist } : {}) }); break;
     case 'plan': archivePlan(); app.plan = msg;
+      if (msg.artist) app.book.note(turnOf(msg), { artist: msg.artist });
       if (app.state && app.state.state === 'finished') { app.book.note(turnOf(msg), { plan: msg.polylines }); archivePlan(); break; } app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); (app.backfilled = app.backfilled || new Set()).add(turnOf(msg)); app.ghost.play(msg.polylines); break;
     case 'progress': app.progress = msg.stroke; if (app.plan) app.viewer.setPlan(app.plan.polylines, msg.stroke); turnOf(msg); break;
     case 'shot': {
       const known = app.book.shots.length;
       if (!known) app.book.backfill(msg).forEach(s => app.book.addShot(s));
+      if (msg.artist && msg.who !== 'start') app.book.note(msg.turn, { artist: msg.artist });
       app.book.addShot(msg); break;
     }
     case 'video': app.video = msg; break;

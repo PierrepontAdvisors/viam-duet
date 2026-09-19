@@ -1,7 +1,7 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, welcomeButton, welcomeReturns } from './story.js?v=ds4';
-import { bubblePosition } from './geometry.js?v=ds4';
-import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds4';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, welcomeButton, welcomeReturns, ARTIST_INFO, artistName, pickerText } from './story.js?v=ds6';
+import { bubblePosition } from './geometry.js?v=ds6';
+import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds6';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -91,6 +91,42 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   }
   /** Restart the design system's pop on an element whose content just changed. */
   function popIt(el) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+
+  // ---- artist picker: beside Go, one artist per turn ----
+  const pick = { open: false, roster: '' };
+  function buildMenu(ids) {
+    const key = ids.join(',');
+    if (key === pick.roster) return;
+    pick.roster = key;
+    $('artist-menu').replaceChildren(...ids.map(id => {
+      const b = document.createElement('button');
+      b.className = 'chip white'; b.dataset.v = id; b.dataset.el = `artist picker — ${artistName(id)}`;
+      const name = document.createElement('b'); name.textContent = artistName(id);
+      b.append(name, document.createTextNode((ARTIST_INFO[id] || [])[1] || ''));
+      return b;
+    }));
+  }
+  function openMenu(onOff) { pick.open = onOff; $('artist-menu').classList.toggle('hidden', !onOff); }
+  function renderPicker() {
+    const st = app.state;
+    const shot = view.source === 'shot' ? app.book.shots[view.index] : null;
+    const rec = st ? app.book.get(st.turn + 1) : null;                       // the exchange in progress
+    const p = st ? pickerText(st.state, st.artist, rec && rec.artist, shot) : null;
+    $('artist-pick').classList.toggle('hidden', !p);
+    if (!p) { openMenu(false); return; }
+    buildMenu(st.artists);
+    const btn = $('artist-btn');
+    if (btn.textContent !== p.text) { btn.textContent = p.text; popIt(btn); }
+    btn.disabled = !p.open;
+    if (!p.open) openMenu(false);
+    for (const b of $('artist-menu').children) b.classList.toggle('on', b.dataset.v === st.artist);
+  }
+  $('artist-btn').onclick = (e) => { e.stopPropagation(); if (!$('artist-btn').disabled) openMenu(!pick.open); };
+  $('artist-menu').onclick = (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    e.stopPropagation(); sendSet({ artist: b.dataset.v }); openMenu(false);
+  };
+  document.addEventListener('click', () => { if (pick.open) openMenu(false); });
 
   // ---- bubble ----
   function currentBubble() {
@@ -223,12 +259,13 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (state === 'finished') { welcome.waiting = true; welcome.pressed = true; sendCommand('restart'); renderWelcome(); return; }
     welcome.pressed = false; showWelcome(false);
   };
-  const renderAll = () => { renderChips(); renderBubble(); renderPanel(); renderWelcome(); };
+  const renderAll = () => { renderChips(); renderPicker(); renderBubble(); renderPanel(); renderWelcome(); };
 
   // ---- keys and developer mode ----
   document.addEventListener('keydown', (e) => {
     if (e.target instanceof Element && e.target.matches('input, textarea, select')) return;
-    if (e.key === 'ArrowLeft') { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); }
+    if (e.key === 'Escape') openMenu(false);
+    else if (e.key === 'ArrowLeft') { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); }
     else if (e.key === 'ArrowRight') { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); }
     else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key === 'l' || e.key === 'L') showLive();
