@@ -1,0 +1,73 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor } from '../duet/static/js/story.js';
+
+test('chipFor gives the storybook words and tone per state, and a readable fallback', () => {
+  assert.deepEqual(chipFor('human_turn'), { text: 'Your turn!', tone: 'green' });
+  assert.deepEqual(chipFor('robot_draw'), { text: 'My turn! Hands off, please', tone: 'red' });
+  assert.deepEqual(chipFor('paused'), { text: 'Paused', tone: 'red' });
+  assert.deepEqual(chipFor('reseat_marker'), { text: 'reseat marker', tone: 'white' });
+});
+
+test('placeholders cycle every 1.5 seconds', () => {
+  assert.equal(placeholderAt(0), PLACEHOLDERS[0]);
+  assert.equal(placeholderAt(1600), PLACEHOLDERS[1]);
+  assert.equal(placeholderAt(1500 * PLACEHOLDERS.length + 10), PLACEHOLDERS[0]);
+});
+
+test('bubbleForState: thinking shows a placeholder until the thought lands, then speaks the quip', () => {
+  assert.deepEqual(bubbleForState('capture', null, { elapsedMs: 0 }), { kind: 'thought', text: PLACEHOLDERS[0] });
+  assert.deepEqual(bubbleForState('interpret', { thought: 'Is that a cat?' }, {}), { kind: 'thought', text: 'Is that a cat?' });
+  assert.deepEqual(bubbleForState('plan', { quip: 'A hat for the cat!' }, {}), { kind: 'speech', text: 'A hat for the cat!' });
+  assert.deepEqual(bubbleForState('robot_draw', null, {}), { kind: 'speech', text: FIXED.noQuip });
+  assert.deepEqual(bubbleForState('human_turn', null, {}), { kind: 'speech', text: FIXED.start });
+  assert.deepEqual(bubbleForState('human_turn', null, { reseat: true }), { kind: 'speech', text: FIXED.reseat });
+  assert.deepEqual(bubbleForState('finished', null, {}), { kind: 'speech', text: 'That was fun. Play it back?' });
+});
+
+test('bubbleForShot follows the photo: thought on the human, speech on the robot', () => {
+  assert.deepEqual(bubbleForShot('start', null), { kind: 'speech', text: FIXED.start });
+  assert.deepEqual(bubbleForShot('human', { thought: 'Loops!' }), { kind: 'thought', text: 'Loops!' });
+  assert.deepEqual(bubbleForShot('human', null), { kind: 'thought', text: FIXED.oldThought });
+  assert.deepEqual(bubbleForShot('robot', { quip: 'Dance!' }), { kind: 'speech', text: 'Dance!' });
+  assert.deepEqual(bubbleForShot('final', null), { kind: 'speech', text: FIXED.oldQuip });
+});
+
+test('TurnBook merges notes per turn and keeps shots in story order', () => {
+  const b = new TurnBook();
+  b.note(1, { thought: 'Hmm' }); b.note(1, { quip: 'Yes!' });
+  assert.deepEqual(b.get(1), { thought: 'Hmm', quip: 'Yes!' }); assert.equal(b.get(2), null);
+  b.addShot({ url: '/sessions/s/turn-01-robot.jpg', frame_url: null, turn: 1, who: 'robot', session: 's' });
+  b.addShot({ url: '/sessions/s/turn-00-start.jpg', frame_url: null, turn: 0, who: 'start', session: 's' });
+  const i = b.addShot({ url: '/sessions/s/turn-01-human.jpg', frame_url: null, turn: 1, who: 'human', session: 's' });
+  assert.equal(i, 1);
+  assert.deepEqual(b.shots.map(s => `${s.turn}-${s.who}`), ['0-start', '1-human', '1-robot']);
+  b.addShot({ url: '/sessions/s/turn-01-robot.jpg', frame_url: '/sessions/s/turn-01-robot-frame.jpg', turn: 1, who: 'robot', session: 's' });
+  assert.equal(b.shots.length, 3); assert.equal(b.shots[2].frame_url, '/sessions/s/turn-01-robot-frame.jpg');
+  assert.equal(b.indexOf(1, 'human'), 1);
+});
+
+test('backfill lists every shot that should precede the latest one, with frame urls when the latest has one', () => {
+  const b = new TurnBook();
+  const latest = { url: '/sessions/s/turn-02-human.jpg', frame_url: '/sessions/s/turn-02-human-frame.jpg', turn: 2, who: 'human', session: 's' };
+  const list = b.backfill(latest);
+  assert.deepEqual(list.map(s => `${s.turn}-${s.who}`), ['0-start', '1-human', '1-robot']);
+  assert.equal(list[1].url, '/sessions/s/turn-01-human.jpg'); assert.equal(list[1].frame_url, '/sessions/s/turn-01-human-frame.jpg');
+  assert.equal(b.backfill({ ...latest, frame_url: null })[1].frame_url, null);
+  assert.deepEqual(b.backfill({ ...latest, turn: 0, who: 'start' }), []);
+});
+
+test('loopSchedule is one second per shot with the last held two seconds', () => {
+  const b = new TurnBook();
+  for (const [t, w] of [[0, 'start'], [1, 'human'], [1, 'robot']]) b.addShot({ url: `/sessions/s/turn-0${t}-${w}.jpg`, frame_url: null, turn: t, who: w, session: 's' });
+  assert.deepEqual(b.loopSchedule(), [1000, 1000, 2000]);
+  assert.deepEqual(new TurnBook().loopSchedule(), []);
+});
+
+test('anchorFor points a thought at the new ink and a speech at the plan', () => {
+  const rec = { new: [[[10, 10], [30, 10]]], plan: [[[100, 200]]] };
+  assert.deepEqual(anchorFor('thought', rec), [20, 10]);
+  assert.deepEqual(anchorFor('speech', rec), [100, 200]);
+  assert.deepEqual(anchorFor('speech', null), [88, 120]);
+  assert.deepEqual(anchorFor('start', rec), [88, 120]);
+});
