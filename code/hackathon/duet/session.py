@@ -209,13 +209,14 @@ class Session:
         self.states_seen.append(state)
         self.emit_state()
 
-    def _emit_shot(self, who: str) -> None:
+    def _emit_shot(self, who: str, turn: int) -> None:
         """`who` is "start", "human", "robot" or "final", so the page can label thumbnails without parsing
-        the URL. `frame_url` is the raw landscape camera frame of the same capture, when one was saved."""
+        the URL, and `turn` is the photo's own turn number, the one in its filename. `frame_url` is the
+        raw landscape camera frame of the same capture, when one was saved."""
         p = self.rec.latest_photo
         if p is not None:
             f = self.rec.latest_frame
-            self.bus.emit("shot", url=f"/sessions/{self.rec.id}/{p.name}", turn=self.turn, who=who,
+            self.bus.emit("shot", url=f"/sessions/{self.rec.id}/{p.name}", turn=turn, who=who,
                           frame_url=f"/sessions/{self.rec.id}/{f.name}" if f is not None else None)
 
     def _set_look(self, value: bool) -> None:
@@ -261,7 +262,7 @@ class Session:
         self._set_look(True)
         self.previous_photo, frame = await self._capture_board()
         self.rec.save_photo(0, "start", self.previous_photo, frame)
-        self._emit_shot("start")
+        self._emit_shot("start", 0)
         return "human_turn"
 
     def _board_homography(self) -> np.ndarray:
@@ -339,7 +340,7 @@ class Session:
         mask, coverage = vision.new_ink(photo, self.previous_photo)
         new_cam = vision.trace(mask)
         if not new_cam:
-            self.bus.emit("human", polylines=self.human_ink, new=[], found=False)
+            self.bus.emit("human", polylines=self.human_ink, new=[], found=False, turn=self.turn + 1)
             return "human_turn"
         self.human_new_cam = new_cam
         self.human_new = vision.cam_to_robot(new_cam, self.cal)
@@ -347,8 +348,8 @@ class Session:
         self.coverage = coverage
         self.previous_photo = photo
         self.rec.save_photo(self.turn + 1, "human", photo, frame)
-        self._emit_shot("human")
-        self.bus.emit("human", polylines=self.human_ink, new=self.human_new, found=True)
+        self._emit_shot("human", self.turn + 1)
+        self.bus.emit("human", polylines=self.human_ink, new=self.human_new, found=True, turn=self.turn + 1)
         return "interpret"
 
     async def _state_interpret(self) -> str:
@@ -358,7 +359,8 @@ class Session:
         self.bus.emit("interpretation", sees=p.sees if p else "", adds=p.adds if p else "",
                       thought=(getattr(p, "thought", "") or FALLBACK_THOUGHT) if p else FALLBACK_THOUGHT,
                       quip=(getattr(p, "quip", "") or FALLBACK_QUIP) if p else FALLBACK_QUIP,
-                      source=self.result.source, latency_s=round(self.result.latency_s, 2), error=self.result.error)
+                      source=self.result.source, latency_s=round(self.result.latency_s, 2), error=self.result.error,
+                      turn=self.turn + 1)
         return "plan"
 
     async def _state_plan(self) -> str:
@@ -388,7 +390,8 @@ class Session:
         self.rec.record_turn(turn, sees=sees, adds=adds, source=source, latency_s=round(r.latency_s, 2) if r else None,
                              error=r.error if r else None, color=self.color,
                              planned_mm=round(sum(length(pl) for pl in self.plan)))
-        self.bus.emit("plan", polylines=self.plan, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=budget)
+        self.bus.emit("plan", polylines=self.plan, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=budget,
+                      turn=self.turn + 1)
         return "robot_draw"
 
     async def _wait_hands_clear(self) -> None:
@@ -410,10 +413,10 @@ class Session:
                 ev = await asyncio.wait_for(self.ctl.events.get(), 0.1)
             except asyncio.TimeoutError:
                 continue
-            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]))
+            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]), turn=self.turn + 1)
         while not self.ctl.events.empty():
             ev = self.ctl.events.get_nowait()
-            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]))
+            self.bus.emit("progress", stroke=ev["stroke"], drawn_mm=round(ev["drawn_mm"]), turn=self.turn + 1)
 
     async def _draw(self, polylines: list[Polyline], budget_mm: float, budget_s: float):
         await self._wait_hands_clear()
@@ -448,7 +451,7 @@ class Session:
         _, self.coverage = vision.new_ink(photo, self.previous_photo)
         self.previous_photo = photo
         self.rec.save_photo(self.turn, "robot", photo, frame)
-        self._emit_shot("robot")
+        self._emit_shot("robot", self.turn)
         self.rec.record_turn(self.turn, coverage=round(self.coverage, 3))
         self.rec.set_turn(self.turn)
         self.rec.write()
@@ -460,7 +463,8 @@ class Session:
         ox, oy = cfg.BOARD_W_MM - cfg.INSET_MM - 12, cfg.BOARD_H_MM - cfg.INSET_MM - 12
         signature = [[(ox + x, oy + y) for x, y in pl] for pl in cfg.SIGNATURE_MM]
         if not self._signed:
-            self.bus.emit("plan", polylines=signature, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=100)
+            self.bus.emit("plan", polylines=signature, color=cfg.COLOR_HEX.get(self.color, "#222222"), budget_mm=100,
+                          turn=self.turn)
             await self._draw(signature, 100.0, 20.0)
             self.robot_ink = self.robot_ink + signature
             self._signed = True
@@ -469,7 +473,7 @@ class Session:
         photo, frame = await self._capture_board()
         self.previous_photo = photo
         self.rec.save_photo(self.turn, "final", photo, frame)
-        self._emit_shot("final")
+        self._emit_shot("final", self.turn)
         self.rec.write()
         video = await asyncio.to_thread(self.rec.stitch)
         if video is not None:

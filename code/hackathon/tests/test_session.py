@@ -67,6 +67,8 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
         assert (rec.dir / name).exists(), name
     shot = next(e for e in events if e["type"] == "shot")
     assert shot["who"] == "start" and shot["frame_url"].endswith("turn-00-start-frame.jpg")
+    human_shot = next(e for e in events if e["type"] == "shot" and e["who"] == "human")
+    assert human_shot["turn"] == 1
     meta = json.loads((rec.dir / "session.json").read_text())
     assert meta["turn"] == 1 and meta["exchanges"] == 1 and meta["history"][0]["source"] == "claude"
     assert meta["history"][0]["sees"].startswith("A creature")
@@ -76,12 +78,15 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
     interp = next(e for e in events if e["type"] == "interpretation")
     assert interp["quip"] == "What a creature! Here comes the sun." and interp["source"] == "claude"
     assert interp["thought"] == "Is that a creature waking up?"
+    assert interp["turn"] == 1
     human = next(e for e in events if e["type"] == "human")
     assert 10 <= len(human["new"]) <= 16
+    assert human["turn"] == 1
     xs = [x for pl in human["new"] for x, _ in pl]
     assert 30 <= min(xs) <= 45 and 130 <= max(xs) <= 145              # robot-board mm (cam_to_robot applied)
     plan = next(e for e in events if e["type"] == "plan")
     assert plan["polylines"] and plan["color"] == cfg.COLOR_HEX["green"]
+    assert plan["turn"] == 1
     assert ctl.drawn[0] == plan["polylines"][:len(ctl.drawn[0])]
 
 
