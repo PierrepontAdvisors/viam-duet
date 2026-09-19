@@ -17,6 +17,10 @@ python moves.py up 50     # planned 50 mm lift, obstacles honored
 | `explore.py` | Connection proof. Prints everything, moves nothing, saves camera frames to `captures/` |
 | `moves.py` | Verb-per-command test moves through the motion service: `where`, `open`, `grab`, `up`, `down`, `goto`, `stop` |
 | `reference/pick-and-place/` | Clone of viam-devrel/pick-and-place (gitignored). `scripts/reference-solution.py` is a complete detect-pick-place loop on this exact hardware |
+| `duet/` | The Duet drawing robot. `python -m duet.<module>`; each module's docstring has its usage. Day 1: `teach`, `stroke_bench`, `dock_test`, `aim`, `calibrate`, `claude_turn`, `turn` (terminal loop). Night 1: `trigger`, `session`, `recorder`, `web`, `run`, `fakes` |
+| `duet/run.py` | `python -m duet.run` starts everything against the machine with the page on http://localhost:8000; `--fake` replays the real day-1 boards through a fake camera and arm; `--fake --claude` adds the real Claude call |
+| `tests/fixtures/` | A real look-pose frame and the boards of the first hardware exchange, used by the tests and by `run.py --fake` |
+| `sessions/` | One folder per session (gitignored): turn photos, plan SVGs, `session.json`, `session.mp4` |
 
 Names default to the hackathon deck's `arm`, `gripper`, `cam`. Override in `.env` if the machine uses `arm-1` style names.
 
