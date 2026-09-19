@@ -88,7 +88,7 @@ body.crop .bubble { font-size: 1.9cqw; padding: 1.3cqw 1.6cqw; }
 
 /* controls: a small corner button, and a panel over the bottom of the picture, laid out on a grid */
 .corner { position: absolute; right: 1.6cqw; bottom: 1.4cqw; z-index: 6; display: flex; gap: .6cqw; align-items: center; }
-body.controls .corner, body.diag .corner { display: none; }
+body.controls .corner, body.diagnostics .corner { display: none; }
 .gear { position: relative; z-index: 6; font: 700 1cqw/1 var(--story); letter-spacing: .1em; text-transform: uppercase;
         padding: .5cqw 1cqw; background: var(--paper); color: var(--ink); border: .25cqw solid var(--ink); border-radius: 999px; cursor: pointer; opacity: .8; }
 .gear:hover { opacity: 1; }
@@ -130,7 +130,7 @@ body.controls .panel { display: grid; }
 .diag { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; z-index: 5; display: none; flex-direction: column; gap: .6cqw;
         padding: .8cqw 1.6cqw 1cqw; background: rgba(255,255,255,.94); border-top: var(--frame-stroke) solid var(--ink);
         font-family: var(--mono); color: var(--ink); }
-body.diag .diag { display: flex; }
+body.diagnostics .diag { display: flex; }   /* the body class differs from the drawer's own class on purpose: body.diag would match .diag { display: none } and hide the page */
 .diag-head { display: flex; gap: 1cqw; align-items: center; height: 2.4cqw; flex: 0 0 auto; }
 .diag .lbl { font: 700 .85cqw/1 var(--story); letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
 .diag-summary { flex: 1; font: .85cqw/1.5 var(--mono); color: #555; }

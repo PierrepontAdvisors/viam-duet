@@ -27,17 +27,17 @@ The corner button "Controls" (class `gear`, id `gear`) moves into a small flex r
 - **The gear** `#diag-gear`: a corner button with the classes `gear icon`, an inline SVG gear of about 1.4 cqw using `currentColor`, `aria-label="Diagnostics"`, `title="Diagnostics (G)"`. It keeps the corner button's paper fill, ink border, and toy-press shadow.
 - **Controls** `#gear`, unchanged in look and behaviour.
 
-`body.controls .corner, body.diag .corner { display: none }` replaces today's `body.controls .gear { display: none }`: both drawers hide the corner row and carry their own Hide button. The `.gear` rule keeps its `z-index: 6` so the welcome-page test's assertion still holds; the row positions the buttons. The corner row sits over the welcome page (z 4) as the Controls button does today.
+`body.controls .corner, body.diagnostics .corner { display: none }` replaces today's `body.controls .gear { display: none }`: both drawers hide the corner row and carry their own Hide button. The `.gear` rule keeps its `z-index: 6` so the welcome-page test's assertion still holds; the row positions the buttons. The corner row sits over the welcome page (z 4) as the Controls button does today.
 
 ## 3. The drawer
 
-`<section class="diag" id="diag">` inside the stage, after the panel: `position: absolute; left: 0; right: 0; bottom: 0; height: 50%; z-index: 5`, the panel's translucent white and frame-stroke top border, mono type (`--mono`) with the panel's small-caps labels (`--story`). Shown by `body.diag`. Three bands, a flex column:
+`<section class="diag" id="diag">` inside the stage, after the panel: `position: absolute; left: 0; right: 0; bottom: 0; height: 50%; z-index: 5`, the panel's translucent white and frame-stroke top border, mono type (`--mono`) with the panel's small-caps labels (`--story`). Shown by `body.diagnostics` (not `body.diag`: the body would then match the drawer's own `.diag { display: none }` rule and hide the page). Three bands, a flex column:
 
 1. **Header**, 2.4 cqw tall: the label "Diagnostics" (the panel's `.lbl` style), the summary in mono (`#diag-summary`, section 5 `header`), and a Hide button (`#diag-hide`, styled like the panel's Hide).
 2. **Timeline**: an SVG `#diag-timeline` with a fixed `viewBox` (1000 by 92 units) and a matching CSS `aspect-ratio`, full width, so nothing stretches. About a third of the drawer's height.
 3. **Log**: `.diag-log`, `flex: 1; min-height: 0; overflow: auto`, holding the table (section 7).
 
-Open and close live in `ui.js` beside the panel's toggle: `toggleDiag(force)` sets `body.diag`, removes `body.controls`, tells the view (`view.setOpen(bool)`), and re-places the bubble; `toggleControls` removes `body.diag` when it opens the panel. Bindings: the gear opens, Hide closes, key `G` toggles (with the existing key guard for inputs), `?view=diag` opens at load as `?view=console` does for the panel. The bubble's floor becomes the top of whichever of the panel or the drawer is open.
+Open and close live in `ui.js` beside the panel's toggle: `toggleDiag(force)` sets `body.diagnostics`, removes `body.controls`, tells the view (`view.setOpen(bool)`), and re-places the bubble; `toggleControls` removes `body.diagnostics` when it opens the panel. Bindings: the gear opens, Hide closes, key `G` toggles (with the existing key guard for inputs), `?view=diag` opens at load as `?view=console` does for the panel. The bubble's floor becomes the top of whichever of the panel or the drawer is open.
 
 ## 4. Recording
 

@@ -39,10 +39,11 @@ test('every data-el name in the page is unique', () => {
 test('styles: the corner row hides under both drawers, the drawer shares the panel layer, the light has three looks', () => {
   const css = read('duet.css');
   assert.match(css, /\.corner \{[^}]*z-index: 6/);
-  assert.match(css, /body\.controls \.corner, body\.diag \.corner \{ display: none; \}/);
+  assert.match(css, /body\.controls \.corner, body\.diagnostics \.corner \{ display: none; \}/);
   assert.ok(!css.includes('body.controls .gear { display: none; }'), 'the old per-button hide is gone');
   assert.match(css, /\.diag \{[^}]*z-index: 5/);
-  assert.match(css, /body\.diag \.diag \{ display: flex; \}/);
+  assert.match(css, /body\.diagnostics \.diag \{ display: flex; \}/);
+  assert.ok(!/body\.diag[ .]/.test(css), 'the body class must not be the drawer class: body.diag would match .diag { display: none }');
   assert.match(css, /\.light \{[^}]*background: var\(--red\)/);
   assert.match(css, /\.light\.on \{ background: var\(--green\); \}/);
   assert.match(css, /\.light\.blink \{ background: var\(--yellow\); \}/);
@@ -84,10 +85,10 @@ test('app.js records every frame before dispatch, both socket events, and every 
 
 test('ui.js opens one drawer at a time, binds G and ?view=diag, and floors the bubble on whichever is open', () => {
   const js = read('js/ui.js');
-  assert.match(js, /function toggleDiag\(force\) \{\n\s*const onOff = document\.body\.classList\.toggle\('diag', force\);\n\s*if \(onOff\) document\.body\.classList\.remove\('controls'\);\n\s*app\.diagView\.setOpen\(onOff\);/);
+  assert.match(js, /function toggleDiag\(force\) \{\n\s*const onOff = document\.body\.classList\.toggle\('diagnostics', force\);\n\s*if \(onOff\) document\.body\.classList\.remove\('controls'\);\n\s*app\.diagView\.setOpen\(onOff\);/);
   assert.match(js, /function toggleControls\(force\) \{\n\s*const onOff = document\.body\.classList\.toggle\('controls', force\);\n\s*if \(onOff\) closeDiag\(\);/);
   assert.match(js, /\$\('diag-gear'\)\.onclick = \(\) => toggleDiag\(true\); \$\('diag-hide'\)\.onclick = \(\) => toggleDiag\(false\);/);
   assert.match(js, /e\.key === 'g' \|\| e\.key === 'G'\) toggleDiag\(\)/);
   assert.match(js, /if \(view0 === 'diag'\) toggleDiag\(true\);/);
-  assert.match(js, /const open = document\.body\.classList\.contains\('controls'\) \? \$\('panel'\) : document\.body\.classList\.contains\('diag'\) \? \$\('diag'\) : null;/);
+  assert.match(js, /const open = document\.body\.classList\.contains\('controls'\) \? \$\('panel'\) : document\.body\.classList\.contains\('diagnostics'\) \? \$\('diag'\) : null;/);
 });

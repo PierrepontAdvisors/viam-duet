@@ -143,7 +143,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (!viewer.h) return;
     const anchor = viewer.boardToStage(anchorFor(b.who === 'start' ? 'start' : b.kind, b.record));
     const sub = $('caption'), cq = viewer.W / 100;
-    const open = document.body.classList.contains('controls') ? $('panel') : document.body.classList.contains('diag') ? $('diag') : null;
+    const open = document.body.classList.contains('controls') ? $('panel') : document.body.classList.contains('diagnostics') ? $('diag') : null;
     const floor = open ? viewer.H - open.offsetHeight - cq : viewer.H - 1.6 * cq;
     const pos = bubblePosition(anchor, viewer.quadStage, { W: viewer.W, H: viewer.H, bw: sub.offsetWidth, bh: sub.offsetHeight, topMin: 7 * cq, floor });
     sub.style.left = `${pos.x}px`; sub.style.top = `${pos.y}px`;
@@ -181,9 +181,9 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     $('gear').title = onOff ? '' : 'Show controls (C)';
     placeBubble(currentBubble());
   }
-  function closeDiag() { document.body.classList.remove('diag'); app.diagView.setOpen(false); }
+  function closeDiag() { document.body.classList.remove('diagnostics'); app.diagView.setOpen(false); }
   function toggleDiag(force) {
-    const onOff = document.body.classList.toggle('diag', force);
+    const onOff = document.body.classList.toggle('diagnostics', force);
     if (onOff) document.body.classList.remove('controls');
     app.diagView.setOpen(onOff);
     placeBubble(currentBubble());
