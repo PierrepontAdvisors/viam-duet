@@ -2,7 +2,7 @@
 
 Pure modules under `duet/static/js/` are tested with Node's runner, no install:
 
-    node --test pagetests/
+    node --test 'pagetests/*.test.mjs'
 
 The replay harness serves the page with tonight's session over the real protocol:
 
