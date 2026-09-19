@@ -51,10 +51,11 @@ CLEARANCE_MM = 5.0              # the robot never draws within this distance of 
 DOT_TOLERANCE_MM = 3.0          # a docked marker's dot further than this from its recorded spot is "moved"
 DOT_MIN_AREA_PX = 30            # smaller color blobs are noise, not a marker's end plug
 
-STILL_WINDOW_S = 0.6            # frames compared for the stillness reading
+STILL_WINDOW_S = 1.5            # frames compared for the stillness reading; the poller keeps 3 s; two frames must fit even at a 1 s cadence
 STILL_THRESH = 3.0              # mean absolute gray difference between frames that still counts as still
 STILL_S = 1.5                   # dock rule: markers home, still, no hand for this long
 HELD_QUIET_S = 2.0              # held rule: still and no hand for this long after activity
+TRIGGER_GRACE_S = 0.4           # one noisy poll must not restart the quiet timer; the scene must stay unsettled this long
 
 HAND_HEIGHT_MM = 25.0           # depth check: anything this far above the board plane, over the board or dock, is a hand
 HAND_AREA_MM2 = 2000.0          # a changed or raised blob at least this big is a hand, not ink
