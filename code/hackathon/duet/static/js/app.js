@@ -5,6 +5,7 @@ import { Viewer } from './viewer.js';
 import { initUI } from './ui.js';
 import { GhostPen } from './preview.js';
 import { Sound } from './audio.js';
+import { polylinesFromSvg } from './picture.js';
 import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js';
 
 const $ = (id) => document.getElementById(id);
@@ -33,8 +34,27 @@ function archivePlan() {
   app.viewer.setDone(app.robotDone); app.viewer.setPlan([], -1);
 }
 function startSession() {
-  app.robotDone = []; app.plan = null; app.progress = -1; app.book = new TurnBook();
+  app.robotDone = []; app.plan = null; app.progress = -1; app.book = new TurnBook(); app.backfilled = new Set();
   app.viewer.setDone([]); app.viewer.setPlan([], -1);
+}
+
+/** A page that joins mid-session only gets the latest plan in the snapshot. The recorder saved every
+ *  earlier plan as plan-NN.svg, so fetch the completed turns' robot strokes from there, once each. */
+async function backfillPlans(session, completedTurns) {
+  app.backfilled = app.backfilled || new Set();
+  for (let t = 1; t <= completedTurns; t++) {
+    if (app.backfilled.has(t) || (app.book.get(t) || {}).plan) continue;
+    app.backfilled.add(t);
+    try {
+      const r = await fetch(`/sessions/${session}/plan-${String(t).padStart(2, '0')}.svg`);
+      if (!r.ok) continue;
+      const { robot } = polylinesFromSvg(await r.text());
+      if (!robot.length) continue;
+      app.book.note(t, { plan: robot, backfilled: true });
+      app.robotDone = [...app.robotDone, ...robot];
+      app.viewer.setDone(app.robotDone);
+    } catch { /* the file is optional; the live layer still works */ }
+  }
 }
 
 function handle(msg) {
@@ -46,10 +66,12 @@ function handle(msg) {
       app.state = msg;
       if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop();
       if (msg.state === 'finished') archivePlan();                                        // the signature joins the finished vector
+      if (msg.session && msg.turn > 0) backfillPlans(msg.session, msg.turn);
       break;
     case 'human': app.human = msg; app.viewer.setInk(msg.polylines); app.book.note(turnOf(msg), { new: msg.new }); break;
     case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s }); break;
-    case 'plan': archivePlan(); app.plan = msg; app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); app.ghost.play(msg.polylines); break;
+    case 'plan': archivePlan(); app.plan = msg;
+      if (app.state && app.state.state === 'finished') { app.book.note(turnOf(msg), { plan: msg.polylines }); archivePlan(); break; } app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); (app.backfilled = app.backfilled || new Set()).add(turnOf(msg)); app.ghost.play(msg.polylines); break;
     case 'progress': app.progress = msg.stroke; if (app.plan) app.viewer.setPlan(app.plan.polylines, msg.stroke); turnOf(msg); break;
     case 'shot': {
       const known = app.book.shots.length;

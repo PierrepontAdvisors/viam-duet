@@ -37,3 +37,20 @@ export function svgDocument({ ink = [], robot = [], inkColor, strokeColor, inkWi
   lines.push('</svg>');
   return lines.join('\n') + '\n';
 }
+
+const PATH_RE = /<path\b[^>]*\bd="([^"]+)"[^>]*\bstroke="([^"]+)"/g;
+const NUM_RE = /-?\d+(?:\.\d+)?/g;
+
+/** A saved plan SVG (`plan-NN.svg`) back into polylines: black paths are the traced human ink,
+ *  green paths the robot's strokes, both in robot-board millimeters. One-point paths are dropped. */
+export function polylinesFromSvg(text) {
+  const ink = [], robot = [];
+  for (const m of String(text).matchAll(PATH_RE)) {
+    const nums = (m[1].match(NUM_RE) || []).map(Number);
+    const pl = [];
+    for (let i = 0; i + 1 < nums.length; i += 2) pl.push([nums[i], nums[i + 1]]);
+    if (pl.length < 2) continue;
+    (m[2] === 'green' || m[2] === '#1b8f3a' ? robot : ink).push(pl);
+  }
+  return { ink, robot };
+}

@@ -47,3 +47,15 @@ test('svgDocument can leave out the paper and refuses bad colors', () => {
   assert.ok(!svg.includes('<rect'));
   assert.ok(svg.includes('stroke="#111111"') && svg.includes('stroke="#1b8f3a"'), 'defaults replace invalid colors');
 });
+
+test('polylinesFromSvg splits a saved plan into human ink (black) and robot strokes (green)', async () => {
+  const { polylinesFromSvg } = await import('../duet/static/js/picture.js');
+  const svg = `<svg viewBox="0 0 176 240"><rect/>
+<path d="M 1.0 2.0 L 3.5 4.5" fill="none" stroke="#222" stroke-width="1.2"/>
+<path d="M 10 10 L 20 10 L 20 20" fill="none" stroke="green" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+<path d="M 5 5" fill="none" stroke="green"/></svg>`;
+  const { ink, robot } = polylinesFromSvg(svg);
+  assert.deepEqual(ink, [[[1, 2], [3.5, 4.5]]]);
+  assert.deepEqual(robot, [[[10, 10], [20, 10], [20, 20]]]);
+  assert.deepEqual(polylinesFromSvg('not svg'), { ink: [], robot: [] });
+});
