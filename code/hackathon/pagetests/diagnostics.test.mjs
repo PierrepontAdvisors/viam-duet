@@ -67,3 +67,27 @@ test('diagview redraws the table only on entries, ticks once a second only while
   assert.match(js, /esc\(summarize\(e\)\)/);
   assert.match(js, /esc\(JSON\.stringify\(fold\(e\.raw\), null, 2\)\)/);
 });
+
+test('app.js records every frame before dispatch, both socket events, and every sent command', () => {
+  const js = read('js/app.js');
+  assert.match(js, /import \{ append, frameEntry, sentEntry, socketEntry \} from '\.\/diag\.js\?v=ds6';/);
+  assert.match(js, /import \{ initDiagView \} from '\.\/diagview\.js\?v=ds6';/);
+  assert.match(js, /import \{ initUI \} from '\.\/ui\.js\?v=ds6';/);
+  const onmessage = js.slice(js.indexOf('ws.onmessage'), js.indexOf('\n}', js.indexOf('ws.onmessage')));
+  assert.ok(onmessage.indexOf('frameEntry(e.data, m, t, seq)') < onmessage.indexOf('if (m) handle(m)'), 'recorded before dispatch');
+  assert.match(onmessage, /app\.diagView\.blink\(\)/);
+  assert.match(js, /ws\.onopen = \(\) => \{[^\n]*socketEntry\('open', null, t, seq\)[^\n]*setConnected\(true\)/);
+  assert.match(js, /ws\.onclose = \(e\) => \{[^\n]*socketEntry\('close', e\.code, t, seq\)[^\n]*setConnected\(false\)/);
+  assert.match(js, /app\.ws\.send\(JSON\.stringify\(msg\)\);\n\s*record\(\(t, seq\) => sentEntry\(msg, t, seq\)\);/);
+  assert.ok(js.indexOf('app.diagView = initDiagView(') < js.indexOf('app.ui = initUI('), 'the view exists before the UI needs it');
+});
+
+test('ui.js opens one drawer at a time, binds G and ?view=diag, and floors the bubble on whichever is open', () => {
+  const js = read('js/ui.js');
+  assert.match(js, /function toggleDiag\(force\) \{\n\s*const onOff = document\.body\.classList\.toggle\('diag', force\);\n\s*if \(onOff\) document\.body\.classList\.remove\('controls'\);\n\s*app\.diagView\.setOpen\(onOff\);/);
+  assert.match(js, /function toggleControls\(force\) \{\n\s*const onOff = document\.body\.classList\.toggle\('controls', force\);\n\s*if \(onOff\) closeDiag\(\);/);
+  assert.match(js, /\$\('diag-gear'\)\.onclick = \(\) => toggleDiag\(true\); \$\('diag-hide'\)\.onclick = \(\) => toggleDiag\(false\);/);
+  assert.match(js, /e\.key === 'g' \|\| e\.key === 'G'\) toggleDiag\(\)/);
+  assert.match(js, /if \(view0 === 'diag'\) toggleDiag\(true\);/);
+  assert.match(js, /const open = document\.body\.classList\.contains\('controls'\) \? \$\('panel'\) : document\.body\.classList\.contains\('diag'\) \? \$\('diag'\) : null;/);
+});

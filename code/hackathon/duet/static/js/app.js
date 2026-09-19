@@ -8,11 +8,15 @@ import { Sound } from './audio.js?v=ds6';
 import { polylinesFromSvg } from './picture.js?v=ds6';
 import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds6';
 
+import { append, frameEntry, sentEntry, socketEntry } from './diag.js?v=ds6';
+import { initDiagView } from './diagview.js?v=ds6';
+
 const $ = (id) => document.getElementById(id);
 export const app = {
   book: new TurnBook(),
   state: null, currentTurn: null, session: null, robotDone: [], calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
   ws: null, connected: false,
+  diag: { entries: [], seq: 0 }, diagView: null,
   viewer: null,
   listeners: [],
 };
@@ -22,7 +26,17 @@ const notify = (msg) => app.listeners.forEach(fn => fn(msg, app));
  *  messages carry their own turn; without it the message is taken to be the current state's. */
 const turnOf = (msg) => { const t = msg.turn ?? (app.state ? app.state.turn : 0); app.currentTurn = t; return t; };
 
-export function send(msg) { if (msg && app.ws && app.ws.readyState === 1) app.ws.send(JSON.stringify(msg)); }
+/** Diagnostics: every frame in, every command out, and the socket's own events, kept for the drawer. */
+function record(make) {
+  const seq = app.diag.seq + 1;
+  app.diag = { entries: append(app.diag.entries, make(Date.now(), seq)), seq };
+  if (app.diagView) app.diagView.onEntry(app.diag.entries);
+}
+export function send(msg) {
+  if (!(msg && app.ws && app.ws.readyState === 1)) return;
+  app.ws.send(JSON.stringify(msg));
+  record((t, seq) => sentEntry(msg, t, seq));
+}
 export const sendSet = (changes) => send(setCommand(changes));
 export const sendCommand = (kind) => send(command(kind));
 
@@ -90,9 +104,13 @@ function handle(msg) {
 function connect() {
   const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
   app.ws = ws;
-  ws.onopen = () => { app.connected = true; notify({ type: 'socket', connected: true }); };
-  ws.onclose = () => { app.connected = false; notify({ type: 'socket', connected: false }); setTimeout(connect, 1000); };
-  ws.onmessage = (e) => { const m = parseMessage(e.data); if (m) handle(m); else console.warn('dropped message', e.data.slice(0, 120)); };
+  ws.onopen = () => { app.connected = true; record((t, seq) => socketEntry('open', null, t, seq)); app.diagView.setConnected(true); notify({ type: 'socket', connected: true }); };
+  ws.onclose = (e) => { app.connected = false; record((t, seq) => socketEntry('close', e.code, t, seq)); app.diagView.setConnected(false); notify({ type: 'socket', connected: false }); setTimeout(connect, 1000); };
+  ws.onmessage = (e) => {
+    const m = parseMessage(e.data);
+    record((t, seq) => frameEntry(e.data, m, t, seq)); app.diagView.blink();
+    if (m) handle(m); else console.warn('dropped message', e.data.slice(0, 120));
+  };
 }
 
 export function boot() {
@@ -100,6 +118,7 @@ export function boot() {
                             mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot'), done: $('l-done') });
   app.ghost = new GhostPen($('l-ghost'), $('ghostpath'), $('ghostpen'));
   app.viewer.setStream('/stream.mjpg?overlay=0');
+  app.diagView = initDiagView({ light: $('light'), summary: $('diag-summary'), svg: $('diag-timeline'), tbody: $('diag-rows') });
   app.ui = initUI(app, { sendSet, sendCommand, on });
   app.sound = new Sound();
   const soundBtn = $('sound');

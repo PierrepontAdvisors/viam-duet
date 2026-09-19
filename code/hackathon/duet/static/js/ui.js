@@ -143,7 +143,8 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (!viewer.h) return;
     const anchor = viewer.boardToStage(anchorFor(b.who === 'start' ? 'start' : b.kind, b.record));
     const sub = $('caption'), cq = viewer.W / 100;
-    const floor = document.body.classList.contains('controls') ? viewer.H - $('panel').offsetHeight - cq : viewer.H - 1.6 * cq;
+    const open = document.body.classList.contains('controls') ? $('panel') : document.body.classList.contains('diag') ? $('diag') : null;
+    const floor = open ? viewer.H - open.offsetHeight - cq : viewer.H - 1.6 * cq;
     const pos = bubblePosition(anchor, viewer.quadStage, { W: viewer.W, H: viewer.H, bw: sub.offsetWidth, bh: sub.offsetHeight, topMin: 7 * cq, floor });
     sub.style.left = `${pos.x}px`; sub.style.top = `${pos.y}px`;
     $('bubble').classList.toggle('right', pos.onRight);
@@ -176,10 +177,19 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   // ---- panel ----
   function toggleControls(force) {
     const onOff = document.body.classList.toggle('controls', force);
+    if (onOff) closeDiag();
     $('gear').title = onOff ? '' : 'Show controls (C)';
     placeBubble(currentBubble());
   }
+  function closeDiag() { document.body.classList.remove('diag'); app.diagView.setOpen(false); }
+  function toggleDiag(force) {
+    const onOff = document.body.classList.toggle('diag', force);
+    if (onOff) document.body.classList.remove('controls');
+    app.diagView.setOpen(onOff);
+    placeBubble(currentBubble());
+  }
   $('gear').onclick = () => toggleControls(true); $('hide').onclick = () => toggleControls(false);
+  $('diag-gear').onclick = () => toggleDiag(true); $('diag-hide').onclick = () => toggleDiag(false);
   $('b-live').onclick = showLive;
   $('b-prev').onclick = () => { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); };
   $('b-next').onclick = () => { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); };
@@ -270,6 +280,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key === 'l' || e.key === 'L') showLive();
     else if (e.key === 'c' || e.key === 'C') toggleControls();
+    else if (e.key === 'g' || e.key === 'G') toggleDiag();
     else if (e.key === 'z' || e.key === 'Z') viewer.setCrop(!viewer.crop);
     else if (e.key === 'd' || e.key === 'D') { document.body.classList.toggle('dev'); if (!document.body.classList.contains('dev')) $('devLabel').style.display = 'none'; }
   });
@@ -301,7 +312,9 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (msg.type === 'plan' && !view.strokeLocked) { stage.style.setProperty('--vec-stroke', msg.color); strokeColor.value = msg.color; }
     renderAll();
   });
-  if (new URLSearchParams(location.search).get('view') === 'console') toggleControls(true);
+  const view0 = new URLSearchParams(location.search).get('view') || '';
+  if (view0 === 'console') toggleControls(true);
+  if (view0 === 'diag') toggleDiag(true);
   renderAll();
-  return { showLive, showShot, play, stopLoop, toggleControls, renderAll };
+  return { showLive, showShot, play, stopLoop, toggleControls, toggleDiag, renderAll };
 }
