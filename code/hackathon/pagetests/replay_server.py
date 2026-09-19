@@ -121,21 +121,21 @@ class Replay:
                 self.turn = t
                 self.go("capture"); self.shot(t, "human")
                 all_ink = all_ink + ink
-                self.bus.emit("human", polylines=all_ink, new=ink, found=True); await self.wait(1.0)
+                self.bus.emit("human", turn=t, polylines=all_ink, new=ink, found=True); await self.wait(1.0)
                 self.go("interpret"); await self.wait(3.0)
                 h = self.history[t - 1] if t - 1 < len(self.history) else {"sees": "", "adds": "", "source": "claude"}
                 fallback = h.get("source") == "fallback"
-                self.bus.emit("interpretation", sees=h.get("sees", ""), adds=h.get("adds", ""), source=h.get("source", "claude"),
+                self.bus.emit("interpretation", turn=t, sees=h.get("sees", ""), adds=h.get("adds", ""), source=h.get("source", "claude"),
                               latency_s=None if fallback else 7.5, error="timeout" if fallback else None,
                               thought="Hmm... my words got lost." if fallback else THOUGHTS[(t - 1) % len(THOUGHTS)],
                               quip="Lost my words. Drawing anyway!" if fallback else QUIPS[(t - 1) % len(QUIPS)])
-                self.go("plan"); self.bus.emit("plan", polylines=robot, color="#1b8f3a", budget_mm=4000); await self.wait(2.0)
+                self.go("plan"); self.bus.emit("plan", turn=t, polylines=robot, color="#1b8f3a", budget_mm=4000); await self.wait(2.0)
                 self.go("robot_draw")
                 drawn = 0.0
                 for i, pl in enumerate(robot):
                     await self.wait(0.4)
                     drawn += sum(((pl[k][0] - pl[k - 1][0]) ** 2 + (pl[k][1] - pl[k - 1][1]) ** 2) ** 0.5 for k in range(1, len(pl)))
-                    self.bus.emit("progress", stroke=i, drawn_mm=round(drawn))
+                    self.bus.emit("progress", turn=t, stroke=i, drawn_mm=round(drawn))
                 self.shot(t, "robot"); self.go("look"); await self.wait(1.0)
             self.go("finish"); await self.wait(1.5)
             self.go("finished")

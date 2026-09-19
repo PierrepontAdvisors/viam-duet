@@ -129,6 +129,8 @@ Page to server: `set` (`length`, `exchanges`, `handoff`, `artist`, `direction`, 
 
 Other URLs: `/` (the page), `/static/…` if the backend mounts it, `/stream.mjpg?overlay=0`, `/sessions/<id>/…`, `/calibration.json`, `/health`.
 
+`human`, `interpretation`, `plan`, and `progress` also carry `turn`, the exchange they belong to, so a page that connects mid-session files the snapshot's messages under the right turn; without it the page falls back to `state.turn`.
+
 Unknown message types are ignored. Every incoming field is checked for type before use; a malformed message is logged to the console and dropped, never thrown.
 
 ## 10. Files
