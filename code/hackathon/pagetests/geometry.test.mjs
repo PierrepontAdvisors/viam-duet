@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   solve, homography, applyH, matrix3d, boardOrder, containRect, cropTransform,
-  insetMaskPath, centroid, bubblePosition, fitInverse, polylineLength, pointAlong,
+  insetMaskPath, centroid, bubblePosition, fitInverse, polylineLength, pointAlong, tracePath,
 } from '../duet/static/js/geometry.js';
 
 // tonight's calibration.json, verbatim
@@ -83,4 +83,11 @@ test('polylineLength and pointAlong walk a path in millimeters', () => {
   assert.deepEqual(pointAlong(pls, 5), { p: [5, 0], stroke: 0 });
   assert.deepEqual(pointAlong(pls, 15), { p: [0, 15], stroke: 1 });
   assert.deepEqual(pointAlong(pls, 99), { p: [0, 20], stroke: 1 });
+});
+test('tracePath draws the part of the plan a pen has reached, whole strokes then a partial one', () => {
+  const pls = [[[0, 0], [10, 0]], [[0, 10], [0, 20]]];
+  assert.equal(tracePath(pls, 5), 'M0.00 0.00 L5.00 0.00');
+  assert.equal(tracePath(pls, 15), 'M0.00 0.00 L10.00 0.00 M0.00 10.00 L0.00 15.00');
+  assert.equal(tracePath(pls, 99), 'M0.00 0.00 L10.00 0.00 M0.00 10.00 L0.00 20.00');
+  assert.equal(tracePath([], 5), '');
 });

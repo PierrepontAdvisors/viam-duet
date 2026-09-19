@@ -3,6 +3,8 @@ import { parseMessage, setCommand, command } from './protocol.js';
 import { TurnBook } from './story.js';
 import { Viewer } from './viewer.js';
 import { initUI } from './ui.js';
+import { GhostPen } from './preview.js';
+import { Sound } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 export const app = {
@@ -23,10 +25,10 @@ export const sendCommand = (kind) => send(command(kind));
 function handle(msg) {
   switch (msg.type) {
     case 'calib': app.calib = msg; app.viewer.setCalib(msg); break;
-    case 'state': app.state = msg; break;
+    case 'state': app.state = msg; if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop(); break;
     case 'human': app.human = msg; app.viewer.setInk(msg.polylines); app.book.note(turnOf(msg), { new: msg.new }); break;
     case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s }); break;
-    case 'plan': app.plan = msg; app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); break;
+    case 'plan': app.plan = msg; app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); app.ghost.play(msg.polylines); break;
     case 'progress': app.progress = msg.stroke; if (app.plan) app.viewer.setPlan(app.plan.polylines, msg.stroke); break;
     case 'shot': {
       const known = app.book.shots.length;
@@ -51,8 +53,32 @@ function connect() {
 export function boot() {
   app.viewer = new Viewer({ stage: $('stage'), pic: $('pic'), base: $('base'), photo: $('photo'), ov: $('ov'), fit: $('fit'),
                             mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot') });
+  app.ghost = new GhostPen($('l-ghost'), $('ghostpath'), $('ghostpen'));
   app.viewer.setStream('/stream.mjpg?overlay=0');
   app.ui = initUI(app, { sendSet, sendCommand, on });
+  app.sound = new Sound();
+  const soundBtn = $('sound');
+  const setSound = (onOff) => {
+    app.sound.enable(onOff);
+    soundBtn.textContent = onOff ? 'Sound on' : 'Sound off'; soundBtn.classList.toggle('on', onOff);
+    try { localStorage.setItem('duet.sound', JSON.stringify(onOff)); } catch { /* fine */ }
+  };
+  soundBtn.onclick = () => setSound(!app.sound.on);
+  let remembered = false;
+  try { remembered = JSON.parse(localStorage.getItem('duet.sound') || 'false'); } catch { /* fine */ }
+  if (remembered) soundBtn.textContent = 'Sound: click to enable';       // audio needs a gesture; the label invites it
+  on((msg) => {
+    const s = app.sound;
+    if (msg.type === 'interpretation') s.speak(msg.thought);
+    else if (msg.type === 'progress') s.click();
+    else if (msg.type === 'state') {
+      s.hum(msg.state === 'capture' || msg.state === 'interpret');
+      if (msg.state === 'human_turn' && app.prevState !== 'human_turn') s.chime('yours');
+      if (msg.state === 'robot_draw' && app.prevState !== 'robot_draw') s.chime('mine');
+      if (msg.state === 'plan' && app.prevState !== 'plan') { const rec = app.book.get(msg.turn); if (rec) s.speak(rec.quip); }
+      app.prevState = msg.state;
+    }
+  });
   connect();
 }
 

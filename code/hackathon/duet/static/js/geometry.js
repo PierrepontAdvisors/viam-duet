@@ -118,3 +118,21 @@ export function pointAlong(polylines, dist) {
   }
   return last;
 }
+/** SVG path data for the first `dist` millimeters of the plan: whole strokes, then a partial one. */
+export function tracePath(polylines, dist) {
+  let left = dist;
+  const parts = [];
+  for (const pl of polylines) {
+    if (pl.length < 2) continue;
+    const pts = [pl[0]];
+    let cut = false;
+    for (let i = 1; i < pl.length && !cut; i++) {
+      const a = pl[i - 1], b = pl[i], seg = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (left >= seg) { pts.push(b); left -= seg; }
+      else { const t = seg ? left / seg : 0; pts.push([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]); left = 0; cut = true; }
+    }
+    parts.push('M' + pts.map(([x, y]) => `${x.toFixed(2)} ${y.toFixed(2)}`).join(' L'));
+    if (cut || left <= 0) break;
+  }
+  return parts.join(' ');
+}
