@@ -113,7 +113,7 @@ body.controls .panel { display: grid; }
 .welcome { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; color: var(--ink);
            background: var(--yellow) url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><g fill='none' stroke='%23111' stroke-opacity='.12' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'><path d='M0 24 q10 -14 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0'/><path d='M0 140 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14'/><path d='M96 56 l-10 -10 M110 50 l0 -14 M124 56 l10 -10 M90 70 l-14 0 M130 70 l14 0'/><path d='M30 70 l.01 0 M50 100 l.01 0' stroke-width='10'/><path d='M14 56 a18 18 0 0 1 36 0 M60 116 a14 14 0 0 0 28 0'/></g></svg>") 0 0 / 160px 160px repeat; animation: drift 27s linear infinite; }
 .welcome-inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s2); max-width: 64cqw; }
-.welcome-inner > * { margin: 0; animation: pop .45s cubic-bezier(.2, .7, .3, 1) both; }
+.welcome-inner > * { margin: 0; animation: pop .45s cubic-bezier(.2, .7, .3, 1) backwards; }
 .welcome-inner > :nth-child(1) { animation-delay: 0ms; }
 .welcome-inner > :nth-child(2) { animation-delay: 120ms; }
 .welcome-inner > :nth-child(3) { animation-delay: 240ms; }
@@ -145,7 +145,7 @@ button.chip:active { transform: translate(.15cqw, .15cqw); box-shadow: 0 0 0 var
 .go:active, .welcome-start:not(:disabled):active { transform: translate(.3cqw, .3cqw); box-shadow: .1cqw .1cqw 0 var(--ink); }
 /* the two big ones wiggle once after they pop in */
 @keyframes wiggle { 0% { rotate: 0deg; } 25% { rotate: -3deg; } 50% { rotate: 3deg; } 75% { rotate: -1.5deg; } 100% { rotate: 0deg; } }
-.go.pop, .welcome-start.pop { animation: pop .45s cubic-bezier(.2, .7, .3, 1) both, wiggle .6s ease-out .45s; }
+.go.pop, .welcome-start.pop { animation: pop .45s cubic-bezier(.2, .7, .3, 1) backwards, wiggle .6s ease-out .45s; }
 @media (prefers-reduced-motion: reduce) {
   button.chip, .gear, .go, .welcome-start, .panel button, .panel a { transition: none; }
   .go.pop, .welcome-start.pop { animation: none; }

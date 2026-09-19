@@ -26,6 +26,7 @@ test('tokens.css defines the system and the pop; duet.css leans on it', () => {
   const t = read('tokens.css');
   for (const v of ['--yellow:', '--headline:', '--paper-radius:', '--frame-stroke:', '--story:']) assert.ok(t.includes(v), v);
   assert.match(t, /@keyframes pop/);
+  assert.match(t, /\.pop \{ animation: pop [^;]*backwards; \}/, 'a finished pop releases the element for hover');
   assert.match(t, /prefers-reduced-motion: reduce\)\s*\{\s*\.pop \{ animation: none; \}/);
   const css = read('duet.css');
   assert.ok(!/@import/.test(css), 'no imports');
