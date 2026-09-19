@@ -1,6 +1,6 @@
 # Duet artists: a per-turn picker on the main screen and four new artists
 
-Date: 2026-09-19, day 2 at the table. Status: spec written from the brainstorm, awaiting Nicholas's review. Branch `feat/duet-design` in the main checkout. Parent specs: `docs/superpowers/specs/2026-09-18-duet-design.md` (artists, section 7) and `docs/superpowers/specs/2026-09-19-duet-open-strokes-design.md` (the planner rules every artist obeys).
+Date: 2026-09-19, day 2 at the table. Status: approved and implemented on 2026-09-19 (commits 38b35a1, 8d27ea1, 6bf7617; the picker markup rode in 7b8f585). Branch `feat/duet-design` in the main checkout. Parent specs: `docs/superpowers/specs/2026-09-18-duet-design.md` (artists, section 7) and `docs/superpowers/specs/2026-09-19-duet-open-strokes-design.md` (the planner rules every artist obeys).
 
 ## 1. Summary and decisions
 
