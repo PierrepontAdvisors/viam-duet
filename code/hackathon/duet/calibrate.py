@@ -7,6 +7,10 @@ which one is the board's top-left, and save a warped board image to check.
     python -m duet.calibrate --fit 15,15,20 120,180,20
                                              fit camera-to-robot scale and offset from squares the robot drew
                                              (top-left x, y and side, in robot mm); reads captures/calib_board.jpg
+    python -m duet.calibrate --plane FILE    OFFLINE: fit the board plane for the depth hand check from a saved
+                                             depth map (captures/depth.dep from explore.py, taken at the look pose)
+    python -m duet.calibrate --dock x0 y0 x1 y1
+                                             OFFLINE: record the dock tub's image rectangle for the hand check
 
 The arm must be at the look pose. Board top-left is the corner you touched off as `corner tl`.
 """
@@ -74,8 +78,43 @@ def fit(squares: list[tuple[float, float, float]], line_mm: float = 1.0) -> None
     print(f"fit: robot_x = {ax:.4f} * cam_x {bx:+.2f};  robot_y = {ay:.4f} * cam_y {by:+.2f}  (saved)")
 
 
+def offline(argv: list[str]) -> bool:
+    """The verbs that need no camera. Returns True when one ran."""
+    cal = load_calibration()
+    if "--dock" in argv:
+        i = argv.index("--dock")
+        x0, y0, x1, y1 = (int(v) for v in argv[i + 1:i + 5])
+        cal["dock_region_image"] = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+        save_calibration(cal)
+        print(f"dock region saved: x {x0}..{x1}, y {y0}..{y1}")
+        return True
+    if "--plane" in argv:
+        from duet.camera import decode_depth
+        path = Path(argv[argv.index("--plane") + 1])
+        depth = np.load(path)["depth"] if path.suffix == ".npz" else decode_depth(path.read_bytes())
+        quad = np.array(cal["marks_image"], dtype=np.float32)
+        center = quad.mean(axis=0)
+        padded = [[float(x + 25 * np.sign(x - center[0])), float(y + 25 * np.sign(y - center[1]))] for x, y in quad]
+        plane = vision.fit_plane(depth, vision.polygon_mask(depth.shape, [padded]))
+        cal.update({"plane": list(plane), "board_region_image": padded, "mm_per_px": vision.mm_per_px(quad)})
+        expected = vision.plane_depth(depth.shape, plane)
+        inside = (vision.polygon_mask(depth.shape, [padded]) > 0) & (depth > 0)
+        resid = np.abs(depth[inside].astype(np.float32) - expected[inside])
+        print(f"plane z = {plane[0]:.4f} x + {plane[1]:.4f} y + {plane[2]:.1f}; "
+              f"median residual {np.median(resid):.1f} mm, {np.mean(resid < 15) * 100:.0f}% of readings within 15 mm")
+        if "dock_region_image" in cal:
+            dock = (vision.polygon_mask(depth.shape, [cal["dock_region_image"]]) > 0) & (depth > 0)
+            cal["dock_offset_mm"] = float(np.median(expected[dock] - depth[dock].astype(np.float32)))
+            print(f"dock surface sits {cal['dock_offset_mm']:.0f} mm above the board plane (hand check reference)")
+        save_calibration(cal)
+        return True
+    return False
+
+
 def main(argv: list[str]) -> None:
     CAPTURES.mkdir(exist_ok=True)
+    if offline(argv):
+        return
     if "--fit" in argv:
         specs = [tuple(float(v) for v in a.split(",")) for a in argv[argv.index("--fit") + 1:] if "," in a]
         fit(specs)

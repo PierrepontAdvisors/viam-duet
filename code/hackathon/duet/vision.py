@@ -1,6 +1,8 @@
 """Pure functions on frames: corner marks, the board warp, new ink, tracing. No I/O, no robot."""
 from __future__ import annotations
 
+import math
+from dataclasses import dataclass
 from itertools import combinations
 
 import cv2
@@ -200,3 +202,133 @@ def cam_to_robot(polylines: list[list[Point]], cal: dict) -> list[list[Point]]:
         return polylines
     ax, bx, ay, by = m["ax"], m["bx"], m["ay"], m["by"]
     return [[(ax * x + bx, ay * y + by) for x, y in pl] for pl in polylines]
+
+
+# ---- trigger readings: homography helpers, hand from depth or color, dock dots, stillness --------
+
+def board_homography(quad_board_order: np.ndarray) -> np.ndarray:
+    """3x3 map from image pixels to warped-board pixels (PX_PER_MM, origin at the board's top-left)."""
+    w, h = BOARD_PX
+    dst = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=np.float32)
+    return cv2.getPerspectiveTransform(np.asarray(quad_board_order, dtype=np.float32), dst)
+
+
+def to_board_mm(homography: np.ndarray, pts_px: list[Point]) -> list[Point]:
+    """Image pixels to camera-board millimeters through the corner-mark homography."""
+    out = cv2.perspectiveTransform(np.array([pts_px], dtype=np.float32), homography)[0]
+    return [(float(x) / PX_PER_MM, float(y) / PX_PER_MM) for x, y in out]
+
+
+def mm_per_px(quad_image: np.ndarray) -> float:
+    """Average scale at the look pose: the board's area over the corner quad's pixel area."""
+    area_px = abs(cv2.contourArea(np.asarray(quad_image, dtype=np.float32)))
+    return math.sqrt(cfg.BOARD_W_MM * cfg.BOARD_H_MM / area_px)
+
+
+def polygon_mask(shape_hw: tuple[int, int], polygons: list) -> np.ndarray:
+    """1 inside any of the polygons (lists of (x, y) image points), 0 elsewhere."""
+    m = np.zeros(shape_hw[:2], dtype=np.uint8)
+    for poly in polygons:
+        cv2.fillPoly(m, [np.asarray(poly, dtype=np.int32)], 1)
+    return m
+
+
+def fit_plane(depth: np.ndarray, mask: np.ndarray) -> tuple[float, float, float]:
+    """Least-squares plane z = a*x + b*y + c through the valid readings inside `mask`. Readings far
+    from the median (glare on the board reflects the ceiling and reads as meters) are dropped, and
+    the fit is repeated without outliers."""
+    ys, xs = np.nonzero((mask > 0) & (depth > 0))
+    z = depth[ys, xs].astype(np.float64)
+    if z.size < 100:
+        raise ValueError("not enough valid depth readings inside the region")
+    keep = np.abs(z - np.median(z)) < 80
+    a = np.column_stack([xs, ys, np.ones_like(xs)]).astype(np.float64)
+    coef, *_ = np.linalg.lstsq(a[keep], z[keep], rcond=None)
+    keep = np.abs(a @ coef - z) < 15
+    if keep.sum() >= 100:
+        coef, *_ = np.linalg.lstsq(a[keep], z[keep], rcond=None)
+    return float(coef[0]), float(coef[1]), float(coef[2])
+
+
+def plane_depth(shape_hw: tuple[int, int], plane: tuple[float, float, float]) -> np.ndarray:
+    a, b, c = plane
+    ys, xs = np.mgrid[0:shape_hw[0], 0:shape_hw[1]]
+    return (a * xs + b * ys + c).astype(np.float32)
+
+
+def reference_depth(shape_hw: tuple[int, int], plane: tuple[float, float, float],
+                    offsets: list[tuple[list, float]]) -> np.ndarray:
+    """The surface a hand is measured against: the board plane, raised by `offset_mm` inside each
+    polygon (the dock's putty stands above the board plane, so its own top is the reference there)."""
+    ref = plane_depth(shape_hw, plane)
+    for polygon, offset_mm in offsets:
+        ref[polygon_mask(shape_hw, [polygon]) > 0] -= float(offset_mm)
+    return ref
+
+
+def _big_blob(mask: np.ndarray, mm2_per_px: float, area_mm2: float) -> bool:
+    n, _, stats, _ = cv2.connectedComponentsWithStats(mask)
+    return any(stats[i, cv2.CC_STAT_AREA] * mm2_per_px >= area_mm2 for i in range(1, n))
+
+
+def hand_present_depth(depth: np.ndarray, region_mask: np.ndarray, expected_depth: np.ndarray,
+                       mm2_per_px: float, height_mm: float = cfg.HAND_HEIGHT_MM,
+                       area_mm2: float = cfg.HAND_AREA_MM2) -> bool:
+    """True if a connected blob inside the region sits more than `height_mm` above the expected
+    surface and covers at least `area_mm2`. Zero depth (no reading) never counts."""
+    above = ((depth > 0) & (depth.astype(np.float32) < expected_depth - height_mm) & (region_mask > 0)).astype(np.uint8)
+    above = cv2.morphologyEx(above, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    return _big_blob(above, mm2_per_px, area_mm2)
+
+
+def hand_present_color(current: np.ndarray, reference: np.ndarray, region_mask: np.ndarray, mm2_per_px: float,
+                       thresh: int = cfg.HAND_DIFF_THRESH, open_px: int = cfg.HAND_OPEN_PX,
+                       area_mm2: float = cfg.HAND_AREA_MM2) -> bool:
+    """The backup when no depth plane is calibrated: compare the frame with the reference frame
+    taken at the look pose after the robot's last turn. New marker lines are thin and vanish under
+    the opening; a hand is a big changed blob."""
+    cur = cv2.GaussianBlur(cv2.cvtColor(current, cv2.COLOR_BGR2GRAY), (5, 5), 0)
+    ref = cv2.GaussianBlur(cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY), (5, 5), 0)
+    changed = ((cv2.absdiff(cur, ref) > thresh) & (region_mask > 0)).astype(np.uint8)
+    changed = cv2.morphologyEx(changed, cv2.MORPH_OPEN, np.ones((open_px, open_px), np.uint8))
+    return _big_blob(changed, mm2_per_px, area_mm2)
+
+
+@dataclass(frozen=True)
+class DotReading:
+    status: str                              # "home" | "moved" | "missing"
+    displacement_mm: tuple[float, float]     # where the dot is relative to its recorded spot, camera-board axes
+
+
+def dock_dots(frame_bgr: np.ndarray, slots: dict, homography: np.ndarray,
+              tol_mm: float = cfg.DOT_TOLERANCE_MM, roi_px: int = 45) -> dict[str, DotReading]:
+    """Per docked marker: is its colored end plug at the recorded image spot? `slots` comes from
+    calibration.json: {"green": {"xy": [x, y], "hsv_lo": [...], "hsv_hi": [...]}}. The displacement
+    is measured through the board homography so it is in board axes, ready for the pick correction."""
+    hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
+    out: dict[str, DotReading] = {}
+    for name, slot in slots.items():
+        ex, ey = slot["xy"]
+        x0, y0 = max(int(ex - roi_px), 0), max(int(ey - roi_px), 0)
+        sub = hsv[y0:int(ey + roi_px), x0:int(ex + roi_px)]
+        mask = cv2.inRange(sub, np.array(slot["hsv_lo"], np.uint8), np.array(slot["hsv_hi"], np.uint8))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+        n, _, stats, cents = cv2.connectedComponentsWithStats(mask)
+        best = max(range(1, n), key=lambda i: stats[i, cv2.CC_STAT_AREA], default=None)
+        if best is None or stats[best, cv2.CC_STAT_AREA] < cfg.DOT_MIN_AREA_PX:
+            out[name] = DotReading("missing", (0.0, 0.0))
+            continue
+        fx, fy = float(cents[best][0]) + x0, float(cents[best][1]) + y0
+        (bx, by), (rx, ry) = to_board_mm(homography, [(fx, fy), (float(ex), float(ey))])
+        d = (bx - rx, by - ry)
+        out[name] = DotReading("home" if math.hypot(*d) <= tol_mm else "moved", d)
+    return out
+
+
+def still(frames: list[np.ndarray], thresh: float = cfg.STILL_THRESH) -> bool:
+    """True when every consecutive pair of frames differs by less than `thresh` on average (gray,
+    downsampled). Fewer than two frames is not still: there is nothing to compare."""
+    if len(frames) < 2:
+        return False
+    small = [cv2.resize(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), (160, 90), interpolation=cv2.INTER_AREA) for f in frames]
+    return all(float(np.mean(cv2.absdiff(a, b))) < thresh for a, b in zip(small, small[1:]))
