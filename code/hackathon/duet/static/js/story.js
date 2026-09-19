@@ -101,7 +101,7 @@ export function anchorFor(kind, record) {
 }
 
 /* ---- welcome page ---- */
-export const FRESH_STATES = ['idle', 'look', 'start'];
+export const FRESH_STATES = ['idle', 'start'];   // not look: the loop passes through look after every robot turn
 export const WELCOME_RETURN_MS = 8000;
 /** The welcome page's button for a state: its label and whether it can be pressed. `waiting` is set after
  *  Start was pressed on a finished session, until a new session's state arrives. */
@@ -111,7 +111,7 @@ export function welcomeButton(state, waiting = false) {
   return { label: 'Getting ready…', enabled: false };
 }
 /** The welcome returns when a fresh session begins after a session that was under way or finished:
- *  a restarted process or a reconnect looks like idle/look/start arriving after anything else. */
+ *  a restarted process or a restart in place looks like idle or start arriving after anything else. */
 export function welcomeReturns(prev, next) {
   return FRESH_STATES.includes(next) && prev != null && !FRESH_STATES.includes(prev);
 }

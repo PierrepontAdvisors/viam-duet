@@ -89,3 +89,9 @@ test('welcomeReturns: a fresh state after a finished or running session, never a
   assert.equal(welcomeReturns('finished', 'human_turn'), false);
   assert.equal(WELCOME_RETURN_MS, 8000);
 });
+
+test('welcomeReturns: look after a robot turn is not a fresh session', () => {
+  assert.equal(welcomeReturns('robot_draw', 'look'), false);
+  assert.equal(welcomeReturns('finished', 'start'), true);
+  assert.equal(welcomeReturns('finished', 'idle'), true);
+});
