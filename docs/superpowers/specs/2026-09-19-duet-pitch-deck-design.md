@@ -89,14 +89,19 @@ Bright Haring plates. Every card is a saturated colour plate covered edge to edg
 
 ```
 docs/duet/pitch/
-  index.html          the deck: markup, CSS, and script in one file
-  img/turn-00-start.jpg
-  img/turn-01-human.jpg ... img/turn-06-robot.jpg   (13 photos, longest side about 1200 px)
-  img/plate-1.jpg ... img/plate-7.jpg             generated plate textures, 2K 16:9, JPEG
-  img/hero-thesis.jpg, img/hero-duet.jpg, img/hero-build.jpg   generated heroes, 2K square, JPEG
-  gen_images.py                                   the generator: prompts, one call per missing image, JPEG conversion with sips
-  fonts/Fredoka.woff2                             fetched once while online (a .ttf only if no woff2 is available)
+  index.html        the seven cards, the SVG motifs and patterns, the artist symbols, the developer-mode elements
+  deck.css          plates, pattern, type, paper, chips, bubble, flipbook, counter, developer-mode styles
+  fredoka.css       @font-face with Fredoka (variable 400 to 700, latin) as a base64 data URI
+  deck.js           window.Deck state functions, then DOM wiring guarded by typeof document
+  dev.js            the D-key developer mode
+  gen_images.py     the Nano Banana 2 generator (prompts, one call per missing image, JPEG via sips)
+  README.md         how to open it and the keys
+  img/turn-00-start.jpg ... img/turn-06-robot.jpg   the 13 photos, copied unchanged (704 x 960)
+  img/plate-1.jpg ... img/plate-7.jpg             generated plate textures, 2K 16:9
+  img/hero-thesis.jpg, img/hero-duet.jpg, img/hero-build.jpg   generated heroes, 2K square
 ```
+
+Amended 2026-09-19 while planning and building: Chrome, the default browser on the presenting Mac, blocks web fonts and module scripts loaded over file:// under its CORS rules. So the font is embedded as a data URI in its own stylesheet, the script is a classic script, and its pure state functions are exposed on window.Deck so Node can test them without a DOM. The photos are already 704 x 960 and are copied, not downscaled. Card 7's words sit on a black panel because bare type over the full-colour plate failed the legibility check.
 
 - The photos are copies of `code/hackathon/sessions/20260918-190258/turn-*.jpg`, downscaled with a one-line script or `sips` so the deck stays a few megabytes and opens instantly from disk. Originals are untouched.
 - The font is fetched once while online and committed; without it the fallback stack renders, which is acceptable but not the plan.
