@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duet</title>
+<style>
+  :root { --ink: #1b221d; --paper: #f7f6f2; --line: #d9d6ce; --green: #1b8f3a; --accent: #2743e3; --warn: #b3261e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.4 system-ui, -apple-system, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: #fff; }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .04em; }
+  .pill { padding: 4px 10px; border-radius: 999px; background: #eee; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+  .pill[data-state="human_turn"] { background: #e3f6e8; color: var(--green); }
+  .pill[data-state="robot_draw"], .pill[data-state="plan"], .pill[data-state="interpret"], .pill[data-state="capture"], .pill[data-state="look"] { background: #e6e9ff; color: var(--accent); }
+  .pill[data-state="paused"] { background: #fde7e5; color: var(--warn); }
+  .counter { margin-left: auto; font-size: 28px; font-weight: 700; }
+  .counter small { font-size: 13px; font-weight: 500; color: #666; margin-left: 6px; }
+  main { display: grid; gap: 16px; padding: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { main { grid-template-columns: 1.3fr 1fr 1fr; } .span2 { grid-column: span 2; } }
+  section { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
+  section h2 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: #666; }
+  img, video, svg { display: block; width: 100%; border-radius: 8px; background: #eee; }
+  .quip { font-size: 15px; font-style: italic; color: var(--green); margin: 0 0 8px; }
+  .sees { font-size: 20px; font-weight: 600; margin: 0 0 6px; }
+  .adds { font-size: 17px; margin: 0; }
+  .source { margin-top: 8px; font-size: 12px; color: #666; }
+  .source.fallback { color: var(--warn); font-weight: 600; }
+  .controls { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  .controls label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #666; }
+  .controls select, .controls input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .seg { display: flex; gap: 4px; }
+  .seg button { flex: 1; }
+  button { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; }
+  button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  button.danger { border-color: var(--warn); color: var(--warn); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; grid-column: span 2; }
+  .error { grid-column: span 2; min-height: 1.4em; color: var(--warn); font-size: 13px; }
+  .hidden { display: none !important; }
+  .muted { color: #888; font-size: 13px; }
+  body.dev [data-el]{outline:1px dashed rgba(39,67,227,.4);outline-offset:-1px;}
+  body.dev [data-el]:hover{outline:2px solid #2743E3;background:rgba(39,67,227,.07);cursor:crosshair;}
+  .dev-badge{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483000;display:none;padding:7px 14px;font:600 11px/1 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:#2743E3;border-radius:999px;box-shadow:0 6px 20px rgba(39,67,227,.35);}
+  body.dev .dev-badge{display:block;}
+  .dev-label{position:fixed;z-index:2147483001;display:none;pointer-events:none;padding:4px 8px;font:600 11px/1 system-ui,sans-serif;color:#fff;background:#1B221D;border-radius:6px;white-space:nowrap;}
+  .dev-toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(10px);z-index:2147483002;opacity:0;padding:9px 16px;font:600 12px/1 system-ui,sans-serif;color:#fff;background:#1B2FA8;border-radius:999px;transition:opacity .2s,transform .2s;pointer-events:none;}
+  .dev-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<header data-el="header">
+  <h1 data-el="title">Duet</h1>
+  <span class="pill" id="state" data-state="idle" data-el="state pill">connecting</span>
+  <span class="muted" id="conn" data-el="connection status"></span>
+  <span class="muted" id="guard" data-el="hand guard status"></span>
+  <div class="counter" data-el="exchange counter"><span id="turn">0</span> of <span id="total">5</span><small id="length">short</small></div>
+</header>
+<main>
+  <section class="span2" data-el="live camera panel">
+    <h2>Live camera</h2>
+    <img id="stream" src="/stream.mjpg" alt="wrist camera" data-el="live camera stream">
+  </section>
+  <section data-el="interpretation panel">
+    <h2>Claude</h2>
+    <p class="quip" id="quip" data-el="quip bubble"></p>
+    <p class="sees" id="sees" data-el="sees sentence">Waiting for the first mark.</p>
+    <p class="adds" id="adds" data-el="adds sentence"></p>
+    <div class="source" id="source" data-el="interpretation source"></div>
+  </section>
+  <section data-el="vector plan panel">
+    <h2>Plan</h2>
+    <svg id="plan" viewBox="0 0 176 240" data-el="vector plan svg">
+      <rect width="176" height="240" fill="#fff"/>
+      <rect x="15" y="15" width="146" height="210" fill="none" stroke="#e5e5e5" stroke-width=".5"/>
+      <g id="g-human" fill="none" stroke="#222" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></g>
+      <g id="g-done" fill="none" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"></g>
+      <g id="g-queued" fill="none" stroke-width="1" stroke-dasharray="3 2" stroke-linecap="round" stroke-linejoin="round"></g>
+    </svg>
+    <div class="muted" id="planmeta" data-el="plan meta"></div>
+  </section>
+  <section data-el="last turn panel">
+    <h2>Last turn</h2>
+    <img id="shot" alt="last turn photo" data-el="last turn photo">
+  </section>
+  <section data-el="controls panel">
+    <h2>Controls</h2>
+    <div class="controls">
+      <label data-el="artist picker">Artist
+        <select id="artist"><option value="haring">Keith Haring</option></select>
+      </label>
+      <label data-el="exchange count input">Exchanges
+        <input id="exchanges" type="number" min="1" max="20" value="5">
+      </label>
+      <label data-el="length setting">Length
+        <div class="seg" id="lengths">
+          <button data-v="short" data-el="length button — short">Short</button>
+          <button data-v="medium" data-el="length button — medium">Medium</button>
+          <button data-v="long" data-el="length button — long">Long</button>
+        </div>
+      </label>
+      <label data-el="marker handoff toggle">Marker
+        <div class="seg" id="handoffs">
+          <button data-v="held" data-el="handoff button — held">Held</button>
+          <button data-v="dock" data-el="handoff button — dock">Dock</button>
+        </div>
+      </label>
+      <div class="row">
+        <button id="pause" data-el="pause button">Pause</button>
+        <button id="resume" class="hidden" data-el="resume button">Resume</button>
+        <button id="pass" data-el="pass turn button">Pass turn</button>
+        <button id="clear" class="danger" data-el="clear arm error button">Clear arm error</button>
+      </div>
+      <div class="error" id="error" data-el="error line"></div>
+    </div>
+  </section>
+  <section data-el="session video panel">
+    <h2>Session video</h2>
+    <video id="video" controls class="hidden" data-el="session video"></video>
+    <p class="muted" id="videonote" data-el="session video note">Stitched when the piece is done.</p>
+    <a id="videolink" class="hidden" download data-el="session video download link">Download</a>
+  </section>
+</main>
+
+<div class="dev-badge">DEV MODE · click an element to copy its name · press D to exit</div>
+<div class="dev-label" id="devLabel"></div>
+<div class="dev-toast" id="devToast"></div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const S = { human: [], plan: null, progress: -1 };
+  let ws = null;
+
+  function connect() {
+    ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+    ws.onopen = () => { $('conn').textContent = ''; };
+    ws.onclose = () => { $('conn').textContent = 'reconnecting…'; setTimeout(connect, 1000); };
+    ws.onmessage = (e) => handle(JSON.parse(e.data));
+  }
+  function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+  function points(pl) { return pl.map(p => p[0].toFixed(2) + ',' + p[1].toFixed(2)).join(' '); }
+  function polys(group, list, stroke) {
+    group.innerHTML = '';
+    if (stroke) group.setAttribute('stroke', stroke);
+    for (const pl of list) {
+      if (pl.length < 2) continue;
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      el.setAttribute('points', points(pl));
+      group.appendChild(el);
+    }
+  }
+  function drawPlan() {
+    polys($('g-human'), S.human);
+    if (!S.plan) { polys($('g-done'), []); polys($('g-queued'), []); $('planmeta').textContent = ''; return; }
+    const n = S.progress + 1;
+    polys($('g-done'), S.plan.polylines.slice(0, n), S.plan.color);
+    polys($('g-queued'), S.plan.polylines.slice(n), S.plan.color);
+    $('planmeta').textContent = n + ' of ' + S.plan.polylines.length + ' strokes drawn · budget ' + S.plan.budget_mm + ' mm';
+  }
+  function seg(id, value) {
+    for (const b of $(id).querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === value);
+  }
+  function handle(m) {
+    switch (m.type) {
+      case 'state':
+        $('state').textContent = m.state.replace('_', ' ');
+        $('state').dataset.state = m.state;
+        $('turn').textContent = m.turn;
+        $('total').textContent = m.exchanges;
+        $('length').textContent = m.length;
+        $('guard').textContent = 'hand check: ' + m.hand_guard;
+        if (document.activeElement !== $('exchanges')) $('exchanges').value = m.exchanges;
+        seg('lengths', m.length); seg('handoffs', m.handoff);
+        $('pass').classList.toggle('hidden', m.handoff !== 'held');
+        $('pause').classList.toggle('hidden', m.state === 'paused');
+        $('resume').classList.toggle('hidden', m.state !== 'paused');
+        $('error').textContent = m.error || '';
+        break;
+      case 'human':
+        S.human = m.polylines || [];
+        if (m.found === false) $('error').textContent = 'No new ink found; still your turn.';
+        drawPlan();
+        break;
+      case 'plan':
+        S.plan = m; S.progress = -1; drawPlan();
+        break;
+      case 'progress':
+        S.progress = m.stroke; drawPlan();
+        break;
+      case 'interpretation':
+        $('quip').textContent = (m.thought ? m.thought + ' … ' : '') + (m.quip || '');
+        $('sees').textContent = m.sees || (m.source === 'fallback' ? 'Claude was unavailable this turn.' : '');
+        $('adds').textContent = m.adds || '';
+        $('source').textContent = m.source === 'claude' ? ('Claude, ' + m.latency_s + ' s') : ('Fallback grammar: ' + (m.error || ''));
+        $('source').className = 'source ' + m.source;
+        break;
+      case 'shot':
+        $('shot').src = m.url + '?t=' + Date.now();
+        break;
+      case 'video':
+        $('video').src = m.url; $('video').classList.remove('hidden');
+        $('videonote').classList.add('hidden');
+        $('videolink').href = m.url; $('videolink').classList.remove('hidden');
+        break;
+      case 'dock':
+        if (m.reseat && m.reseat.length) $('error').textContent = 'Please reseat the ' + m.reseat.join(', ') + ' marker in its cap.';
+        break;
+      case 'error':
+        $('error').textContent = m.message;
+        break;
+    }
+  }
+
+  $('artist').onchange = () => send({ type: 'set', artist: $('artist').value });
+  $('exchanges').onchange = () => send({ type: 'set', exchanges: parseInt($('exchanges').value, 10) });
+  $('lengths').onclick = (e) => { const v = e.target.dataset.v; if (v) send({ type: 'set', length: v }); };
+  $('handoffs').onclick = (e) => { const v = e.target.dataset.v; if (v) send({ type: 'set', handoff: v }); };
+  $('pause').onclick = () => send({ type: 'pause' });
+  $('resume').onclick = () => send({ type: 'resume' });
+  $('pass').onclick = () => send({ type: 'pass' });
+  $('clear').onclick = () => send({ type: 'clear_error' });
+  connect();
+})();
+</script>
+<script>
+(function(){
+  var label=document.getElementById('devLabel'),toast=document.getElementById('devToast'),tT=null;
+  function isDev(){return document.body.classList.contains('dev');}
+  function copy(t){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t)['catch'](fb);}else fb();
+    function fb(){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(a);}}
+  function toastMsg(m){toast.textContent=m;toast.classList.add('show');if(tT)clearTimeout(tT);tT=setTimeout(function(){toast.classList.remove('show');},1400);}
+  document.addEventListener('keydown',function(e){var t=e.target;if(t&&t.matches&&t.matches('input,textarea,select,[contenteditable]'))return;
+    if(e.key==='d'||e.key==='D'){document.body.classList.toggle('dev');if(!isDev())label.style.display='none';}});
+  document.addEventListener('mousemove',function(e){if(!isDev()){label.style.display='none';return;}
+    var el=e.target.closest?e.target.closest('[data-el]'):null;
+    if(el){label.textContent=el.getAttribute('data-el');label.style.display='block';
+      label.style.left=Math.min(e.clientX+12,window.innerWidth-label.offsetWidth-8)+'px';label.style.top=(e.clientY+14)+'px';}
+    else label.style.display='none';});
+  document.addEventListener('click',function(e){if(!isDev())return;
+    var el=e.target.closest?e.target.closest('[data-el]'):null;if(!el)return;
+    e.preventDefault();e.stopPropagation();var n=el.getAttribute('data-el');copy(n);toastMsg('Copied: '+n);},true);
+})();
+</script>
+</body>
+</html>
