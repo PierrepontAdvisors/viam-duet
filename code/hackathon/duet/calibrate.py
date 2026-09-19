@@ -174,6 +174,9 @@ def main(argv: list[str]) -> None:
         "board_mm": [cfg.BOARD_W_MM, cfg.BOARD_H_MM],
     })
     save_calibration(cal)
+    if "plane" in cal:
+        print("WARNING: the marks moved but the depth plane, regions and camera-to-robot fit are from the old "
+              "position; re-run --fit, then --dock and --plane")
     board = vision.warp_to_board(frame, vision.board_quad(quad, k))
     cv2.imwrite(str(CAPTURES / "calib_board.jpg"), board)
     print(f"calibration saved to {cfg.CALIBRATION_PATH}; warped board in captures/calib_board.jpg")

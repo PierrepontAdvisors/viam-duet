@@ -202,6 +202,10 @@ def test_settings_are_validated_at_the_boundary(tmp_path, look_frame, exchange_s
     assert ctl.held_mode is False
     s.update_settings(handoff="held")
     assert ctl.held_mode is True
+    s.state = "robot_draw"                                # a Marker click mid-draw must not reach the arm
+    with pytest.raises(ValueError):
+        s.update_settings(handoff="dock")
+    s.state = "idle"
 
 
 def test_pause_during_the_robot_turn_stops_the_arm_and_resume_finishes(tmp_path, look_frame, exchange_start, exchange_human, calibration):

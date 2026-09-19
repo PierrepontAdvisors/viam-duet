@@ -184,7 +184,7 @@
         $('turn').textContent = m.turn;
         $('total').textContent = m.exchanges;
         $('length').textContent = m.length;
-        $('guard').textContent = 'hand check: ' + m.hand_guard;
+        $('guard').textContent = 'hand check: ' + m.hand_guard + (m.camera_error ? ' · camera: ' + m.camera_error : '');
         if (document.activeElement !== $('exchanges')) $('exchanges').value = m.exchanges;
         seg('lengths', m.length); seg('handoffs', m.handoff);
         artists(m.artists, m.artist);

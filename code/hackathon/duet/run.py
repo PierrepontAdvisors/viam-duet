@@ -163,7 +163,9 @@ async def main(args: argparse.Namespace) -> None:
         await frames.start()
         ctl = Controller(machine, poses, board)
         ctl.held_mode = args.handoff == "held"
-    vision.trace(np.zeros((8, 8), np.uint8))   # skan's first import costs 1.5 s; pay it before the first exchange
+    warm = np.zeros((8, 8), np.uint8)          # skan's first import costs 1.5 s; pay it before the first exchange
+    warm[3, 1:7] = 255                         # a line, so Skeleton is built too and not just imported
+    vision.trace(warm)
     guard = HandGuard(frames, cal)
     session = Session(settings, frames, ctl, brain, rec, bus, cal, guard=guard)
     app = make_app(session, frames, bus, calibration=cal)

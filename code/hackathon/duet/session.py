@@ -178,6 +178,9 @@ class Session:
 
     # ---- controls, called from the page ------------------------------------------------------
     def update_settings(self, **changes) -> Settings:
+        if self.state in ("robot_draw", "finish") and changes.get("handoff", self.settings.handoff) != self.settings.handoff:
+            # the arm is holding the pen: switching now would send it through the other mode's return sequence
+            raise ValueError("the marker handoff cannot change while the arm is drawing")
         self.settings = replace(self.settings, **changes).check()
         self.ctl.held_mode = self.settings.handoff == "held"    # the arm must not reach for a dock it is not using
         self.rec.update(**self.settings.record())
@@ -404,16 +407,18 @@ class Session:
         """Right before the arm leaves the look pose: wait for the hand to go, then mark the guard
         blind until the next go_look (the wrist camera no longer sees the board it was checked against)."""
         if self.guard is not None:
+            cause = "hand over the board or dock"
             for second in range(HAND_WAIT_S):
                 blind = self.frames.latest() is None       # no frame at all reads as a hand; say which it is
                 if not blind and not await self.guard():
                     break
+                cause = "no camera frame for the hand check" if blind else "hand over the board or dock"
                 if second % HAND_WAIT_MESSAGE_S == 0:      # the same line every second is noise on the page
-                    self.bus.emit("error", message="no camera frame for the hand check; waiting" if blind else
-                                  "hand over the board or dock: waiting before the arm moves")
+                    self.bus.emit("error", message=f"{cause}; waiting" if blind else
+                                  f"{cause}: waiting before the arm moves")
                 await asyncio.sleep(1.0)
             else:
-                raise Blocked("hand over the board or dock for 30 s")
+                raise Blocked(f"{cause} for {HAND_WAIT_S} s")
         self._set_look(False)
 
     async def _forward_progress(self, task: asyncio.Task, turn: int) -> None:

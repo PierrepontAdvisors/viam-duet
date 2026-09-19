@@ -143,7 +143,7 @@ def propose(client: anthropic.Anthropic, board_bgr: np.ndarray, human: list[Poly
             "long": "a full scene: six to twelve bold elements, such as figures, creatures, a setting and "
                     "symbols, each a simple continuous outline, spread across the free space"}[length_setting]
     hist = "\n".join(f"  exchange {i + 1}: saw \"{h['sees']}\"; added \"{h['adds']}\"" for i, h in enumerate(history)) or "  (this is the first exchange)"
-    text = (f"{ARTIST_NOTES[artist]}\n"
+    text = (f"{ARTIST_NOTES.get(artist, ARTIST_NOTES['haring'])}\n"
             f"Exchange {exchange} of {exchange_total}. Length setting: {length_setting}, so add {asks}. "
             f"Stroke budget: {budget:.0f} mm total. Allowed color: green.\n"
             f"New strokes the person just drew, as polylines in board millimeters:\n{fmt_polylines(human)}\n"
