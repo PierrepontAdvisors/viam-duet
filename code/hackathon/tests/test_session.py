@@ -70,13 +70,13 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
     human_shot = next(e for e in events if e["type"] == "shot" and e["who"] == "human")
     assert human_shot["turn"] == 1
     meta = json.loads((rec.dir / "session.json").read_text())
-    assert meta["turn"] == 1 and meta["exchanges"] == 1 and meta["history"][0]["source"] == "claude"
+    assert meta["turn"] == 1 and meta["exchanges"] == 1 and meta["history"][0]["source"] == "fake"
     assert meta["history"][0]["sees"].startswith("A creature")
     types = [e["type"] for e in events]
     for t in ("state", "human", "interpretation", "plan", "progress", "shot", "video"):
         assert t in types, t
     interp = next(e for e in events if e["type"] == "interpretation")
-    assert interp["quip"] == "What a creature! Here comes the sun." and interp["source"] == "claude"
+    assert interp["quip"] == "What a creature! Here comes the sun." and interp["source"] == "fake"
     assert interp["thought"] == "Is that a creature waking up?"
     assert interp["turn"] == 1
     human = next(e for e in events if e["type"] == "human")

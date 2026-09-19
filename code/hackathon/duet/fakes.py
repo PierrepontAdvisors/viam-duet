@@ -185,4 +185,4 @@ class FakeBrain:
             p = Proposal(sees="The scene has a sun now.", adds="A ground line under the creature.",
                          thought="Where does the creature stand?", quip="Let's give it ground to stand on.", color="green",
                          strokes=[_stroke(kind="polyline", points=[Pt(x=lo, y=y), Pt(x=hi_x, y=y)])])
-        return TurnResult(p, "claude", self.latency_s, None)
+        return TurnResult(p, "fake", self.latency_s, None)
