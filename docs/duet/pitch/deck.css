@@ -135,11 +135,32 @@ ul, ol { padding: 0; list-style: none; }
 .mods.four  { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .mod { min-width: 0; display: flex; flex-direction: column; gap: .6cqw; }
 .mod .sample { width: 9cqw; height: 5.4cqw; }
-.node p { font-size: var(--caption); font-weight: 600; line-height: 1.2; }
-.num { align-items: center; padding-top: var(--s1); padding-bottom: var(--s1); }
-.num b { font-size: var(--headline); font-weight: 700; line-height: 1.1; }
-.num span { font-size: var(--caption); font-weight: 600; line-height: 1.2; }
 .closing { font-weight: 700; }
+
+/* module head: drawing or icon beside the name; steps on card 6 carry a Viam line under the box */
+.mod-head { display: flex; align-items: center; gap: var(--s1); min-width: 0; }
+.mod-head .sample { width: 6cqw; height: 3.6cqw; flex: none; }
+.icon { width: 4cqw; height: 4cqw; flex: none; display: block; }
+.mods.four .mod .body { line-height: 1.25; }
+.pill.next { padding: .2cqw .8cqw; background: var(--yellow); margin-left: auto; }
+.pill.prompt { align-self: flex-start; text-align: left; font-weight: 600; }
+.step { min-width: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.step .node { flex: 1; }
+.viam { font-weight: 600; padding: 0 .4cqw; }
+
+/* entrance: everything inside the frame pops in, in reading order, when a card becomes active */
+@keyframes pop { from { opacity: 0; transform: translateY(1cqw) scale(.92); } 70% { opacity: 1; transform: translateY(0) scale(1.02); } to { opacity: 1; transform: none; } }
+.card.active :is(.kicker, .wordmark, .split .words > :not(.line), .split .figure, .triptych .module, .modules .lead, .modules .mods > *, .modules .closing, .foot > *) {
+  animation: pop .45s cubic-bezier(.2, .7, .3, 1) both; animation-delay: calc(var(--i, 2) * 80ms); }
+.card.active .kicker { --i: 0; }
+.card.active .wordmark { --i: 1; }
+.card.active :is(.split .words > :nth-child(1), .triptych .m1, .modules .lead) { --i: 2; }
+.card.active :is(.split .words > :nth-child(2), .triptych .m2, .modules .mods > :nth-child(1)) { --i: 3; }
+.card.active :is(.split .words > :nth-child(3), .triptych .m3, .modules .mods > :nth-child(2)) { --i: 4; }
+.card.active :is(.split .words > :nth-child(4), .split .figure, .modules .mods > :nth-child(3)) { --i: 5; }
+.card.active .modules .mods > :nth-child(4) { --i: 6; }
+.card.active :is(.modules .closing, .foot > *) { --i: 7; }
+@media (prefers-reduced-motion: reduce) { .card.active * { animation: none !important; } }
 
 /* developer mode (press D), from ~/.claude/rules/common/preview-dev-mode.md */
 body.dev [data-el]{outline:1px dashed rgba(39,67,227,.4);outline-offset:-1px;}

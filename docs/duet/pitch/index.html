@@ -55,6 +55,12 @@
       <g transform="rotate(5 268 64)"><rect x="236" y="32" width="64" height="64" rx="12" fill="#17a34a" stroke="currentColor" stroke-width="5"/><text x="268" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">T</text></g>
       <path d="M40 118 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
     </symbol>
+    <!-- step icons: thick round ink strokes, one plate colour each -->
+    <symbol id="i-look" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M50 16 v-9 M24 26 l-6 -6 M76 26 l6 -6"/><path d="M10 56 q40 -40 80 0 q-40 40 -80 0 z" fill="#1f4fd6"/><circle cx="50" cy="56" r="13" fill="#fff"/><circle cx="50" cy="56" r="6" fill="#111" stroke="none"/></g></symbol>
+    <symbol id="i-think" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 62 q-16 0 -16 -13 q0 -12 12 -13 q2 -14 18 -14 q12 0 16 8 q14 -4 18 8 q12 2 10 13 q-2 11 -15 11 z" fill="#ffd400"/><circle cx="28" cy="76" r="5" fill="#ffd400"/><circle cx="18" cy="88" r="3" fill="#ffd400"/></g></symbol>
+    <symbol id="i-answer" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M34 72 l36 -36 l12 12 l-36 36 l-16 4 z" fill="#17a34a"/><path d="M62 44 l12 12"/><path d="M10 90 q8 -10 16 0 t16 0 t16 0"/></g></symbol>
+    <symbol id="i-draw" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="76" width="40" height="12" rx="4" fill="#e5322d"/><path d="M32 76 l10 -32 l30 -14" stroke-width="9"/><circle cx="42" cy="44" r="6" fill="#e5322d"/><circle cx="72" cy="30" r="6" fill="#e5322d"/><path d="M72 30 l14 12 l-4 6"/></g></symbol>
+    <symbol id="i-own" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 78 l40 -40 l10 10 l-40 40 l-14 4 z" fill="#ff7a00"/><path d="M56 44 l10 10"/><path d="M76 14 v16 M68 22 h16 M88 40 v8 M84 44 h8"/></g></symbol>
   </defs>
 </svg>
 
@@ -156,22 +162,11 @@
     <header class="band head"><span class="kicker" data-el="card 5 kicker">05 · Learning</span><span class="wordmark" data-el="card 5 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
     <div class="content">
       <div class="lead"><h2 class="headline" data-el="card 5 headline">And you learn their language by <span class="key">answering back</span>.</h2></div>
-      <ul class="mods three">
-        <li class="paper mod" data-el="card 5 lesson — Haring">
-          <svg class="sample" viewBox="0 0 100 60"><use href="#s-haring" width="100" height="60"/></svg>
-          <span class="caption">Haring</span>
-          <p class="body">One continuous outline, then motion ticks. Your blob becomes a figure.</p>
-        </li>
-        <li class="paper mod" data-el="card 5 lesson — Mondrian">
-          <svg class="sample" viewBox="0 0 100 60"><use href="#s-mondrian" width="100" height="60"/></svg>
-          <span class="caption">Mondrian</span>
-          <p class="body">Your mark's edges run out to a grid. You start seeing the rectangle in everything.</p>
-        </li>
-        <li class="paper mod" data-el="card 5 lesson — Van Gogh">
-          <svg class="sample" viewBox="0 0 100 60"><use href="#s-vangogh" width="100" height="60"/></svg>
-          <span class="caption">Van Gogh</span>
-          <p class="body">Dashes stream around your mark like water around a rock.</p>
-        </li>
+      <ul class="mods four">
+        <li class="paper mod" data-el="card 5 lesson — Haring"><div class="mod-head"><svg class="sample" viewBox="0 0 100 60"><use href="#s-haring" width="100" height="60"/></svg><span class="caption">Haring</span></div><p class="body">One continuous outline, then motion ticks. Your blob becomes a figure.</p></li>
+        <li class="paper mod" data-el="card 5 lesson — Mondrian"><div class="mod-head"><svg class="sample" viewBox="0 0 100 60"><use href="#s-mondrian" width="100" height="60"/></svg><span class="caption">Mondrian</span></div><p class="body">Your mark's edges run out to a grid. You start seeing the rectangle in everything.</p></li>
+        <li class="paper mod" data-el="card 5 lesson — Van Gogh"><div class="mod-head"><svg class="sample" viewBox="0 0 100 60"><use href="#s-vangogh" width="100" height="60"/></svg><span class="caption">Van Gogh</span></div><p class="body">Dashes stream around your mark like water around a rock.</p></li>
+        <li class="paper mod own" data-el="card 5 lesson — your own artist"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-own"/></svg><span class="caption">Your own artist</span><span class="pill next">Next</span></div><span class="pill prompt" data-el="card 5 prompt example">"Bold comic-book lines with halftone dots"</span><p class="body">Describe a style in one sentence. Duet answers in it.</p></li>
       </ul>
       <p class="closing body" data-el="card 5 footer">You don't study the technique. You have a conversation in it.</p>
     </div>
@@ -190,19 +185,13 @@
         <p class="sub body" data-el="card 6 subtitle"><span class="key">Viam</span> under every step.</p>
       </div>
       <ol class="mods four">
-        <li class="paper mod node" data-el="card 6 node — Look"><h3 class="body">Look</h3><p>Viam camera component. RealSense colour and depth, aligned, from the wrist. The board is found again every turn.</p></li>
-        <li class="paper mod node" data-el="card 6 node — Understand"><h3 class="body">Understand</h3><p>Claude Opus 5. One photo in, two sentences and strokes out.</p></li>
-        <li class="paper mod node" data-el="card 6 node — Answer"><h3 class="body">Answer</h3><p>The artist's grammar styles the strokes. The planner clips and budgets them, in board millimetres mapped into Viam's world frame.</p></li>
-        <li class="paper mod node" data-el="card 6 node — Draw"><h3 class="body">Draw</h3><p>Viam motion service. Every move planned around the table and wall obstacles, linear constraints on pen-down, arm and gripper components over the Python SDK.</p></li>
+        <li class="step" data-el="card 6 step — Look"><div class="paper mod node"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-look"/></svg><h3 class="body">Look</h3></div><p class="body">The camera on the wrist photographs the board.</p></div><p class="viam caption" data-el="card 6 Viam line — Look">Viam · the camera component streams colour and depth from the wrist.</p></li>
+        <li class="step" data-el="card 6 step — Understand"><div class="paper mod node"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-think"/></svg><h3 class="body">Understand</h3></div><p class="body">Claude reads the drawing and decides what to add.</p></div><p class="viam caption" data-el="card 6 Viam line — Understand">Viam · the frame reaches Claude through the Python SDK.</p></li>
+        <li class="step" data-el="card 6 step — Answer"><div class="paper mod node"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-answer"/></svg><h3 class="body">Answer</h3></div><p class="body">The artist's style turns that idea into strokes.</p></div><p class="viam caption" data-el="card 6 Viam line — Answer">Viam · board millimetres map into the machine's world frame.</p></li>
+        <li class="step" data-el="card 6 step — Draw"><div class="paper mod node"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-draw"/></svg><h3 class="body">Draw</h3></div><p class="body">The arm draws them, planned safely around the table.</p></div><p class="viam caption" data-el="card 6 Viam line — Draw">Viam · the motion service plans every move around the table and wall.</p></li>
       </ol>
-      <ul class="mods four">
-        <li class="paper mod num" data-el="card 6 number — 8 s"><b>8 s</b><span>to look and decide</span></li>
-        <li class="paper mod num" data-el="card 6 number — 2 mm"><b>2 mm</b><span>calibration</span></li>
-        <li class="paper mod num" data-el="card 6 number — tests"><b>120</b><span>tests</span></li>
-        <li class="paper mod num" data-el="card 6 number — direct moves"><b>0</b><span>direct arm moves</span></li>
-      </ul>
     </div>
-    <footer class="band foot"><span class="strip" data-el="card 6 Viam strip">viam-server owns the arm's control box &middot; machine configured in app.viam.com &middot; Python SDK from a laptop &middot; motion service with obstacles &middot; camera, arm, gripper components</span><span class="counter">6 / 7</span></footer>
+    <footer class="band foot"><span class="strip" data-el="card 6 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">6 / 7</span></footer>
   </section>
 
   <section class="card split build plate-black" data-card="7" data-el="card 7 — the build">

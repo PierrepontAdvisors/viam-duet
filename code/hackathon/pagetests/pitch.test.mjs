@@ -139,8 +139,11 @@ test('the deck has seven cards in order carrying the agreed copy, with plain apo
     'Dashes stream around your mark like water around a rock.',
     "You don't study the technique. You have a conversation in it.",
     'Look. Understand. Answer. Draw.', '<span class="key">Viam</span> under every step.',
-    'Viam camera component.', 'Claude Opus 5.', 'Viam motion service.',
-    'viam-server owns the arm', 'app.viam.com',
+    'The camera on the wrist photographs the board.', 'Viam · the camera component streams colour and depth from the wrist.',
+    'Claude reads the drawing and decides what to add.', 'Viam · the frame reaches Claude through the Python SDK.',
+    "The artist's style turns that idea into strokes.", "Viam · board millimetres map into the machine's world frame.",
+    'The arm draws them, planned safely around the table.', 'Viam · the motion service plans every move around the table and wall.',
+    'Your own artist', 'Bold comic-book lines with halftone dots', 'Describe a style in one sentence. Duet answers in it.',
     '<span class="key">One person.</span> Two days. Claude and Viam.',
     'Nicholas Fjellberg Swerdlowe', 'Draw one mark. Duet answers.',
   ];
@@ -184,7 +187,6 @@ test('every card carries the master page: frame, kicker, wordmark, footer with a
     assert.ok(/class="frame"/.test(s), `card ${i + 1} frame`);
     assert.ok(/class="card (split|triptych|modules) /.test('class="card ' + s.slice(0, 40)), `card ${i + 1} uses a template class`);
   });
-  assert.ok(sections[5].includes('viam-server owns the arm'), 'card 6 footer carries the Viam strip');
   assert.ok(!/id="counter"/.test(h), 'the stage-level counter is gone');
 });
 
@@ -211,14 +213,27 @@ test('the toy logo replaces the Duet word in the header and on card 2, footers c
     assert.ok(/class="wordmark"[^>]*>\s*<svg class="logo/.test(s), `card ${i + 1} header logo`);
     assert.ok(s.includes('class="wash"'), `card ${i + 1} wash`);
     assert.ok(!s.includes('foot-logo'), `card ${i + 1} has no footer logo`);
-    if (i !== 5) {
-      assert.ok(/class="band foot">\s*<span class="strip"[^>]*>Nicholas Fjellberg Swerdlowe/.test(s), `card ${i + 1} footer carries the name and hackathon line`);
-      assert.ok(!s.includes('Viam Fine Motor Skills · 2026'), `card ${i + 1} old footer line gone`);
-    }
+    assert.ok(/class="band foot">\s*<span class="strip"[^>]*>Nicholas Fjellberg Swerdlowe/.test(s), `card ${i + 1} footer carries the name and hackathon line`);
+    assert.ok(!s.includes('Viam Fine Motor Skills · 2026'), `card ${i + 1} old footer line gone`);
   });
-  assert.ok(sections[5].includes('viam-server owns the arm'), 'card 6 keeps the strip');
   assert.ok(/class="name"[^>]*>\s*<svg class="logo/.test(sections[1]), 'card 2 large logo');
   const css = read('deck.css');
   assert.ok(css.includes('.wash {') && css.includes('.plate-black .wash'), 'wash rules');
   assert.ok(css.includes('.plate-black .logo'), 'logo turns white on black');
+});
+
+test('card 6 steps carry icons and Viam lines, card 5 has four modules, motion is defined', () => {
+  const h = read('index.html');
+  for (const id of ['i-look', 'i-think', 'i-answer', 'i-draw', 'i-own']) {
+    assert.ok(h.includes(`<symbol id="${id}"`), `symbol ${id}`);
+    assert.ok(h.includes(`href="#${id}"`), `${id} is used`);
+  }
+  const sections = h.split(/<section class="card /).slice(1);
+  assert.equal((sections[4].match(/class="paper mod/g) || []).length, 4, 'card 5 has four modules');
+  assert.ok(sections[4].includes('Your own artist') && sections[4].includes('>Next<'), 'fourth module is marked Next');
+  assert.equal((sections[5].match(/class="viam caption"/g) || []).length, 4, 'card 6 has four Viam lines');
+  assert.ok(!sections[5].includes('class="paper mod num"'), 'numbers row removed');
+  const css = read('deck.css');
+  assert.match(css, /@keyframes pop/);
+  assert.match(css, /prefers-reduced-motion: reduce\)[^}]*\{[^}]*\.card\.active \* \{ animation: none !important; \}/);
 });
