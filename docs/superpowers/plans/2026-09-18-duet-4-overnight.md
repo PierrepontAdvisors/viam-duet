@@ -992,14 +992,17 @@ git commit -m "feat: session recorder in turn.py's layout with an ffmpeg stitch"
 The page's visitor view shows Claude's few words in a speech bubble; the full `sees`/`adds` stay on the operator view. In `code/hackathon/duet/claude_turn.py` change the import `from pydantic import BaseModel` to `from pydantic import BaseModel, Field`, and add one field to `Proposal` after `adds`:
 
 ```python
+    thought: str = Field(description="a few wondering words about what you see, under eight words, storybook tone, no coordinates")
     quip: str = Field(description="a few warm, encouraging words to the person, under eight words, no coordinates")
 ```
 
-and append this sentence to the `SYSTEM` prompt's paragraph that begins "Your job each turn" (right after "then give the strokes as data."):
+and append these two sentences to the `SYSTEM` prompt's paragraph that begins "Your job each turn" (right after "then give the strokes as data."):
 
 ```
-Also give a quip: a few warm, encouraging words to the person, under eight words, no coordinates.
+Also give a thought: a few wondering words about what you see, under eight words, in a storybook tone, no coordinates. And a quip: a few warm, encouraging words to the person, under eight words, no coordinates.
 ```
+
+The page shows the thought in a thought cloud while Claude looks and the quip in a speech bubble while the robot draws.
 
 `python -m pytest tests/test_planner_haring.py -q` must still pass (it does not build a Proposal). The `turn.py` terminal loop ignores the field. `Proposal(...)` constructions in the fakes below include `quip`.
 
@@ -1085,6 +1088,7 @@ def test_one_full_exchange_on_the_real_day_1_boards(tmp_path, look_frame, exchan
         assert t in types, t
     interp = next(e for e in events if e["type"] == "interpretation")
     assert interp["quip"] == "What a creature! Here comes the sun." and interp["source"] == "claude"
+    assert interp["thought"] == "Is that a creature waking up?"
     human = next(e for e in events if e["type"] == "human")
     assert 10 <= len(human["new"]) <= 16
     xs = [x for pl in human["new"] for x, _ in pl]
@@ -1348,12 +1352,12 @@ class FakeBrain:
         lo, hi_x, hi_y = cfg.INSET_MM + 10, cfg.BOARD_W_MM - cfg.INSET_MM - 10, cfg.BOARD_H_MM - cfg.INSET_MM - 10
         if self.n % 2:
             p = Proposal(sees="A creature sprawls across the board, looking up.", adds="A sun above it, to give the scene a sky.",
-                         quip="What a creature! Here comes the sun.", color="green",
+                         thought="Is that a creature waking up?", quip="What a creature! Here comes the sun.", color="green",
                          strokes=[_stroke(kind="circle", cx=min(max(cx, lo + 14), hi_x - 14), cy=max(lo + 14, top - 32), r=12.0)])
         else:
             y = min(hi_y, bottom + 25)
             p = Proposal(sees="The scene has a sun now.", adds="A ground line under the creature.",
-                         quip="Let's give it ground to stand on.", color="green",
+                         thought="Where does the creature stand?", quip="Let's give it ground to stand on.", color="green",
                          strokes=[_stroke(kind="polyline", points=[Pt(x=lo, y=y), Pt(x=hi_x, y=y)])])
         return TurnResult(p, "claude", self.latency_s, None)
 ```
@@ -1388,6 +1392,7 @@ RETRY_AFTER_FAULT = {"look": "look", "human_turn": "human_turn", "capture": "hum
 HAND_WAIT_S = 30
 SETTLE_AFTER_LOOK_S = 0.8      # the camera image settles after the arm stops, as in duet.turn
 FALLBACK_QUIP = "Lost my words. Drawing anyway!"   # the speech bubble when Claude did not answer
+FALLBACK_THOUGHT = "Hmm... my words got lost."       # the thought cloud when Claude did not answer
 
 
 @dataclass(frozen=True)
@@ -1689,6 +1694,7 @@ class Session:
                                                self.settings.length, self.turn + 1, self.settings.exchanges)
         p = self.result.proposal
         self.bus.emit("interpretation", sees=p.sees if p else "", adds=p.adds if p else "",
+                      thought=(getattr(p, "thought", "") or FALLBACK_THOUGHT) if p else FALLBACK_THOUGHT,
                       quip=(getattr(p, "quip", "") or FALLBACK_QUIP) if p else FALLBACK_QUIP,
                       source=self.result.source, latency_s=round(self.result.latency_s, 2), error=self.result.error)
         return "plan"
@@ -2261,7 +2267,7 @@ def make_app(session, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibr
         S.progress = m.stroke; drawPlan();
         break;
       case 'interpretation':
-        $('quip').textContent = m.quip || '';
+        $('quip').textContent = (m.thought ? m.thought + ' … ' : '') + (m.quip || '');
         $('sees').textContent = m.sees || (m.source === 'fallback' ? 'Claude was unavailable this turn.' : '');
         $('adds').textContent = m.adds || '';
         $('source').textContent = m.source === 'claude' ? ('Claude, ' + m.latency_s + ' s') : ('Fallback grammar: ' + (m.error || ''));
