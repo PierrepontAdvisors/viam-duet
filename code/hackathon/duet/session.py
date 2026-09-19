@@ -28,7 +28,7 @@ STYLERS = {"abstract": abstract, "mimic": mimic, "haring": haring, "mondrian": m
 # Where Resume picks up after a fault. `interpret` and `plan` retry themselves: the visitor's strokes
 # are already consumed, so sending them back to `human_turn` would ask for the mark to be drawn again.
 RECOVER_TIMEOUT_S = 45.0      # a recover that hangs on a dropped connection must not hold the loop forever
-RETRY_AFTER_FAULT = {"start": "start", "look": "look", "human_turn": "human_turn", "capture": "human_turn",
+RETRY_AFTER_FAULT = {"start": "start", "wipe": "wipe", "look": "look", "human_turn": "human_turn", "capture": "human_turn",
                      "interpret": "interpret", "plan": "plan", "robot_draw": "look", "finish": "finish"}
 HELD_IDS = itertools.count(1)   # every held still gets a fresh id, unique for the process, so the stream's key never repeats
 HAND_WAIT_S = 30
@@ -348,7 +348,23 @@ class Session:
         self.previous_photo, frame = await self._capture_board()
         self.rec.save_photo(0, "start", self.previous_photo, frame)
         self._emit_shot("start", 0)
+        self.coverage = vision.ink_coverage(self.previous_photo)
+        if self.coverage >= cfg.COVERAGE_START:
+            # the last visitor's piece is still on the board; a new piece would end on its first turn
+            self.bus.emit("error", message=f"the board is {self.coverage:.0%} inked; wipe it clean, then press Start")
+            return "wipe"
         return "human_turn"
+
+    async def _state_wipe(self) -> str:
+        """The start photo showed a board still full of ink. Nothing moves until the operator wipes it
+        and presses Start on the welcome (the `restart` command), which takes the start photo again."""
+        self._restart.clear()
+        while not self._restart.is_set():
+            if not self._running.is_set():
+                return "wipe"
+            await asyncio.sleep(self.poll_s)
+        self._restart.clear()
+        return "start"
 
     def _board_homography(self) -> np.ndarray:
         if self._homography is None:

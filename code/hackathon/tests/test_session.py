@@ -486,3 +486,25 @@ def test_an_ink_artist_answers_without_the_brain(tmp_path, look_frame, exchange_
     assert plan["artist"] == "mimic" and plan["polylines"]
     meta = json.loads((rec.dir / "session.json").read_text())
     assert meta["history"][0]["source"] == "ink" and meta["history"][0]["adds"].endswith("shifted")
+
+
+def test_a_full_board_at_start_waits_for_a_wipe_and_start_again(tmp_path, look_frame, exchange_start, exchange_human, calibration, monkeypatch):
+    monkeypatch.setattr(cfg, "COVERAGE_START", 0.01)          # the day-1 creature board reads about 2 percent inked
+    async def scenario():
+        s, frames, ctl, rec, q = build(tmp_path, look_frame, exchange_human, calibration, exchanges=1, handoff="held")
+        task = asyncio.create_task(s.run())
+        await until_state(s, "wipe")
+        events = drain(q)
+        moves_before = len(ctl.calls)
+        frames.show_board(exchange_start)                       # the operator wiped the board
+        s.restart()                                             # and pressed Start on the welcome
+        await until_state(s, "human_turn")
+        await cancel(task)
+        return s, ctl, events, moves_before
+    s, ctl, events, moves_before = asyncio.run(scenario())
+    assert s.states_seen == ["start", "wipe", "start", "human_turn"]
+    err = next(e for e in events if e["type"] == "error")
+    assert "wipe" in err["message"].lower() and "%" in err["message"]
+    state = next(e for e in events if e["type"] == "state" and e["state"] == "wipe")
+    assert state["coverage"] > 0.01
+    assert not any(c[0] == "draw" for c in ctl.calls[moves_before:])

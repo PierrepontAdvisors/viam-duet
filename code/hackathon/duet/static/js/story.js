@@ -16,6 +16,7 @@ export const FIXED = {
   noQuip: 'Here we go!',
   oldThought: 'Hmm, what was this?',
   oldQuip: 'I remember this one!',
+  wipe: 'The board is still full. Wipe it clean, then press Start.',
 };
 
 /* ---- artists: the picker's names and one-line descriptions, in the backend's display order ---- */
@@ -56,7 +57,8 @@ const TABLE = {
   plan: { chip: ['I have an idea!', 'yellow'], bubble: ['speech', 'quip'] },
   robot_draw: { chip: ['My turn! Hands off, please', 'red'], bubble: ['speech', 'quip'] },
   finish: { chip: ['Signing…', 'green'], bubble: ['speech', 'All done! Thank you.'] },
-  finished: { chip: ['The end', 'yellow'], bubble: ['speech', 'That was fun. Play it back?'] },
+  finished: { chip: ['The end', 'yellow'], bubble: ['speech', 'The end! Wipe the board for the next artist.'] },
+  wipe: { chip: ['Wipe the board', 'red'], bubble: ['speech', FIXED.wipe] },
   paused: { chip: ['Paused', 'red'], bubble: ['speech', 'One moment, please.'] },
 };
 
@@ -139,8 +141,15 @@ export const WELCOME_RETURN_MS = 8000;
  *  Start was pressed on a finished session, until a new session's state arrives. */
 export function welcomeButton(state, waiting = false) {
   if (waiting) return { label: 'Starting soon…', enabled: false };
-  if (state === 'human_turn' || state === 'finished') return { label: 'Start', enabled: true };
+  if (state === 'human_turn' || state === 'finished' || state === 'wipe') return { label: 'Start', enabled: true };
   return { label: 'Getting ready…', enabled: false };
+}
+/** The welcome's what-to-do-next line: after a piece, and while the start photo still shows the last
+ *  visitor's ink (`coverage` is the state's inked fraction). Null when there is nothing to ask. */
+export function welcomePrompt(state, coverage) {
+  if (state === 'wipe') return `The board is still ${Math.round((coverage || 0) * 100)}% full. Wipe it clean, then press Start.`;
+  if (state === 'finished') return 'Wipe the board clean for the next artist, then press Start.';
+  return null;
 }
 /** The welcome returns when a fresh session begins after a session that was under way or finished:
  *  a restarted process or a restart in place looks like idle or start arriving after anything else. */

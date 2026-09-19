@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { welcomeButton, welcomeReturns, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor, feedLabel, ARTIST_INFO, artistName, pickerText } from '../duet/static/js/story.js';
+import { welcomeButton, welcomeReturns, welcomePrompt, WELCOME_RETURN_MS, chipFor, bubbleForState, bubbleForShot, placeholderAt, PLACEHOLDERS, FIXED, TurnBook, anchorFor, feedLabel, ARTIST_INFO, artistName, pickerText } from '../duet/static/js/story.js';
 
 test('chipFor gives the storybook words and tone per state, and a readable fallback', () => {
   assert.deepEqual(chipFor('human_turn'), { text: 'Your turn!', tone: 'green' });
@@ -22,7 +22,7 @@ test('bubbleForState: thinking shows a placeholder until the thought lands, then
   assert.deepEqual(bubbleForState('robot_draw', null, {}), { kind: 'speech', text: FIXED.noQuip });
   assert.deepEqual(bubbleForState('human_turn', null, {}), { kind: 'speech', text: FIXED.start });
   assert.deepEqual(bubbleForState('human_turn', null, { reseat: true }), { kind: 'speech', text: FIXED.reseat });
-  assert.deepEqual(bubbleForState('finished', null, {}), { kind: 'speech', text: 'That was fun. Play it back?' });
+  assert.deepEqual(bubbleForState('finished', null, {}), { kind: 'speech', text: 'The end! Wipe the board for the next artist.' });
 });
 
 test('bubbleForShot follows the photo: thought on the human, speech on the robot', () => {
@@ -124,4 +124,16 @@ test('pickerText while browsing: a robot photo names who drew it, anything else 
   assert.equal(pickerText('human_turn', 'abstract', null, { who: 'robot', artist: null }), null);
   assert.equal(pickerText('human_turn', 'abstract', null, { who: 'human', artist: 'designer' }), null);
   assert.equal(pickerText('robot_draw', 'abstract', 'mimic', { who: 'start', artist: null }), null);
+});
+
+test('a full board at start: the wipe state instructs, the welcome prompts, and Start stays live', () => {
+  assert.deepEqual(chipFor('wipe'), { text: 'Wipe the board', tone: 'red' });
+  assert.deepEqual(bubbleForState('wipe', null, {}), { kind: 'speech', text: FIXED.wipe });
+  assert.match(FIXED.wipe, /wipe/i); assert.match(FIXED.wipe, /Start/);
+  assert.deepEqual(welcomeButton('wipe'), { label: 'Start', enabled: true });
+  assert.equal(welcomePrompt('wipe', 0.348), 'The board is still 35% full. Wipe it clean, then press Start.');
+  assert.equal(welcomePrompt('finished', 0.4), 'Wipe the board clean for the next artist, then press Start.');
+  for (const s of ['idle', 'start', 'human_turn', 'robot_draw', 'paused', null]) assert.equal(welcomePrompt(s, 0.4), null, String(s));
+  assert.match(bubbleForState('finished', null, {}).text, /wipe/i);
+  assert.equal(welcomeReturns('start', 'wipe'), false);
 });

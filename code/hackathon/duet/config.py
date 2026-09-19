@@ -40,6 +40,7 @@ GRIPPER_SETTLE_S = 0.3        # pause after grab or open before the next move
 REQUIRE_GRAB_DETECT = False   # set True in stage 3 if this gripper unit reports grab() reliably
 
 COVERAGE_END = 0.33           # end the session when this fraction of the drawable area is inked
+COVERAGE_START = 0.15         # a start photo more inked than this is last visitor's board: wait for a wipe
 
 # ---- perception: trigger readings (plan 2) --------------------------------------------------
 FIXTURES_DIR = PACKAGE_DIR.parent / "tests" / "fixtures"

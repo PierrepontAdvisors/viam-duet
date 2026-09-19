@@ -1,5 +1,5 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns, ARTIST_INFO, artistName, pickerText } from './story.js?v=ds7';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns, welcomePrompt, ARTIST_INFO, artistName, pickerText } from './story.js?v=ds7';
 import { bubblePosition } from './geometry.js?v=ds7';
 import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds7';
 
@@ -264,6 +264,9 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (!welcome.shown && welcomeReturns(welcome.prev, state)) showWelcome(true);
     $('home').classList.toggle('hidden', !(state === 'finished' && !welcome.shown));   // the piece stays up until someone chooses to leave it
     if (welcome.shown && welcome.pressed && state === 'human_turn') { welcome.pressed = false; showWelcome(false); }
+    const prompt = welcomePrompt(state, app.state ? app.state.coverage : 0);
+    $('welcome-do').classList.toggle('hidden', !prompt);
+    if (prompt && $('welcome-do').textContent !== prompt) $('welcome-do').textContent = prompt;
     const b = welcomeButton(state, welcome.waiting);
     const btn = $('start');
     if (btn.textContent !== b.label) { btn.textContent = b.label; if (b.enabled) popIt(btn); }
@@ -273,7 +276,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   $('home').onclick = () => showWelcome(true);
   $('start').onclick = () => {
     const state = app.state ? app.state.state : null;
-    if (state === 'finished') { welcome.waiting = true; welcome.pressed = true; sendCommand('restart'); renderWelcome(); return; }
+    if (state === 'finished' || state === 'wipe') { welcome.waiting = true; welcome.pressed = true; sendCommand('restart'); renderWelcome(); return; }   // wipe: the start photo is taken again
     welcome.pressed = false; showWelcome(false);
   };
   const renderAll = () => { renderChips(); renderPicker(); renderBubble(); renderPanel(); renderWelcome(); };
