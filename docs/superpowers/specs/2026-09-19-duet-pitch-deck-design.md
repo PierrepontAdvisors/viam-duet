@@ -16,12 +16,13 @@ Decisions made during brainstorming:
 - **One technical card**, with Viam named in every step it touches.
 - **The close is the build itself** ("One person. Two days. Claude and Viam."), with the rig instruction as its footer so it stays on screen during the demo. "One person" is accurate.
 - **One self-contained HTML file**, no framework, no CDN, no build step.
+- **The look is bright Haring plates**, not the page's black stage: each card sits on a saturated colour plate covered in a repeating squiggle pattern in Keith Haring's style, with bold black type. Added after the first spec read.
 
 ## 2. The cards
 
 Words in quotes are on the slide. Everything else is spoken.
 
-**Card 1, Thesis.** Black. Three lines, white, revealed one per advance:
+**Card 1, Thesis.** Yellow plate. Three lines, black, revealed one per advance:
 "Anyone can now study with the greatest minds in history."
 "Nobody could make art with them."
 "Until today."
@@ -54,13 +55,16 @@ The test count is confirmed against the suite on the day before the deck is fina
 
 ## 3. Look
 
-- The same black 16:9 stage as the live page, letterboxed in any window (`width: min(100vw, 177.78vh)`, `aspect-ratio: 16/9`), so a projector, a laptop, or a phone all show the whole card.
-- Typography is Fredoka from a local font file in `fonts/`, falling back to Chalkboard SE, Comic Sans MS, then sans-serif, the same stack as `duet.css`. Sizes scale with the stage using container units so the cards look the same at any window size.
-- Colours are the page's tokens: paper `#fff`, ink `#111`, yellow `#ffd400`, green `#1b8f3a`, red `#c62828`, stage black. One word per card takes the yellow; anything about the robot's ink is green; anything about the visitor's ink is red. Everything else is white on black.
-- Photos sit on white paper cards with rounded corners and a soft shadow. The speech bubble matches the page's bubble (white, rounded, a tail toward the photo it speaks about).
-- The three artist chips are inline SVG paths, no images: a swirl of short dashes, a small grid with one hatched cell, a bold outline with ticks. Colours follow the PRD's artist rules: Van Gogh dashes in blue, Mondrian lines in blue with one red hatched cell, Haring outline and ticks in green. The deck adds one token the page lacks, blue `#1f4fd6`, for the first two.
-- The flipbook is one `<img>` whose `src` a timer swaps; all 13 images are preloaded when the deck opens so the first loop is smooth.
-- Motion is limited to the card-1 line reveals (a short fade and rise), the flipbook, and a short cross-fade between cards. Nothing bounces.
+Bright Haring plates. Every card is a saturated colour plate covered edge to edge in a repeating hand-drawn pattern in Keith Haring's style, with bold black type on top. The deck borrows Haring's grammar, not his drawings: no reproductions of his figures, only the kinds of marks he used.
+
+- **Stage.** The same 16:9 stage as the live page, letterboxed in black in any window (`width: min(100vw, 177.78vh)`, `aspect-ratio: 16/9`). Inside it, the plate fills the whole card.
+- **Plates, one colour per card.** 1 Thesis: yellow. 2 What Duet is: red. 3 One turn: blue. 4 Co-creation: green. 5 Learning: orange. 6 How it works: cream (a light plate so the diagram reads). 7 The build: black with the pattern in all the bright colours at once, white type. Tokens: yellow `#ffd400`, red `#e5322d`, blue `#1f4fd6`, green `#17a34a`, orange `#ff7a00`, cream `#fff4d6`, ink `#111`, paper `#fff`. The page's `#1b8f3a` green and `#c62828` red still mark the robot's ink and the visitor's ink where the copy refers to them.
+- **Pattern.** An inline SVG `<pattern>` tile, about 160 px square, drawn once and reused on every plate: wavy squiggles, zigzags, short radiating ticks (motion lines), dots, and small open arcs, in a thick round-capped stroke. On colour plates the pattern is black at 12 to 16 percent opacity so type stays legible; on the cream plate it is black at 10 percent; on the black plate it is the five bright colours at full opacity. The pattern drifts very slowly (about 6 px per second, one direction) for life, and stops under `prefers-reduced-motion`. It never sits behind a photo or a speech bubble.
+- **Type.** Fredoka from a local font file in `fonts/`, falling back to Chalkboard SE, Comic Sans MS, then sans-serif. Headlines heavy (600 to 700), black, large; the one word that matters on each card is set in white with a black outline (a Haring-style keyline via `paint-order: stroke` or a text shadow stack) rather than in a second colour. Sizes scale with the stage using container units.
+- **Paper.** Photos, the speech bubble, the artist chips, the four numbers on card 6, and the diagram nodes sit on white paper cards with a thick black outline (about 4 px at full size) and rounded corners, the way Haring's figures are outlined. No soft shadows; the outline does the work.
+- **Artist chips.** Inline SVG paths, no images: a swirl of short dashes (Van Gogh, blue), a small grid with one red hatched cell (Mondrian, blue lines), a bold outline with ticks (Haring, green). Each on its own paper card.
+- **Flipbook.** One `<img>` on a paper card whose `src` a timer swaps; all 13 images are preloaded when the deck opens so the first loop is smooth.
+- **Motion.** The card-1 line reveals (a short fade and rise), the pattern drift, the flipbook, and a short cross-fade between cards. Nothing bounces.
 
 ## 4. Controls
 
@@ -98,6 +102,7 @@ docs/duet/pitch/
 
 - **Node test** `code/hackathon/pagetests/pitch.test.mjs`, run with the existing `node --test 'pagetests/*.test.mjs'`: reads `docs/duet/pitch/index.html`, asserts seven cards in order with the expected headline text, asserts every `src`, `href` and `url()` that points into `img/` or `fonts/` names a file that exists, asserts the 13 flipbook filenames are listed, and asserts the developer-mode badge, label, and toast elements are present.
 - **Browser pass** with the built-in browser: open the file, step through all seven cards with the keyboard, take one screenshot per card into `code/hackathon/captures/pitch-N.png`, confirm the card-1 reveals, the flipbook cycling, the hash updating, fullscreen, and developer mode copying a name. Screenshots are shown to Nicholas for review before 3:30.
+- **Legibility check** during the browser pass: on each plate, the headline and body type are read at arm's length from a laptop and at the back of a room from a projector-sized window; if the pattern competes with the type, its opacity comes down, never the type size.
 - **Offline check**: the browser pass is repeated once with the network off (or with Google Fonts blocked) to confirm the local font loads and nothing else is fetched.
 
 ## 7. Out of scope
