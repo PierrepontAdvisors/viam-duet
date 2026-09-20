@@ -203,12 +203,14 @@ ul, ol { padding: 0; list-style: none; }
                         animation-delay: calc(var(--i, 2) * var(--stagger, 80ms) / var(--speed, 1)); }
 /* the fixed-height pictures give the row its space */
 .stage.shownotes .photo img { height: 22cqw; }
-.stage.shownotes .flip img { height: 22cqw; }
+.stage.shownotes .flip img { height: 22cqw; }   /* 23cqw left 0.08cqw at 1280 and spilled at most other widths */
 .stage.shownotes .build .photo img { height: 20cqw; }
 .stage.shownotes .what .hero img { width: 26cqw; height: 26cqw; }
 
-/* with the notes row on, the big-room type comes down a step so every card still fits its plate */
-.stage.shownotes .card { --display: 6.4cqw; --headline: 4.1cqw; --body: 2.5cqw; --caption: 1.5cqw; }
+/* with the notes row on, the type comes down a step. --headline 4.1 and --body 2.5 hold the fit: at 4.2 card 1's
+   second thesis line goes to two lines (1.4cqw spill); at 3.1 cards 5 and 6 spill 0.9 and 4.0cqw. --display and
+   --caption come down with them to keep the scale, not for fit. */
+.stage.shownotes .card { --display: 6.4cqw; --headline: 4.1cqw; --body: 2.5cqw; --caption: 1.7cqw; }
 /* card 3's bubble sets --body on itself, out of that rule's reach; with the notes on it takes the step too */
 .stage.shownotes .triptych .m2 .bubble { --body: 2.6cqw; }
 
