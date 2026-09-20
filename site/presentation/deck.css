@@ -113,7 +113,11 @@ ul, ol { padding: 0; list-style: none; }
 .flipwrap { display: flex; flex-direction: column; align-items: center; gap: var(--s1); }
 .flip img { display: block; height: 31cqw; width: auto; max-width: 100%; object-fit: contain; border-radius: calc(var(--paper-radius) - .4cqw); }
 .credit { opacity: .85; }
-.cta { color: var(--yellow); margin-top: var(--s1); }
+.vision { color: #fff; margin-top: var(--s1); }
+.pill.demo { align-self: flex-start; background: var(--green); color: #fff; text-decoration: none; font-size: var(--body); font-weight: 700; padding: .6cqw 1.8cqw; }
+.pill.demo:hover { background: var(--yellow); color: var(--ink); }
+.pill.demo:focus-visible { background: var(--yellow); color: var(--ink); outline: none; }
+.plate-black .pill.demo { border-color: #fff; }
 
 /* template: triptych (three modules of four columns) */
 .triptych .m1 { grid-column: 1 / 4; }
@@ -125,6 +129,9 @@ ul, ol { padding: 0; list-style: none; }
 .bubble { position: relative; width: 100%; background: var(--yellow); padding: var(--s2); display: flex; flex-direction: column; gap: var(--s1); text-align: center; }
 .bubble .adds { color: var(--robot); }
 .bubble .pill { align-self: center; }
+.bubble .says { align-self: center; letter-spacing: .12em; text-transform: uppercase; margin-bottom: calc(-1 * var(--s1)); }
+/* card 3's bubble grew a label; the body token comes in a step on that card so the module still clears the footer */
+.triptych .m2 .bubble { --body: 2.8cqw; }
 .bubble::before { content: ""; position: absolute; top: 50%; right: calc(-1 * var(--s2) - var(--paper-border)); transform: translateY(-50%);
                   border: 1.4cqw solid transparent; border-right: 0; border-left: var(--s2) solid var(--ink); }
 .bubble::after  { content: ""; position: absolute; top: 50%; right: calc(-1 * var(--s2) + .55cqw); transform: translateY(-50%);
@@ -170,13 +177,42 @@ ul, ol { padding: 0; list-style: none; }
 .card.active :is(.modules .closing, .foot > *) { --i: 7; }
 @media (prefers-reduced-motion: reduce) { .card.active * { animation: none !important; } }
 
-/* playbar: Play and speed, a pill pair straddling the frame's bottom-right corner (P also toggles play) */
+/* playbar: Notes, Play, and speed, three pills straddling the frame's bottom-right corner (P also toggles play) */
 .playbar { position: absolute; right: calc(var(--frame-inset) + 1cqw); bottom: calc(var(--frame-inset) - 1.4cqw); z-index: 5;
            display: flex; align-items: center; gap: .6cqw; opacity: .6; transition: opacity .2s; }
 .playbar:hover, .stage.playing .playbar { opacity: 1; }
 .playbar .pill { padding: 0 .9cqw; line-height: 1.35; cursor: pointer; white-space: nowrap; }
 .playbar button { font-family: inherit; font-weight: inherit; }
 .playbar select { font: inherit; border: 0; background: transparent; color: inherit; cursor: pointer; }
+
+/* notes: the spoken part of the pitch as a paper speech bubble, the tail pointing at the speaker's name in the footer.
+   Shown on the web (stage.shownotes); N or the Notes pill hides it. The flag is not named notes: that bare .notes rule
+   below would hide the stage too. Hidden, the aside is display:none and takes no row; shown, it auto-places into an
+   implicit row under the content. Font: the caption token, taken in like the footer's. */
+.notes { display: none; position: relative; justify-content: flex-start; min-width: 0; }
+.stage.shownotes .notes { display: flex; }
+.notes p { position: relative; margin: 0; max-width: 100%; padding: .9cqw 1.6cqw; background: var(--paper); color: var(--ink);
+           border: var(--paper-border) solid var(--ink); border-radius: var(--paper-radius);
+           --caption: 1.45cqw; font-size: var(--caption); font-weight: 600; line-height: 1.3; text-align: left; }
+.notes p::before { content: ""; position: absolute; left: 2.4cqw; bottom: calc(-1 * var(--s1) - var(--paper-border));
+                   border: .9cqw solid transparent; border-bottom: 0; border-top: var(--s1) solid var(--ink); }
+.notes p::after  { content: ""; position: absolute; left: calc(2.4cqw + .22cqw); bottom: calc(-1 * var(--s1) + .22cqw);
+                   border: .68cqw solid transparent; border-bottom: 0; border-top: .8cqw solid var(--paper); }
+.plate-black .notes p::before { border-top-color: #fff; }   /* the ink wedge would vanish on the black plate; the frame there is white too */
+.card.active .notes p { --i: 6; animation: pop calc(.45s / var(--speed, 1)) cubic-bezier(.2, .7, .3, 1) both;
+                        animation-delay: calc(var(--i, 2) * var(--stagger, 80ms) / var(--speed, 1)); }
+/* the fixed-height pictures give the row its space */
+.stage.shownotes .photo img { height: 22cqw; }
+.stage.shownotes .flip img { height: 22cqw; }   /* 23cqw left 0.08cqw at 1280 and spilled at most other widths */
+.stage.shownotes .build .photo img { height: 20cqw; }
+.stage.shownotes .what .hero img { width: 26cqw; height: 26cqw; }
+
+/* with the notes row on, the type comes down a step. --headline 4.1 and --body 2.5 hold the fit: at 4.2 card 1's
+   second thesis line goes to two lines (1.4cqw spill); at 3.1 cards 5 and 6 spill 0.9 and 4.0cqw. --display and
+   --caption come down with them to keep the scale, not for fit. */
+.stage.shownotes .card { --display: 6.4cqw; --headline: 4.1cqw; --body: 2.5cqw; --caption: 1.7cqw; }
+/* card 3's bubble sets --body on itself, out of that rule's reach; with the notes on it takes the step too */
+.stage.shownotes .triptych .m2 .bubble { --body: 2.6cqw; }
 
 /* developer mode (press D), from ~/.claude/rules/common/preview-dev-mode.md */
 body.dev [data-el]{outline:1px dashed rgba(39,67,227,.4);outline-offset:-1px;}

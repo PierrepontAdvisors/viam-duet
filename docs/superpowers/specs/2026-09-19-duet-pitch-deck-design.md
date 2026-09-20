@@ -125,3 +125,16 @@ Amended 2026-09-19 while planning and building: Chrome, the default browser on t
 ## 8. Git
 
 Built and committed on `feat/duet-design`, the branch the demo runs from, in small commits: the spec, the assets, the deck, the test. Nothing under `duet/` is staged.
+
+## 8. Notes for the web (added 2026-09-20)
+
+The deck now lives on the showcase site, where nobody hears the talk. Each card gained an aside that takes an
+implicit fourth grid row under the content, holding a paper speech bubble with the spoken part, written in the
+present tense of the day: the deck is a snapshot of the pitch as given, and it still sells. `N`, the Notes pill,
+and `?notes=0` hide the bubbles, which restores the room version. The stage flag is `shownotes`, not `notes`, so the
+asides' own hide rule cannot match the stage. With the notes on, the type comes down a step (`--headline` 4.1cqw and
+`--body` 2.5cqw hold the fit; `--display` and `--caption` follow for the scale) and the fixed-height pictures shrink,
+so every card fits its plate from phone-landscape to 1920 wide. Card 3 names the speaker ("Claude says") and rounds
+the badge to "about 8 seconds". Card 5 marks "Your own artist" as "Coming next". Card 7 dropped the rig instruction
+for "Next: artists you train yourself" and a Play the demo pill; its bubble carries the diner story and the wish to
+train Duet on a family member's hand. Plan: `docs/superpowers/plans/2026-09-20-deck-notes.md`.
