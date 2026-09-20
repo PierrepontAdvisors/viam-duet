@@ -30,3 +30,16 @@ test('ui.js applies the table it is given: layers, colours, widths, levels, and 
   const app = read('js/app.js');
   assert.match(app, /initUI\(app, \{ sendSet, sendCommand, on, replay: !!REPLAY_URL \}\)/);
 });
+
+test('app.js wires the hand in replay mode: built at boot, fed cues, cancelled off the human turn and on restart; sound turns on at Start when nothing is stored', () => {
+  const app = read('js/app.js');
+  assert.match(app, /import \{ Hand \} from '\.\/hand\.js\?v=ds8';/);
+  assert.match(app, /const SPEED = Number\(new URLSearchParams\(location\.search\)\.get\('speed'\)\) \|\| 1;/);
+  assert.match(app, /if \(REPLAY_URL\) app\.hand = new Hand\(\$\('hand'\), \{ stage: \$\('stage'\), targets: handTarget, speed: SPEED \}\);/);
+  assert.match(app, /new Player\(replay, feed, \{ speed: SPEED, cue: \(c\) => app\.hand && app\.hand\.run\(c\) \}\)/);
+  assert.match(app, /if \(app\.hand && msg\.state !== 'human_turn'\) app\.hand\.cancel\(\);/);
+  assert.match(app, /if \(msg\.type === 'restart' && app\.hand\) app\.hand\.cancel\(\);/);
+  assert.match(app, /const wantsSound = stored === null \? defaultsFor\(!!REPLAY_URL\)\.sound : stored;/);
+  assert.match(app, /\$\('start'\)\.addEventListener\('click', \(\) => \{ if \(!app\.sound\.on\) setSound\(true\); \}, \{ once: true \}\)/);
+  assert.ok(!/\?v=ds7/.test(app), 'assets at v=ds8');
+});
