@@ -321,7 +321,7 @@ test('notes: a speech bubble row under the content, shown only with the stage sh
   assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 24cqw; height: 24cqw; \}/);
   assert.match(css, /\.triptych \.m2 \.bubble \{ --body: 2\.8cqw; \}/);
-  assert.match(css, /\.stage\.shownotes \.card \{ --display: 6\.4cqw; --headline: 4\.1cqw; --body: 2\.5cqw; --caption: 1\.7cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.card \{ --display: 6\.4cqw; --headline: 4\.1cqw; --body: 2\.5cqw; --caption: 1\.7cqw; padding-top: 3\.5cqw; row-gap: 1\.2cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.triptych \.m2 \.bubble \{ --body: 2\.6cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.modules \.mod \.body \{ --body: 2\.3cqw; \}/);
 });
@@ -333,13 +333,13 @@ test('notes: every card carries the spoken part in its own aside, in the present
   const frameLine = 'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click the right two thirds to advance, the left third to go back.';
   assert.match(sections[0], /<p><span class="frame">The two-minute pitch/, 'card 1 sets its frame line apart');
   const LINES = {
-    1: [frameLine, 'Duet puts a partner at the table.'],
-    2: ['in the hand of an artist you choose.'],
-    3: ['A real turn from last night.'],
-    4: ['Everyone who sits down leaves with a piece they made with a partner.'],
-    5: ['You have a conversation in it.'],
-    6: ['Viam\'s motion service draws them safely around the table.'],
-    7: ['so it can sketch with my grandchildren the way he sketched with me.'],
+    1: [frameLine, 'an AI creative partner with a body'],
+    2: ['anyone who can hold a marker'],
+    3: ['traces the new ink into millimetre polylines'],
+    4: ['co-creation, not automation'],
+    5: ['Each artist is a style module'],
+    6: ['Viam runs the machine and Claude runs the judgment'],
+    7: ['so it can sketch with my grandchildren the way he sketched with me'],
   };
   sections.forEach((s, i) => {
     const n = i + 1;

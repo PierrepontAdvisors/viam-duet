@@ -191,7 +191,7 @@ ul, ol { padding: 0; list-style: none; }
    implicit row under the content. Font: the caption token, taken in like the footer's. */
 .notes { display: none; position: relative; justify-content: flex-start; min-width: 0; }
 .stage.shownotes .notes { display: flex; }
-.notes p { position: relative; margin: 0; max-width: 100%; padding: .9cqw 1.6cqw; background: var(--paper); color: var(--ink);
+.notes p { position: relative; margin: 0; max-width: 100%; padding: .6cqw 1.4cqw; background: var(--paper); color: var(--ink);
            border: var(--paper-border) solid var(--ink); border-radius: var(--paper-radius);
            --caption: 1.6cqw; font-size: var(--caption); font-weight: 600; line-height: 1.3; text-align: left; }
 .notes p::before { content: ""; position: absolute; left: 2.4cqw; bottom: calc(-1 * var(--s1) - var(--paper-border));
@@ -214,7 +214,7 @@ ul, ol { padding: 0; list-style: none; }
 /* with the notes row on, the type comes down a step. --headline 4.1 and --body 2.5 hold the fit: at 4.2 card 1's
    second thesis line goes to two lines (1.4cqw spill); at 3.1 cards 5 and 6 spill 0.9 and 4.0cqw. --display and
    --caption come down with them to keep the scale, not for fit. */
-.stage.shownotes .card { --display: 6.4cqw; --headline: 4.1cqw; --body: 2.5cqw; --caption: 1.7cqw; }
+.stage.shownotes .card { --display: 6.4cqw; --headline: 4.1cqw; --body: 2.5cqw; --caption: 1.7cqw; padding-top: 3.5cqw; row-gap: 1.2cqw; }
 /* card 3's bubble sets --body on itself, out of that rule's reach; with the notes on it takes the step too */
 .stage.shownotes .triptych .m2 .bubble { --body: 2.6cqw; }
 .stage.shownotes .modules .mod .body { --body: 2.3cqw; }   /* the four-module cards are body-bound; 2.4 still left card 6 0.43cqw at 1920, 2.3 buys it 0.74 */
