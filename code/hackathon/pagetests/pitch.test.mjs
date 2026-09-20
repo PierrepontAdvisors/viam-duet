@@ -191,13 +191,17 @@ test('every local file the deck references exists, and the four support files ar
   const h = read('index.html');
   const refs = [...h.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
   assert.ok(refs.length >= 8, 'expected local references');
-  for (const r of refs) assert.ok(existsSync(DIR + r), `referenced but missing: ${r}`);
+  for (const r of refs) {
+    if (r.startsWith('../')) continue; // links that leave the folder are the showcase site's (../ home, ../demo/), resolved only when the deck is served from site/presentation/
+    assert.ok(existsSync(DIR + r), `referenced but missing: ${r}`);
+  }
   for (const f of ['fredoka.css', 'deck.css', 'deck.js', 'dev.js']) assert.ok(refs.includes(f), `${f} not linked`);
   assert.ok(refs.includes('img/turn-07-human.jpg') && refs.includes('img/turn-07-robot.jpg'), 'card 3 photos are the Haring turn of the latest run');
   assert.ok(refs.includes('img/turn-10-final.jpg'), 'card 7 shows the finished piece');
   for (let n = 1; n <= 7; n++) assert.ok(refs.includes(`img/plate-${n}.jpg`), `plate ${n} not referenced`);
   for (const hero of ['hero-thesis', 'hero-duet']) assert.ok(refs.includes(`img/${hero}.jpg`), `${hero} not referenced`);
   assert.ok(!/type="module"/.test(h), 'module scripts do not load over file:// in Chrome');
+  assert.deepEqual([...h.matchAll(/href="(\.\.\/[^"]*)"/g)].map((m) => m[1]).sort(), ['../', '../demo/'], 'exactly two links leave the deck folder');
 });
 
 test('developer mode is wired: badge, label, toast, and unique data-el names on the cards', () => {
