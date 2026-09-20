@@ -297,3 +297,26 @@ test('notes: a fourth card row holds a paper speech bubble, shown only with the 
   assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 26cqw; height: 26cqw; \}/);
 });
+
+test('notes: every card carries the spoken part in its own aside, in the present tense of the day', () => {
+  const h = read('index.html');
+  const sections = h.split(/<section class="card /).slice(1);
+  assert.equal(sections.length, 7);
+  sections.forEach((s, i) => {
+    const n = i + 1;
+    assert.equal((s.match(/<aside class="notes"/g) || []).length, 1, `card ${n} has one notes aside`);
+    assert.ok(s.includes(`data-el="card ${n} notes — the spoken part"`), `card ${n} notes are named`);
+    assert.ok(s.indexOf('<aside class="notes"') < s.indexOf('<footer class="band foot"'), `card ${n} notes sit above the footer`);
+  });
+  for (const line of [
+    'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click to advance.',
+    'Duet puts a partner at the table.',
+    'in the hand of an artist you choose.',
+    'A real turn from last night.',
+    'Everyone who sits down leaves with a piece they made with a partner.',
+    'You have a conversation in it.',
+    'Viam\'s motion service draws them safely around the table.',
+    'so it can sketch with my grandchildren the way he sketched with me.',
+  ]) assert.ok(h.includes(line), `note missing: ${line}`);
+  assert.ok(!/[‘’]/.test(h), 'plain apostrophes');
+});
