@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": true,
+  "headers": [
+    { "source": "/demo/sessions/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/presentation/img/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/(.*)\\.(css|js|json)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
+  ]
+}

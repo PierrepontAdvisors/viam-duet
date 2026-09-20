@@ -237,7 +237,7 @@ test('the toy logo replaces the Duet word in the header and on card 2, footers c
     assert.ok(/class="wordmark"[^>]*>\s*<svg class="logo/.test(s), `card ${i + 1} header logo`);
     assert.ok(s.includes('class="wash"'), `card ${i + 1} wash`);
     assert.ok(!s.includes('foot-logo'), `card ${i + 1} has no footer logo`);
-    assert.ok(/class="band foot">\s*<span class="strip"[^>]*>Nicholas Fjellberg Swerdlowe/.test(s), `card ${i + 1} footer carries the name and hackathon line`);
+    assert.ok(/class="band foot">\s*<span class="strip"[^>]*>(<a [^>]*>)?Nicholas Fjellberg Swerdlowe/.test(s), `card ${i + 1} footer carries the name and hackathon line`);
     assert.ok(!s.includes('Viam Fine Motor Skills · 2026'), `card ${i + 1} old footer line gone`);
   });
   assert.ok(/class="name"[^>]*>\s*<svg class="logo/.test(sections[1]), 'card 2 large logo');
