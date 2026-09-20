@@ -335,11 +335,11 @@ test('notes: every card carries the spoken part in its own aside, in the present
   const LINES = {
     1: [frameLine, 'an AI creative partner with a body'],
     2: ['anyone who can hold a marker'],
-    3: ['traces the new ink into millimetre polylines'],
-    4: ['co-creation, not automation'],
+    3: ['traced into millimetre lines'],
+    4: ['The core feature is co-creation'],
     5: ['Each artist is a style module'],
-    6: ['Viam runs the machine and Claude runs the judgment'],
-    7: ['so it can sketch with my grandchildren the way he sketched with me'],
+    6: ['How it works, in four steps'],
+    7: ['sketch with my grandchildren in his hand'],
   };
   sections.forEach((s, i) => {
     const n = i + 1;
