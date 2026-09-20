@@ -157,7 +157,7 @@ test('the deck has seven cards in order carrying the agreed copy, with plain apo
     'You make a mark. It answers back.',
     'A crowded world of creatures, flowers and dancing figures.',
     'A small green dancing figure in the open lower-right space to balance the crowd.',
-    '8 s to look and decide', 'Your mark', 'Duet answers',
+    'about 8 seconds to look and decide', 'Claude says', 'Your mark', 'Duet answers',
     'Everyone leaves with a piece made with a <span class="key">partner</span>.',
     'Ten exchanges. Two artists. One of them was a robot.',
     'You learn their language by <span class="key">answering back</span>.',
@@ -254,7 +254,7 @@ test('card 6 steps carry icons, card 5 has four modules, motion is defined', () 
   }
   const sections = h.split(/<section class="card /).slice(1);
   assert.equal((sections[4].match(/class="paper mod/g) || []).length, 4, 'card 5 has four modules');
-  assert.ok(sections[4].includes('Your own artist') && sections[4].includes('>Next<'), 'fourth module is marked Next');
+  assert.ok(sections[4].includes('Your own artist') && sections[4].includes('>Coming next<'), 'fourth module is marked Next');
   assert.equal((sections[5].match(/class="viam caption"/g) || []).length, 0, 'card 6 Viam lines folded into the boxes for the big room');
   assert.ok(sections[5].includes('<span class="key">Viam</span> under every step.'), 'card 6 still credits Viam');
   assert.ok(!sections[4].includes('class="pill prompt"'), 'card 5 prompt pill dropped for the big room');
@@ -317,6 +317,8 @@ test('notes: every card carries the spoken part in its own aside, in the present
     assert.equal((s.match(/<aside class="notes"/g) || []).length, 1, `card ${n} has one notes aside`);
     assert.ok(s.includes(`data-el="card ${n} notes — the spoken part"`), `card ${n} notes are named`);
     assert.match(s, /<\/div>\s*\n\s*<aside class="notes"/, `card ${n} notes sit directly after the content, before the footer`);
+    const head = s.slice(0, s.indexOf('<aside class="notes"'));
+    assert.equal((head.match(/<div\b/g) || []).length, (head.match(/<\/div>/g) || []).length, `card ${n} notes are a direct child of the card`);
     assert.ok(s.indexOf('<aside class="notes"') < s.indexOf('<footer class="band foot"'), `card ${n} notes sit above the footer`);
     for (const line of LINES[n]) assert.ok(s.includes(line), `card ${n} note missing: ${line}`);
   });
