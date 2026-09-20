@@ -438,7 +438,7 @@ rm -rf site/__pycache__
 
 The terminal tab "showcase site · localhost:8090" already serves `site/`; if it is gone, `cd site && python3 -m http.server 8090 --bind 127.0.0.1` in a terminal tab.
 
-- [ ] **Step 2: Measure every card for overflow with the notes on**
+- [ ] **Step 2: Measure every card for overflow, with the notes on and again with them off**
 
 Two things the Task 2 reviewer learned the hard way: the `pop` entrance animation starts at `scale(.92)`, so any `getBoundingClientRect` taken right after `classList.add('active')` reads 8 percent small; inject `.card.active * { animation: none !important; transition: none !important; }` for the measurement (a `<style>` element appended to `head`, removed afterwards). And card 6 spills about 0.9cqw even with the notes off, before this plan; treat 0.9 as its floor rather than chasing it.
 
@@ -454,7 +454,7 @@ Open `http://127.0.0.1:8090/presentation/` in the built-in browser at 1280×720 
 })
 ```
 
-Expected: `contentOverflow <= 0` on every card and `notesLines` between 2 and 7. Also `getComputedStyle(document.querySelector('.stage')).display !== 'none'` and the stage's height is not 0 (the reviewer's guard against a hide rule that matches the stage), and, with the notes on and again off, each card's `.foot` bottom edge sits the same 4cqw above the card's bottom (the guard against an empty gapped grid track). Then step through cards 1 to 7 with the right arrow and take a screenshot of each; the bubble sits above the footer with its tail toward the name, nothing is clipped, the flipbook and photos are whole.
+Run it twice: once with `shownotes` on the stage (the web version) and once without (`stage.classList.remove('shownotes')`, the room version), since the Task 4 review found card 3's bubble module regressing in the room version, which the `.stage.shownotes` scale rule cannot reach. Expected in both states: `contentOverflow <= 0` on every card (card 6 may keep its pre-existing 0.9cqw), and with the notes on `notesLines` between 2 and 7. Also `getComputedStyle(document.querySelector('.stage')).display !== 'none'` and the stage's height is not 0 (the reviewer's guard against a hide rule that matches the stage), and, with the notes on and again off, each card's `.foot` bottom edge sits the same 4cqw above the card's bottom (the guard against an empty gapped grid track). Then step through cards 1 to 7 with the right arrow and take a screenshot of each; the bubble sits above the footer with its tail toward the name, nothing is clipped, the flipbook and photos are whole.
 
 - [ ] **Step 3: Fix the overflow (expected on every card)**
 
