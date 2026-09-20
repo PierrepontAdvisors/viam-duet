@@ -8,7 +8,7 @@
 
 **Tech Stack:** Vanilla HTML/CSS/JS, `node --test` for the deck tests (`code/hackathon/pagetests/pitch.test.mjs`), Python 3 for `site/build.py`, the built-in browser for the visual pass.
 
-**Where to work:** the worktree `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/.worktrees/showcase-site`, branch `feat/showcase-site`. Run the deck tests from `code/hackathon` with `node --test pagetests/pitch.test.mjs`. Rebuild the site with the hackathon venv: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python site/build.py --sessions /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/sessions`.
+**Where to work:** the worktree `<repo>/.worktrees/showcase-site`, branch `feat/showcase-site`. Run the deck tests from `code/hackathon` with `node --test pagetests/pitch.test.mjs`. Rebuild the site with the hackathon venv: `<repo>/code/hackathon/.venv/bin/python site/build.py --sessions <repo>/code/hackathon/sessions`.
 
 **Constraints the tests enforce (do not fight them):**
 - Every `font-size` in `deck.css` must be exactly `var(--display|headline|body|caption)`. To size something smaller, redefine the token on the element (`.notes { --caption: 1.45cqw; font-size: var(--caption); }`), as `.foot` already does.
@@ -435,7 +435,7 @@ git commit -m "feat(deck): card 7 is the vision card: what comes next and a way 
 - [ ] **Step 1: Rebuild the site and serve it**
 
 ```bash
-/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python site/build.py --sessions /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/sessions
+<repo>/code/hackathon/.venv/bin/python site/build.py --sessions <repo>/code/hackathon/sessions
 rm -rf site/__pycache__
 ```
 
@@ -521,7 +521,7 @@ demo pill; its bubble carries the diner story and the wish to train Duet on a fa
 - [ ] **Step 3: Rebuild the site, run every test suite**
 
 ```bash
-/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python site/build.py --sessions /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/sessions
+<repo>/code/hackathon/.venv/bin/python site/build.py --sessions <repo>/code/hackathon/sessions
 rm -rf site/__pycache__
 cd code/hackathon && node --test 'pagetests/*.test.mjs' 2>&1 | grep -E "^ℹ (pass|fail)"
 grep -c '<aside class="notes"' ../../site/presentation/index.html
@@ -532,7 +532,7 @@ Expected: `ℹ fail 0`, and `7`.
 - [ ] **Step 4: Commit and push**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/.worktrees/showcase-site
+cd <repo>/.worktrees/showcase-site
 git add docs/duet/pitch/README.md docs/superpowers/specs/2026-09-19-duet-pitch-deck-design.md docs/superpowers/plans/2026-09-20-deck-notes.md site/presentation
 git commit -m "docs(deck): notes for the web; the site's presentation copy rebuilt with the bubbles"
 git push
