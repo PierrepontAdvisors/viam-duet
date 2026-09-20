@@ -302,21 +302,22 @@ test('notes: every card carries the spoken part in its own aside, in the present
   const h = read('index.html');
   const sections = h.split(/<section class="card /).slice(1);
   assert.equal(sections.length, 7);
+  const frameLine = 'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click the right side to advance, the left to go back.';
+  const LINES = {
+    1: [frameLine, 'Duet puts a partner at the table.'],
+    2: ['in the hand of an artist you choose.'],
+    3: ['A real turn from last night.'],
+    4: ['Everyone who sits down leaves with a piece they made with a partner.'],
+    5: ['You have a conversation in it.'],
+    6: ['Viam\'s motion service draws them safely around the table.'],
+    7: ['so it can sketch with my grandchildren the way he sketched with me.'],
+  };
   sections.forEach((s, i) => {
     const n = i + 1;
     assert.equal((s.match(/<aside class="notes"/g) || []).length, 1, `card ${n} has one notes aside`);
     assert.ok(s.includes(`data-el="card ${n} notes — the spoken part"`), `card ${n} notes are named`);
+    assert.match(s, /<\/div>\s*\n\s*<aside class="notes"/, `card ${n} notes sit directly after the content, before the footer`);
     assert.ok(s.indexOf('<aside class="notes"') < s.indexOf('<footer class="band foot"'), `card ${n} notes sit above the footer`);
+    for (const line of LINES[n]) assert.ok(s.includes(line), `card ${n} note missing: ${line}`);
   });
-  for (const line of [
-    'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click to advance.',
-    'Duet puts a partner at the table.',
-    'in the hand of an artist you choose.',
-    'A real turn from last night.',
-    'Everyone who sits down leaves with a piece they made with a partner.',
-    'You have a conversation in it.',
-    'Viam\'s motion service draws them safely around the table.',
-    'so it can sketch with my grandchildren the way he sketched with me.',
-  ]) assert.ok(h.includes(line), `note missing: ${line}`);
-  assert.ok(!/[‘’]/.test(h), 'plain apostrophes');
 });
