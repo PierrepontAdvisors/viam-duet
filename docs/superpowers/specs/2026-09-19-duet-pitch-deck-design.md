@@ -126,7 +126,7 @@ Amended 2026-09-19 while planning and building: Chrome, the default browser on t
 
 Built and committed on `feat/duet-design`, the branch the demo runs from, in small commits: the spec, the assets, the deck, the test. Nothing under `duet/` is staged.
 
-## 8. Notes for the web (added 2026-09-20)
+## 9. Notes for the web (added 2026-09-20)
 
 The deck now lives on the showcase site, where nobody hears the talk. Each card gained an aside that takes an
 implicit fourth grid row under the content, holding a paper speech bubble with the spoken part, written in the
