@@ -1,0 +1,12 @@
+# Direct dependencies, pinned from the hackathon venv (Python 3.12) on 2026-09-20.
+viam-sdk==0.80.0
+anthropic==1.7.0
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+opencv-python-headless==5.0.0.93
+numpy==2.5.3
+shapely==2.1.2
+pydantic==2.13.5
+# tests
+pytest==9.1.1
+httpx==0.28.1
