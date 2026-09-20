@@ -167,11 +167,24 @@ test('the deck has seven cards in order carrying the agreed copy, with plain apo
     'The camera takes a photo of the board.', 'Claude decides what to add.',
     "The artist's style becomes strokes.", 'The Viam motion service draws them.',
     '<span class="key">One person.</span> Two days. Claude and Viam.',
-    'Nicholas Fjellberg Swerdlowe', 'Draw one mark. Duet answers.',
+    'Nicholas Fjellberg Swerdlowe', 'Next: artists you <span class="key">train yourself</span>.',
   ];
   for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
   assert.match(h, /<div class="paper bubble body"[^>]*>\s*<span class="caption says"/, 'card 3 names the speaker at the top of its bubble');
   assert.ok(!/[‘’]/.test(h), 'use plain apostrophes so quotes are searchable');
+});
+
+test('card 7 is the vision card: the rig line is gone, the next step and a way into the demo are on it', () => {
+  const h = read('index.html');
+  const card7 = h.split(/<section class="card /)[7];
+  assert.ok(!card7.includes('Draw one mark. Duet answers.'), 'the in-room rig instruction is gone');
+  assert.ok(!card7.includes('class="cta'), 'no cta element');
+  assert.match(card7, /<p class="next body" data-el="card 7 next">Next: artists you <span class="key">train yourself<\/span>\.<\/p>/);
+  assert.match(card7, /<a class="pill demo" href="\.\.\/demo\/" data-el="card 7 — play the demo">/);
+  const css = read('deck.css');
+  assert.ok(!css.includes('.cta {'), 'the cta rule went with its element');
+  assert.match(css, /\.next \{ color: var\(--yellow\); margin-top: var\(--s1\); \}/);
+  assert.match(css, /\.pill\.demo \{[^}]*background: var\(--green\)/);
 });
 
 test('every local file the deck references exists, and the four support files are linked', () => {
