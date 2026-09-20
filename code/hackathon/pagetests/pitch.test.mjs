@@ -285,11 +285,13 @@ test('notes: N and the Notes pill toggle them; the stage learns the setting from
 
 test('notes: a fourth card row holds a paper speech bubble, shown only with the stage shownotes class, and the photos make room', () => {
   const css = read('deck.css');
-  assert.match(css, /\.card \{[^}]*grid-template-rows: auto minmax\(0, 1fr\) auto auto;/);
-  assert.match(css, /\.notes \{ display: none; \}/);
+  assert.match(css, /\.card \{[^}]*grid-template-rows: auto minmax\(0, 1fr\) auto;/);
+  assert.match(css, /\.notes \{ display: none;/);
   assert.match(css, /\.stage\.shownotes \.notes \{ display: flex; \}/);
   assert.match(css, /\.notes p \{[^}]*--caption: 1\.45cqw; font-size: var\(--caption\);/);
   assert.match(css, /\.notes p::before/);
+  assert.match(css, /\.notes p::after/);
+  assert.match(css, /\.plate-black \.notes p::before \{ border-top-color: #fff; \}/);
   assert.match(css, /\.stage\.shownotes \.photo img \{ height: 22cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.flip img \{ height: 23cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);

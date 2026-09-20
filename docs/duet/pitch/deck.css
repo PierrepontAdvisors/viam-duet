@@ -25,7 +25,7 @@ ul, ol { padding: 0; list-style: none; }
 
 /* card: plate behind, then the master page as three rows (header band, content, footer band) */
 .card { position: absolute; inset: 0; box-sizing: border-box; background: var(--plate, #000); opacity: 0; pointer-events: none;
-        transition: opacity .35s ease; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; row-gap: var(--s2);
+        transition: opacity .35s ease; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; row-gap: var(--s2);
         padding: var(--pad-y) var(--pad-x); }
 .card.active { opacity: 1; pointer-events: auto; }
 .plate-yellow { --plate: var(--yellow); }
@@ -180,17 +180,18 @@ ul, ol { padding: 0; list-style: none; }
 
 /* notes: the spoken part of the pitch as a paper speech bubble, the tail pointing at the speaker's name in the footer.
    Shown on the web (stage.shownotes); N or the Notes pill hides it. The flag is not named notes: that bare .notes rule
-   below would hide the stage too. Font: the caption token, taken in like the footer's. */
-.notes { display: none; }
+   below would hide the stage too. Hidden, the aside is display:none and takes no row; shown, it auto-places into an
+   implicit row under the content. Font: the caption token, taken in like the footer's. */
+.notes { display: none; position: relative; justify-content: flex-start; min-width: 0; }
 .stage.shownotes .notes { display: flex; }
-.notes { position: relative; justify-content: flex-start; min-width: 0; }
-.notes p { position: relative; margin: 0; max-width: 84cqw; padding: .9cqw 1.6cqw; background: var(--paper); color: var(--ink);
+.notes p { position: relative; margin: 0; max-width: 100%; padding: .9cqw 1.6cqw; background: var(--paper); color: var(--ink);
            border: var(--paper-border) solid var(--ink); border-radius: var(--paper-radius);
            --caption: 1.45cqw; font-size: var(--caption); font-weight: 600; line-height: 1.3; text-align: left; }
 .notes p::before { content: ""; position: absolute; left: 2.4cqw; bottom: calc(-1 * var(--s1) - var(--paper-border));
                    border: .9cqw solid transparent; border-bottom: 0; border-top: var(--s1) solid var(--ink); }
-.notes p::after  { content: ""; position: absolute; left: calc(2.4cqw + .18cqw); bottom: calc(-1 * var(--s1) + .55cqw);
-                   border: .72cqw solid transparent; border-bottom: 0; border-top: calc(var(--s1) - .1cqw) solid var(--paper); }
+.notes p::after  { content: ""; position: absolute; left: calc(2.4cqw + .22cqw); bottom: calc(-1 * var(--s1) + .22cqw);
+                   border: .68cqw solid transparent; border-bottom: 0; border-top: .8cqw solid var(--paper); }
+.plate-black .notes p::before { border-top-color: #fff; }   /* the ink wedge would vanish on the black plate; the frame there is white too */
 .card.active .notes p { --i: 6; animation: pop calc(.45s / var(--speed, 1)) cubic-bezier(.2, .7, .3, 1) both;
                         animation-delay: calc(var(--i, 2) * var(--stagger, 80ms) / var(--speed, 1)); }
 /* the fixed-height pictures give the row its space */
