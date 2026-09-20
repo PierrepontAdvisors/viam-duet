@@ -408,7 +408,7 @@ In `deck.css`, replace `.cta { color: var(--yellow); margin-top: var(--s1); }` w
 .pill.demo:hover { background: var(--yellow); color: var(--ink); }
 ```
 
-(`../demo/` resolves on the site, where the deck lives at `presentation/`; opened from `docs/duet/pitch/` it points at nothing, like the Home link, and the deck README says so.)
+(`../demo/` resolves on the site, where the deck lives at `presentation/`; opened from `docs/duet/pitch/` it points at nothing, and the deck README says so.) The test `every local file the deck references exists, and the four support files are linked` resolves every `href` against the deck folder, and `../demo/` does not exist there (the Home link's `../` only passed because a parent directory always exists). In that test, skip references that start with `../` with the comment `// links that leave the folder are the showcase site's (../ home, ../demo/), resolved only when the deck is served from site/presentation/`, and add at its end `assert.deepEqual([...h.matchAll(/href="(\.\.\/[^"]*)"/g)].map((m) => m[1]).sort(), ['../', '../demo/'], 'exactly two links leave the deck folder');` so the excusal is deliberate.
 
 - [ ] **Step 4: Run the tests to see them pass**
 
