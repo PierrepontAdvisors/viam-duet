@@ -13,7 +13,7 @@ P, or the Play pill at the bottom right, loops the deck on its own (every reveal
 Card 1 reveals three lines before it advances. Card 7 stays on screen during the demo.
 
 Notes: each card carries the spoken part of the pitch in a speech bubble, for readers who were not in the room.
-N or the Notes pill hides them; `?notes=0` opens with them hidden. Card 7 links to `../demo/` and the corner
+N or the Notes pill toggles them (the pill reads Notes on or Notes off); `?notes=0` opens with them hidden. Card 7 links to `../demo/` and the corner
 links to `../`, which resolve on the showcase site (`site/`), not from this folder.
 
 Images: `python3 docs/duet/pitch/gen_images.py` regenerates any missing plate or hero with Nano Banana 2

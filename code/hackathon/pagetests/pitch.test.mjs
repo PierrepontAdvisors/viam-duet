@@ -186,6 +186,8 @@ test('card 7 is the vision card: the rig line is gone, the next step and a way i
   assert.match(css, /\.vision \{ color: #fff; margin-top: var\(--s1\); \}/);
   assert.ok(!/(^|\n)\.next \{/.test(css), 'no bare .next rule: it would restyle card 5\'s pill next badge');
   assert.match(css, /\.pill\.demo \{[^}]*background: var\(--green\)/);
+  const js = read('deck.js');
+  assert.match(js, /location\.protocol === 'file:'/);
 });
 
 test('every local file the deck references exists, and the four support files are linked', () => {
@@ -299,23 +301,25 @@ test('notes: N and the Notes pill toggle them; the stage learns the setting from
   assert.match(js, /notesBtn\.addEventListener\('click'/);
   assert.match(js, /stage\.classList\.toggle\('shownotes', on\)/);
   assert.match(js, /setNotes\(parseNotes\(location\.search\)\)/);
+  assert.match(js, /notesBtn\.textContent = on \? 'Notes on' : 'Notes off'/);
   const h = read('index.html');
   assert.match(h, /<button id="notes" class="pill" type="button" aria-pressed="true" data-el="playbar — notes button">Notes<\/button>/);
 });
 
-test('notes: a fourth card row holds a paper speech bubble, shown only with the stage shownotes class, and the photos make room', () => {
+test('notes: a speech bubble row under the content, shown only with the stage shownotes class, and the photos make room', () => {
   const css = read('deck.css');
-  assert.match(css, /\.card \{[^}]*grid-template-rows: auto minmax\(0, 1fr\) auto;/);
+  assert.match(css, /\.card \{[^}]*grid-template-rows: auto minmax\(0, 1fr\) auto;/);   // three explicit rows: a hidden aside must not leave an empty gapped track
   assert.match(css, /\.notes \{ display: none;/);
   assert.match(css, /\.stage\.shownotes \.notes \{ display: flex; \}/);
-  assert.match(css, /\.notes p \{[^}]*--caption: 1\.45cqw; font-size: var\(--caption\);/);
+  assert.match(css, /\.notes p \{[^}]*--caption: 1\.6cqw; font-size: var\(--caption\);/);
   assert.match(css, /\.notes p::before/);
   assert.match(css, /\.notes p::after/);
+  assert.match(css, /\.notes \.frame \{ display: block;/);
   assert.match(css, /\.plate-black \.notes p::before \{ border-top-color: #fff; \}/);
   assert.match(css, /\.stage\.shownotes \.photo img \{ height: 22cqw; \}/);
-  assert.match(css, /\.stage\.shownotes \.flip img \{ height: 22cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.flip img \{ height: 21cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);
-  assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 26cqw; height: 26cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 24cqw; height: 24cqw; \}/);
   assert.match(css, /\.triptych \.m2 \.bubble \{ --body: 2\.8cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.card \{ --display: 6\.4cqw; --headline: 4\.1cqw; --body: 2\.5cqw; --caption: 1\.7cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.triptych \.m2 \.bubble \{ --body: 2\.6cqw; \}/);
@@ -325,7 +329,8 @@ test('notes: every card carries the spoken part in its own aside, in the present
   const h = read('index.html');
   const sections = h.split(/<section class="card /).slice(1);
   assert.equal(sections.length, 7);
-  const frameLine = 'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click the right side to advance, the left to go back.';
+  const frameLine = 'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click the right two thirds to advance, the left third to go back.';
+  assert.match(sections[0], /<p><span class="frame">The two-minute pitch/, 'card 1 sets its frame line apart');
   const LINES = {
     1: [frameLine, 'Duet puts a partner at the table.'],
     2: ['in the hand of an artist you choose.'],

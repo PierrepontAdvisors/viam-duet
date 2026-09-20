@@ -115,7 +115,7 @@
   function setNotes(on) {
     notes = on;
     stage.classList.toggle('shownotes', on);
-    if (notesBtn) notesBtn.setAttribute('aria-pressed', String(on));
+    if (notesBtn) { notesBtn.setAttribute('aria-pressed', String(on)); notesBtn.textContent = on ? 'Notes on' : 'Notes off'; }
   }
 
   function onKey(e) {
@@ -173,6 +173,7 @@
     if (speedSel) speedSel.addEventListener('change', function () { setSpeed(parseFloat(speedSel.value)); speedSel.blur(); });
     state = { card: parseHash(location.hash), build: 0 };
     setNotes(parseNotes(location.search));
+    if (location.protocol === 'file:') document.querySelectorAll('.pill.demo').forEach(function (a) { a.style.display = 'none'; });   // ../demo/ exists only on the showcase site
     document.addEventListener('keydown', onKey);
     stage.addEventListener('click', onClick);
     window.addEventListener('hashchange', function () {
