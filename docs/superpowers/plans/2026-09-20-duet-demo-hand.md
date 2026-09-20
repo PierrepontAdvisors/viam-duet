@@ -380,8 +380,7 @@ test('Hand: it presses what it sees: no toggle on a menu a visitor opened, reope
   await tick(40);
   assert.deepEqual([open.picker.clicks, open.row.clicks, open.go.clicks], [0, 1, 1]);
   const closed = rig();
-  const opens = closed.picker.click;
-  closed.picker.click = () => { closed.picker.clicks += 1; if (closed.picker.clicks > 1) opens(); };   // a visitor closes the menu right after the first press
+  closed.picker.click = () => { closed.picker.clicks += 1; if (closed.picker.clicks > 1) closed.row.classList.remove('hidden'); };   // a visitor closes the menu right after the first press
   closed.hand.run({ hand: 'pick', artist: 'mimic' });
   await tick(40);
   assert.equal(closed.picker.clicks, 2, 'pressed again to reopen'); assert.equal(closed.row.clicks, 1);
