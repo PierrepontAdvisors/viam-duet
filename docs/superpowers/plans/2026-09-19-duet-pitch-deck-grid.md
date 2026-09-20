@@ -23,7 +23,7 @@ code/hackathon/pagetests/pitch.test.mjs   two new tests (Task 1)
 docs/superpowers/specs/2026-09-19-duet-pitch-deck-grid-design.md   amendment paragraph (Task 4)
 ```
 
-Paths are relative to the repository root `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam`. Tests run from `code/hackathon`. Commits go on `feat/duet-design`; nothing under `code/hackathon/duet/` is staged.
+Paths are relative to the repository root `<repo>`. Tests run from `code/hackathon`. Commits go on `feat/duet-design`; nothing under `code/hackathon/duet/` is staged.
 
 ---
 
@@ -66,7 +66,7 @@ test('deck.css is built on the tokens: four type sizes, three templates, no stra
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^(✖|ℹ (tests|pass|fail))" | grep -v "^✖ failing"
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^(✖|ℹ (tests|pass|fail))" | grep -v "^✖ failing"
 ```
 
 Expected: 14 pass, the 2 new tests fail (no kicker; `font-size "5.2cqw" is not a token`).
@@ -74,7 +74,7 @@ Expected: 14 pass, the 2 new tests fail (no kicker; `font-size "5.2cqw" is not a
 - [ ] **Step 3: Commit the tests**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add code/hackathon/pagetests/pitch.test.mjs && git commit -m "test(pitch): master page per card and token-only font sizes"
+cd <repo> && git add code/hackathon/pagetests/pitch.test.mjs && git commit -m "test(pitch): master page per card and token-only font sizes"
 ```
 
 ---
@@ -236,7 +236,7 @@ body.dev .dev-badge{display:block;}
 - [ ] **Step 2: Run the tests**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^(✖|ℹ (tests|pass|fail))" | grep -v "^✖ failing"
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^(✖|ℹ (tests|pass|fail))" | grep -v "^✖ failing"
 ```
 
 Expected: the token test passes; only the master-page test still fails (index.html is unchanged so far). The earlier CSS test still passes because `.plate-img`, `.card.plated .pattern`, `@keyframes drift`, the reduced-motion rule, `--yellow`, `--blue` and `.dev-badge` are all present.
@@ -244,7 +244,7 @@ Expected: the token test passes; only the master-page test still fails (index.ht
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/deck.css && git commit -m "feat(pitch): deck.css on design tokens, poster-frame master page, three templates"
+cd <repo> && git add docs/duet/pitch/deck.css && git commit -m "feat(pitch): deck.css on design tokens, poster-frame master page, three templates"
 ```
 
 ---
@@ -449,7 +449,7 @@ and in the `DOMContentLoaded` handler replace `counter = document.getElementById
 - [ ] **Step 3: Run the whole page suite**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test 'pagetests/*.test.mjs' 2>&1 | grep -E "^(✖|ℹ (tests|pass|fail))" | grep -v "^✖ failing"
+cd <repo>/code/hackathon && node --test 'pagetests/*.test.mjs' 2>&1 | grep -E "^(✖|ℹ (tests|pass|fail))" | grep -v "^✖ failing"
 ```
 
 Expected: `fail 0` (16 deck tests plus the page tests).
@@ -457,7 +457,7 @@ Expected: `fail 0` (16 deck tests plus the page tests).
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/index.html docs/duet/pitch/deck.js && git commit -m "feat(pitch): every card on the poster-frame master page and the 12-column grid"
+cd <repo> && git add docs/duet/pitch/index.html docs/duet/pitch/deck.js && git commit -m "feat(pitch): every card on the poster-frame master page and the 12-column grid"
 ```
 
 ---
@@ -471,7 +471,7 @@ cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/p
 - [ ] **Step 1: Render all seven cards over file:// with headless Chrome**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" && for n in 1 2 3 4 5 6 7; do "$CHROME" --headless=new --disable-gpu --hide-scrollbars --window-size=1280,720 --virtual-time-budget=3000 --screenshot="code/hackathon/captures/pitch-$n.png" "file:///Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/docs/duet/pitch/index.html#$n" >/dev/null 2>&1; done; ls -l code/hackathon/captures/pitch-*.png | awk '{print $5, $9}'
+cd <repo> && CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" && for n in 1 2 3 4 5 6 7; do "$CHROME" --headless=new --disable-gpu --hide-scrollbars --window-size=1280,720 --virtual-time-budget=3000 --screenshot="code/hackathon/captures/pitch-$n.png" "file://<repo>/docs/duet/pitch/index.html#$n" >/dev/null 2>&1; done; ls -l code/hackathon/captures/pitch-*.png | awk '{print $5, $9}'
 ```
 
 Expected: seven PNGs. Card 1 shows the frame, kicker, wordmark and hero with no lines yet (they reveal on advance).
@@ -491,7 +491,7 @@ If text overflows the content area on a card, lower that card's largest text one
 - [ ] **Step 3: Interactive check in the served copy**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/docs/duet/pitch && python3 -m http.server 8010 --bind 127.0.0.1
+cd <repo>/docs/duet/pitch && python3 -m http.server 8010 --bind 127.0.0.1
 ```
 
 Open `http://127.0.0.1:8010/#1` in the built-in browser at 1280 by 720: Right three times reveals the lines; the counter in the footer reads `1 / 7` and follows the cards; `5`, `Home`, `End` jump; the flipbook cycles with its pill; `D` shows the badge and a click copies "card 3 kicker" without advancing. Stop the server afterwards.
@@ -514,7 +514,7 @@ Measured on the grid (column 5.9cqw, content area about 39cqw tall between the b
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/deck.css docs/superpowers/specs/2026-09-19-duet-pitch-deck-grid-design.md && git commit -m "docs(pitch): grid spec amended with the measured sizes; deck tuned after the screenshot pass"
+cd <repo> && git add docs/duet/pitch/deck.css docs/superpowers/specs/2026-09-19-duet-pitch-deck-grid-design.md && git commit -m "docs(pitch): grid spec amended with the measured sizes; deck tuned after the screenshot pass"
 ```
 
 If `deck.css` did not change in Step 2, commit only the spec with the same message.
