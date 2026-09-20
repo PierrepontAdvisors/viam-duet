@@ -114,7 +114,7 @@
   }
   function setNotes(on) {
     notes = on;
-    stage.classList.toggle('notes', on);
+    stage.classList.toggle('shownotes', on);
     if (notesBtn) notesBtn.setAttribute('aria-pressed', String(on));
   }
 

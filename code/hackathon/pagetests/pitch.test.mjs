@@ -273,10 +273,11 @@ test('notes: parseNotes reads ?notes=0 as hidden and everything else as shown', 
   assert.equal(D.parseNotes('?a=1&notes=0'), false);
 });
 
-test('notes: N toggles them, the playbar carries a Notes pill, the stage starts with the notes class', () => {
+test('notes: N and the Notes pill toggle them; the stage learns the setting from the URL at load', () => {
   const js = read('deck.js');
-  assert.match(js, /case 'n': case 'N': setNotes\(!notes\); return;/);
-  assert.match(js, /stage\.classList\.toggle\('notes', on\)/);
+  assert.match(js, /case 'n':[\s\S]{0,40}setNotes\(!notes\)/);
+  assert.match(js, /notesBtn\.addEventListener\('click'/);
+  assert.match(js, /stage\.classList\.toggle\('shownotes', on\)/);
   assert.match(js, /setNotes\(parseNotes\(location\.search\)\)/);
   const h = read('index.html');
   assert.match(h, /<button id="notes" class="pill" type="button" aria-pressed="true" data-el="playbar — notes button">Notes<\/button>/);
