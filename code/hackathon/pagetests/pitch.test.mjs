@@ -313,10 +313,12 @@ test('notes: a fourth card row holds a paper speech bubble, shown only with the 
   assert.match(css, /\.notes p::after/);
   assert.match(css, /\.plate-black \.notes p::before \{ border-top-color: #fff; \}/);
   assert.match(css, /\.stage\.shownotes \.photo img \{ height: 22cqw; \}/);
-  assert.match(css, /\.stage\.shownotes \.flip img \{ height: 23cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.flip img \{ height: 22cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 26cqw; height: 26cqw; \}/);
   assert.match(css, /\.triptych \.m2 \.bubble \{ --body: 2\.8cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.card \{ --display: 6\.4cqw; --headline: 4\.1cqw; --body: 2\.5cqw; --caption: 1\.5cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.triptych \.m2 \.bubble \{ --body: 2\.6cqw; \}/);
 });
 
 test('notes: every card carries the spoken part in its own aside, in the present tense of the day', () => {

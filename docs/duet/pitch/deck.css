@@ -203,9 +203,14 @@ ul, ol { padding: 0; list-style: none; }
                         animation-delay: calc(var(--i, 2) * var(--stagger, 80ms) / var(--speed, 1)); }
 /* the fixed-height pictures give the row its space */
 .stage.shownotes .photo img { height: 22cqw; }
-.stage.shownotes .flip img { height: 23cqw; }
+.stage.shownotes .flip img { height: 22cqw; }
 .stage.shownotes .build .photo img { height: 20cqw; }
 .stage.shownotes .what .hero img { width: 26cqw; height: 26cqw; }
+
+/* with the notes row on, the big-room type comes down a step so every card still fits its plate */
+.stage.shownotes .card { --display: 6.4cqw; --headline: 4.1cqw; --body: 2.5cqw; --caption: 1.5cqw; }
+/* card 3's bubble sets --body on itself, out of that rule's reach; with the notes on it takes the step too */
+.stage.shownotes .triptych .m2 .bubble { --body: 2.6cqw; }
 
 /* developer mode (press D), from ~/.claude/rules/common/preview-dev-mode.md */
 body.dev [data-el]{outline:1px dashed rgba(39,67,227,.4);outline-offset:-1px;}
