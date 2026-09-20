@@ -176,23 +176,25 @@ test('the deck has seven cards in order carrying the agreed copy, with plain apo
 
 test('card 7 is the vision card: the rig line is gone, the next step and a way into the demo are on it', () => {
   const h = read('index.html');
-  const card7 = h.split(/<section class="card /)[7];
+  const card7 = h.split(/<section class="card /)[7].split('</section>')[0];
   assert.ok(!card7.includes('Draw one mark. Duet answers.'), 'the in-room rig instruction is gone');
   assert.ok(!card7.includes('class="cta'), 'no cta element');
-  assert.match(card7, /<p class="next body" data-el="card 7 next">Next: artists you <span class="key">train yourself<\/span>\.<\/p>/);
-  assert.match(card7, /<a class="pill demo" href="\.\.\/demo\/" data-el="card 7 — play the demo">/);
+  assert.match(card7, /<p class="vision body" data-el="card 7 next">Next: artists you <span class="key">train yourself<\/span>\.<\/p>/);
+  assert.match(card7, /<a class="pill demo" href="\.\.\/demo\/" data-el="card 7 demo link — play the demo">/);
   const css = read('deck.css');
   assert.ok(!css.includes('.cta {'), 'the cta rule went with its element');
-  assert.match(css, /\.next \{ color: var\(--yellow\); margin-top: var\(--s1\); \}/);
+  assert.match(css, /\.vision \{ color: #fff; margin-top: var\(--s1\); \}/);
+  assert.ok(!/(^|\n)\.next \{/.test(css), 'no bare .next rule: it would restyle card 5\'s pill next badge');
   assert.match(css, /\.pill\.demo \{[^}]*background: var\(--green\)/);
 });
 
 test('every local file the deck references exists, and the four support files are linked', () => {
   const h = read('index.html');
-  const refs = [...h.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
+  const matches = [...h.matchAll(/(src|href)="([^"#:]+)"/g)];
+  const refs = matches.map((m) => m[2]);
   assert.ok(refs.length >= 8, 'expected local references');
-  for (const r of refs) {
-    if (r.startsWith('../')) continue; // links that leave the folder are the showcase site's (../ home, ../demo/), resolved only when the deck is served from site/presentation/
+  for (const [, attr, r] of matches) {
+    if (attr === 'href' && r.startsWith('../')) continue; // links that leave the folder are the showcase site's (../ home, ../demo/), resolved only when the deck is served from site/presentation/
     assert.ok(existsSync(DIR + r), `referenced but missing: ${r}`);
   }
   for (const f of ['fredoka.css', 'deck.css', 'deck.js', 'dev.js']) assert.ok(refs.includes(f), `${f} not linked`);

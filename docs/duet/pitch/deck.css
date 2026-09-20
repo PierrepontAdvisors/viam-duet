@@ -113,9 +113,11 @@ ul, ol { padding: 0; list-style: none; }
 .flipwrap { display: flex; flex-direction: column; align-items: center; gap: var(--s1); }
 .flip img { display: block; height: 31cqw; width: auto; max-width: 100%; object-fit: contain; border-radius: calc(var(--paper-radius) - .4cqw); }
 .credit { opacity: .85; }
-.next { color: var(--yellow); margin-top: var(--s1); }
+.vision { color: #fff; margin-top: var(--s1); }
 .pill.demo { align-self: flex-start; background: var(--green); color: #fff; text-decoration: none; font-size: var(--body); font-weight: 700; padding: .6cqw 1.8cqw; }
 .pill.demo:hover { background: var(--yellow); color: var(--ink); }
+.pill.demo:focus-visible { background: var(--yellow); color: var(--ink); outline: none; }
+.plate-black .pill.demo { border-color: #fff; }
 
 /* template: triptych (three modules of four columns) */
 .triptych .m1 { grid-column: 1 / 4; }
