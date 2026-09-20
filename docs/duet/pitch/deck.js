@@ -32,6 +32,11 @@
     var m = /^#(\d+)$/.exec(hash || '');
     return m ? clamp(parseInt(m[1], 10)) : 1;
   }
+  /* the spoken part of the pitch, shown on the web; ?notes=0 starts with it hidden */
+  function parseNotes(search) {
+    var m = /[?&]notes=([^&]*)/.exec(search || '');
+    return !(m && m[1] === '0');
+  }
   function flipLabel(i) {
     if (i === 0) return 'start';
     return 'turn ' + Math.ceil(i / 2) + ' of ' + TURNS + ' · ' + (i % 2 ? 'you' : 'Duet');
@@ -56,7 +61,7 @@
 
   window.Deck = {
     CARDS: CARDS, BUILDS: BUILDS, FLIPBOOK: FLIPBOOK,
-    advance: advance, back: back, jump: jump, parseHash: parseHash,
+    advance: advance, back: back, jump: jump, parseHash: parseHash, parseNotes: parseNotes,
     flipLabel: flipLabel, flipDelay: flipDelay, nextFlip: nextFlip,
     SPEEDS: SPEEDS, cycle: cycle, playDelay: playDelay
   };
@@ -67,6 +72,7 @@
   var state = { card: 1, build: 0 };
   var stage, counters, flipImg, flipLabelEl, cards;
   var playing = false, speed = 1, timer = null, playBtn, speedSel;
+  var notes = true, notesBtn;
 
   function render() {
     cards.forEach(function (el) {
@@ -106,6 +112,11 @@
     if (speedSel && speedSel.value !== String(v)) speedSel.value = String(v);
     schedule();
   }
+  function setNotes(on) {
+    notes = on;
+    stage.classList.toggle('notes', on);
+    if (notesBtn) notesBtn.setAttribute('aria-pressed', String(on));
+  }
 
   function onKey(e) {
     var t = e.target;
@@ -117,6 +128,7 @@
       case 'ArrowLeft': case 'PageUp': e.preventDefault(); set(back(state)); return;
       case 'Home': set(jump(1)); return;
       case 'End': set(jump(CARDS)); return;
+      case 'n': case 'N': setNotes(!notes); return;
       case 'f': case 'F': toggleFullscreen(); return;
       default:
         if (/^[1-7]$/.test(e.key)) set(jump(parseInt(e.key, 10)));
@@ -155,9 +167,12 @@
     cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
     playBtn = document.getElementById('play');
     speedSel = document.getElementById('speed');
+    notesBtn = document.getElementById('notes');
+    if (notesBtn) notesBtn.addEventListener('click', function () { setNotes(!notes); notesBtn.blur(); });
     if (playBtn) playBtn.addEventListener('click', function () { setPlaying(!playing); playBtn.blur(); });
     if (speedSel) speedSel.addEventListener('change', function () { setSpeed(parseFloat(speedSel.value)); speedSel.blur(); });
     state = { card: parseHash(location.hash), build: 0 };
+    setNotes(parseNotes(location.search));
     document.addEventListener('keydown', onKey);
     stage.addEventListener('click', onClick);
     window.addEventListener('hashchange', function () {

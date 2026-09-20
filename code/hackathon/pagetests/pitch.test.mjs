@@ -263,3 +263,21 @@ test('card 6 steps carry icons, card 5 has four modules, motion is defined', () 
   assert.match(css, /@keyframes pop/);
   assert.match(css, /prefers-reduced-motion: reduce\)[^}]*\{[^}]*\.card\.active \* \{ animation: none !important; \}/);
 });
+
+test('notes: parseNotes reads ?notes=0 as hidden and everything else as shown', () => {
+  const D = loadDeck();
+  assert.equal(D.parseNotes(''), true);
+  assert.equal(D.parseNotes('?speed=2'), true);
+  assert.equal(D.parseNotes('?notes=0'), false);
+  assert.equal(D.parseNotes('?notes=1'), true);
+  assert.equal(D.parseNotes('?a=1&notes=0'), false);
+});
+
+test('notes: N toggles them, the playbar carries a Notes pill, the stage starts with the notes class', () => {
+  const js = read('deck.js');
+  assert.match(js, /case 'n': case 'N': setNotes\(!notes\); return;/);
+  assert.match(js, /stage\.classList\.toggle\('notes', on\)/);
+  assert.match(js, /setNotes\(parseNotes\(location\.search\)\)/);
+  const h = read('index.html');
+  assert.match(h, /<button id="notes" class="pill" type="button" aria-pressed="true" data-el="playbar — notes button">Notes<\/button>/);
+});
