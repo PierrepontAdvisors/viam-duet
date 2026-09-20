@@ -124,7 +124,7 @@
   }
   function onClick(e) {
     if (document.body.classList.contains('dev')) return;   // developer mode owns clicks
-    if (e.target.closest && e.target.closest('.playbar, .homelink')) return;   // the controls and the Home link own theirs
+    if (e.target.closest && e.target.closest('.playbar, a[href]')) return;   // the controls and every link own their clicks
     var r = stage.getBoundingClientRect();
     var x = (e.clientX - r.left) / r.width;
     set(x < 1 / 3 ? back(state) : advance(state));

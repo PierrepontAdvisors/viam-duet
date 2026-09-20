@@ -196,3 +196,5 @@ body.dev .dev-badge{display:block;}
 .homelink { position: absolute; left: calc(var(--frame-inset) + 1cqw); bottom: calc(var(--frame-inset) - 1.4cqw); z-index: 5;
             padding: 0 .9cqw; line-height: 1.35; text-decoration: none; white-space: nowrap; opacity: .55; }
 .homelink:hover { opacity: 1; }
+.strip .who { color: inherit; text-decoration: underline; text-decoration-thickness: .08em; text-underline-offset: .18em; }
+.strip .who:hover { color: var(--blue); }
