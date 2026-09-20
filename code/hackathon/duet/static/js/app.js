@@ -145,7 +145,7 @@ export function boot() {
   app.ghost = new GhostPen($('l-ghost'), $('ghostpath'), $('ghostpen'));
   if (!REPLAY_URL) app.viewer.setStream('/stream.mjpg?overlay=0');
   app.diagView = initDiagView({ light: $('light'), summary: $('diag-summary'), svg: $('diag-timeline'), tbody: $('diag-rows') });
-  app.ui = initUI(app, { sendSet, sendCommand, on });
+  app.ui = initUI(app, { sendSet, sendCommand, on, replay: !!REPLAY_URL });
   app.sound = new Sound();
   const soundBtn = $('sound');
   const setSound = (onOff) => {

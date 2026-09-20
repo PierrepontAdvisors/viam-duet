@@ -1,0 +1,32 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { LIVE_DEFAULTS, DEMO_DEFAULTS, defaultsFor } from '../duet/static/js/ui.js';
+import { CLEAN_LEVELS } from '../duet/static/js/picture.js';
+
+const DIR = fileURLToPath(new URL('../duet/static/', import.meta.url));
+const read = (name) => readFileSync(DIR + name, 'utf8');
+
+test('the live page keeps its defaults; the demo opens as the 2026-09-20 screenshot: cropped, no ink layer, two greens, wider lines, its levels, sound on', () => {
+  assert.deepEqual(LIVE_DEFAULTS, { layers: { robot: true, ink: true, caption: true, chips: true, board: false, clean: true, vector: false },
+                                    ink: '#111111', inkWidth: 12, stroke: null, strokeWidth: 14, picture: CLEAN_LEVELS, crop: false, sound: false });
+  assert.deepEqual(DEMO_DEFAULTS, { layers: { robot: true, ink: false, caption: true, chips: true, board: false, clean: true, vector: false },
+                                    ink: '#37e65b', inkWidth: 38, stroke: '#1fcf4f', strokeWidth: 24,
+                                    picture: { brightness: 0, contrast: 0.84, exposure: 1.4 }, crop: true, sound: true });
+  assert.equal(defaultsFor(true), DEMO_DEFAULTS); assert.equal(defaultsFor(false), LIVE_DEFAULTS);
+});
+
+test('ui.js applies the table it is given: layers, colours, widths, levels, and crop come from it, stored values still win', () => {
+  const js = read('js/ui.js');
+  assert.match(js, /export function initUI\(app, \{ sendSet, sendCommand, on, replay = false \}\)/);
+  assert.match(js, /const D = defaultsFor\(replay\);/);
+  assert.match(js, /store\.get\(`layer\.\$\{name\}`, D\.layers\[name\]\)/);
+  assert.match(js, /store\.get\('color\.ink', D\.ink\)/);
+  assert.match(js, /store\.get\('color\.stroke', D\.stroke\)/);
+  assert.match(js, /store\.get\('width\.ink', D\.inkWidth\)/); assert.match(js, /store\.get\('width\.stroke', D\.strokeWidth\)/);
+  assert.match(js, /applyPicture\(\{ \.\.\.D\.picture, \.\.\.store\.get\('picture', \{\}\) \}\)/);
+  assert.match(js, /if \(D\.crop\) viewer\.setCrop\(true\);/);
+  const app = read('js/app.js');
+  assert.match(app, /initUI\(app, \{ sendSet, sendCommand, on, replay: !!REPLAY_URL \}\)/);
+});
