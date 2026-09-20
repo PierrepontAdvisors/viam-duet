@@ -1,0 +1,198 @@
+:root {
+  /* colour */
+  --yellow: #ffd400; --red: #e5322d; --blue: #1f4fd6; --green: #17a34a; --orange: #ff7a00; --cream: #fff4d6;
+  --ink: #111; --paper: #fff; --robot: #1b8f3a; --human: #c62828;
+  --story: "Fredoka", "Chalkboard SE", "Comic Sans MS", "Segoe Print", sans-serif;
+  /* type: the only four sizes in the deck */
+  --display: 8cqw; --headline: 5.4cqw; --body: 3.1cqw; --caption: 1.9cqw;
+  /* space */
+  --s1: 1cqw; --s2: 2cqw; --s3: 3cqw; --s4: 4cqw;
+  /* paper */
+  --paper-radius: 1.2cqw; --paper-border: .35cqw; --paper-pad: 1.6cqw;
+  /* grid and master page */
+  --gutter: 1.2cqw; --pad-x: 7cqw; --pad-y: 4cqw; --frame-inset: 3cqw; --frame-stroke: .45cqw;
+  --tile: 160px;
+}
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+body { display: flex; align-items: center; justify-content: center; font-family: var(--story); color: var(--ink); }
+.defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+h1, h2, h3, p, ul, ol, figure, figcaption { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+
+/* stage: a 16:9 box letterboxed in the viewport */
+.stage { position: relative; width: min(100vw, 177.78vh); aspect-ratio: 16 / 9; overflow: hidden; background: #000;
+         container-type: inline-size; user-select: none; cursor: default; }
+
+/* card: plate behind, then the master page as three rows (header band, content, footer band) */
+.card { position: absolute; inset: 0; box-sizing: border-box; background: var(--plate, #000); opacity: 0; pointer-events: none;
+        transition: opacity .35s ease; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; row-gap: var(--s2);
+        padding: var(--pad-y) var(--pad-x); }
+.card.active { opacity: 1; pointer-events: auto; }
+.plate-yellow { --plate: var(--yellow); }
+.plate-red    { --plate: var(--red); }
+.plate-blue   { --plate: var(--blue); }
+.plate-green  { --plate: var(--green); }
+.plate-orange { --plate: var(--orange); }
+.plate-cream  { --plate: var(--cream); }
+.plate-black  { --plate: #000; color: #fff; }
+
+/* plate layers: SVG squiggle tile (fallback) under the generated texture */
+.pattern { position: absolute; left: 0; top: 0; width: calc(100% + var(--tile)); height: calc(100% + var(--tile));
+           color: #000; opacity: .12; pointer-events: none; animation: drift 27s linear infinite; }
+.plate-cream .pattern { opacity: .08; }
+.plate-black .pattern { opacity: .35; }
+.plate-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; opacity: .12;
+             pointer-events: none; animation: breathe 30s ease-in-out infinite alternate; }
+.plate-cream .plate-img { opacity: .08; }
+.plate-black .plate-img { mix-blend-mode: normal; opacity: .35; }
+.card.plated .pattern { display: none; }
+@keyframes drift { to { transform: translate(calc(-1 * var(--tile)), calc(-1 * var(--tile))); } }
+@keyframes breathe { to { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .pattern, .plate-img { animation: none; } .card { transition: none; } }
+
+/* frame */
+.frame { position: absolute; inset: var(--frame-inset); border: var(--frame-stroke) solid var(--ink); border-radius: var(--paper-radius); pointer-events: none; }
+.plate-black .frame { border-color: #fff; }
+
+/* wash: the inside of the frame is calmer than the margin */
+.wash { position: absolute; inset: var(--frame-inset); border-radius: var(--paper-radius); background: rgba(255, 255, 255, .22); pointer-events: none; }
+.plate-cream .wash { background: rgba(255, 255, 255, .12); }
+.plate-black .wash { background: rgba(0, 0, 0, .35); }
+
+/* logo: four toy blocks, ink parts in currentColor */
+.logo { display: block; color: var(--ink); }
+.plate-black .logo { color: #fff; }
+.wordmark .logo { height: 3.2cqw; width: auto; }
+.name .logo { width: 20cqw; height: auto; }
+
+/* bands */
+.band { position: relative; display: flex; justify-content: space-between; align-items: center; gap: var(--s2); min-width: 0; }
+.kicker { font-size: var(--caption); font-weight: 700; line-height: 1; letter-spacing: .12em; text-transform: uppercase;
+          padding: .6cqw 1.2cqw; background: var(--paper); color: var(--ink); border: var(--paper-border) solid var(--ink); border-radius: 999px; }
+.wordmark { font-size: var(--body); font-weight: 700; line-height: 1; }
+.foot { font-size: var(--caption); font-weight: 600; line-height: 1.2; }
+.foot .strip { flex: 1; min-width: 0; }
+.foot .counter { flex: none; }
+.plate-black .wordmark, .plate-black .foot { color: #fff; }
+
+/* content on the 12-column grid */
+.content { position: relative; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter);
+           align-items: center; min-height: 0; }
+
+/* type roles */
+.display  { font-size: var(--display);  font-weight: 700; line-height: 1.05; text-wrap: balance; }
+.headline { font-size: var(--headline); font-weight: 700; line-height: 1.1; text-wrap: balance; }
+.body     { font-size: var(--body);     font-weight: 600; line-height: 1.3; text-wrap: balance; }
+.caption  { font-size: var(--caption);  font-weight: 700; line-height: 1.2; }
+.key { color: #fff; -webkit-text-stroke: .05em var(--ink); paint-order: stroke fill; }
+.plate-black .key { color: var(--yellow); -webkit-text-stroke: 0; }
+
+/* paper: one style for every card-like thing */
+.paper { box-sizing: border-box; background: var(--paper); color: var(--ink); border: var(--paper-border) solid var(--ink);
+         border-radius: var(--paper-radius); padding: var(--paper-pad); }
+.pill { display: inline-block; padding: .5cqw 1.2cqw; border: var(--paper-border) solid var(--ink); border-radius: 999px;
+        background: var(--paper); color: var(--ink); font-size: var(--caption); font-weight: 700; line-height: 1.2; text-align: center; }
+
+/* template: split (words in cols 1-7, figure in cols 9-12) */
+.split .words { grid-column: 1 / 10; min-width: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.split .figure { grid-column: 10 / 13; min-width: 0; }
+.cocreate .words { grid-column: 1 / 7; }  .cocreate .figure { grid-column: 7 / 13; }
+.build .words { grid-column: 1 / 9; }     .build .figure { grid-column: 9 / 13; }
+.what .words { grid-column: 1 / 7; }      .what .figure { grid-column: 7 / 13; display: flex; justify-content: center; }
+.what .hero img { width: 34cqw; height: 34cqw; }
+.hero img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: calc(var(--paper-radius) - .4cqw); }
+.thesis .words { gap: var(--s2); }
+.thesis .line { opacity: 0; transform: translateY(1cqw); transition: opacity calc(.4s / var(--speed, 1)) ease, transform calc(.4s / var(--speed, 1)) ease; }
+.card[data-build="1"] .line:nth-child(-n+1),
+.card[data-build="2"] .line:nth-child(-n+2),
+.card[data-build="3"] .line:nth-child(-n+3) { opacity: 1; transform: none; }
+.beats { display: flex; flex-direction: column; gap: .4cqw; }
+.chips { display: flex; gap: var(--gutter); }
+.chip { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s1); padding: var(--s1) var(--s1); }
+.chip .sample { width: 7cqw; height: 4.2cqw; flex: none; }
+.flipwrap { display: flex; flex-direction: column; align-items: center; gap: var(--s1); }
+.flip img { display: block; height: 31cqw; width: auto; max-width: 100%; object-fit: contain; border-radius: calc(var(--paper-radius) - .4cqw); }
+.credit { opacity: .85; }
+.cta { color: var(--yellow); margin-top: var(--s1); }
+
+/* template: triptych (three modules of four columns) */
+.triptych .m1 { grid-column: 1 / 4; }
+.triptych .m2 { grid-column: 4 / 10; }
+.triptych .m3 { grid-column: 10 / 13; }
+.module { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: .6cqw; }
+.photo img { display: block; height: 28cqw; width: auto; max-width: 100%; object-fit: contain; border-radius: calc(var(--paper-radius) - .4cqw); }
+.cap { color: #fff; text-align: center; }
+.bubble { position: relative; width: 100%; background: var(--yellow); padding: var(--s2); display: flex; flex-direction: column; gap: var(--s1); text-align: center; }
+.bubble .adds { color: var(--robot); }
+.bubble .pill { align-self: center; }
+.bubble::before { content: ""; position: absolute; top: 50%; right: calc(-1 * var(--s2) - var(--paper-border)); transform: translateY(-50%);
+                  border: 1.4cqw solid transparent; border-right: 0; border-left: var(--s2) solid var(--ink); }
+.bubble::after  { content: ""; position: absolute; top: 50%; right: calc(-1 * var(--s2) + .55cqw); transform: translateY(-50%);
+                  border: 1cqw solid transparent; border-right: 0; border-left: 1.5cqw solid var(--yellow); }
+
+/* template: modules (headline across the top, equal paper modules under it, a closing line) */
+.modules .content { display: flex; flex-direction: column; justify-content: center; align-items: stretch; gap: var(--s2); }
+.modules .lead { display: flex; flex-direction: column; gap: var(--s1); }
+.how .content { gap: var(--s1); }
+.mods { display: grid; column-gap: var(--gutter); row-gap: var(--gutter); }
+.mods.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mods.four  { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.mod { min-width: 0; display: flex; flex-direction: column; gap: .6cqw; }
+.mod .sample { width: 9cqw; height: 5.4cqw; }
+.build .photo img { height: 31cqw; }
+.closing { font-weight: 700; }
+
+/* module head: drawing or icon beside the name; steps on card 6 carry a Viam line under the box */
+.mod-head { display: flex; align-items: center; gap: var(--s1); min-width: 0; }
+.mod-head .sample { width: 8cqw; height: 4.8cqw; flex: none; }
+.icon { width: 5cqw; height: 5cqw; flex: none; display: block; }
+.mods.four .mod .body { line-height: 1.25; }
+.mod.own { position: relative; }
+.pill.next { position: absolute; top: calc(-1 * var(--s1)); right: var(--s2); padding: .2cqw .8cqw; background: var(--yellow); }
+.pill.prompt { align-self: flex-start; text-align: left; font-weight: 600; }
+.viams { margin-top: calc(-1 * var(--s1) + .4cqw); }
+.viam { font-weight: 600; padding: 0 .4cqw; min-width: 0; }
+
+/* entrance: everything inside the frame pops in, in reading order, when a card becomes active */
+@keyframes pop { from { opacity: 0; transform: translateY(1cqw) scale(.92); } 70% { opacity: 1; transform: translateY(0) scale(1.02); } to { opacity: 1; transform: none; } }
+.card.active :is(.kicker, .wordmark, .split .words > :not(.line), .split .figure, .triptych .module, .modules .lead, .modules .mods > *, .modules .closing, .foot > *) {
+  animation: pop calc(.45s / var(--speed, 1)) cubic-bezier(.2, .7, .3, 1) both;
+  animation-delay: calc(var(--i, 2) * var(--stagger, 80ms) / var(--speed, 1)); }
+.stage.playing { --stagger: 320ms; }   /* autoplay reveals the objects one by one */
+.card.active .kicker { --i: 0; }
+.card.active .wordmark { --i: 1; }
+.card.active :is(.split .words > :nth-child(1), .triptych .m1, .modules .lead) { --i: 2; }
+.card.active :is(.split .words > :nth-child(2), .triptych .m2, .modules .mods > :nth-child(1)) { --i: 3; }
+.card.active :is(.split .words > :nth-child(3), .triptych .m3, .modules .mods > :nth-child(2)) { --i: 4; }
+.card.active :is(.split .words > :nth-child(4), .split .figure, .modules .mods > :nth-child(3)) { --i: 5; }
+.card.active .modules .mods > :nth-child(4) { --i: 6; }
+.card.active .modules .viams > * { --i: 7; }
+.card.active :is(.modules .closing, .foot > *) { --i: 7; }
+@media (prefers-reduced-motion: reduce) { .card.active * { animation: none !important; } }
+
+/* playbar: Play and speed, a pill pair straddling the frame's bottom-right corner (P also toggles play) */
+.playbar { position: absolute; right: calc(var(--frame-inset) + 1cqw); bottom: calc(var(--frame-inset) - 1.4cqw); z-index: 5;
+           display: flex; align-items: center; gap: .6cqw; opacity: .6; transition: opacity .2s; }
+.playbar:hover, .stage.playing .playbar { opacity: 1; }
+.playbar .pill { padding: 0 .9cqw; line-height: 1.35; cursor: pointer; white-space: nowrap; }
+.playbar button { font-family: inherit; font-weight: inherit; }
+.playbar select { font: inherit; border: 0; background: transparent; color: inherit; cursor: pointer; }
+
+/* developer mode (press D), from ~/.claude/rules/common/preview-dev-mode.md */
+body.dev [data-el]{outline:1px dashed rgba(39,67,227,.4);outline-offset:-1px;}
+body.dev [data-el]:hover{outline:2px solid #2743E3;background:rgba(39,67,227,.07);cursor:crosshair;}
+.dev-badge{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483000;display:none;
+  padding:7px 14px;font:600 11px/1 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;
+  color:#fff;background:#2743E3;border-radius:999px;box-shadow:0 6px 20px rgba(39,67,227,.35);}
+body.dev .dev-badge{display:block;}
+.dev-label{position:fixed;z-index:2147483001;display:none;pointer-events:none;padding:4px 8px;
+  font:600 11px/1 system-ui,sans-serif;color:#fff;background:#1B221D;border-radius:6px;white-space:nowrap;}
+.dev-toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(10px);z-index:2147483002;
+  opacity:0;padding:9px 16px;font:600 12px/1 system-ui,sans-serif;color:#fff;background:#1B2FA8;border-radius:999px;
+  transition:opacity .2s,transform .2s;pointer-events:none;}
+.dev-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* the showcase site's way home, in the corner opposite the playbar; ../ from site/presentation/ */
+.homelink { position: absolute; left: calc(var(--frame-inset) + 1cqw); bottom: calc(var(--frame-inset) - 1.4cqw); z-index: 5;
+            padding: 0 .9cqw; line-height: 1.35; text-decoration: none; white-space: nowrap; opacity: .55; }
+.homelink:hover { opacity: 1; }

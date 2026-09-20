@@ -1,0 +1,182 @@
+{
+  "id": "20260919-151119",
+  "started": "20260919-151119",
+  "turn": 10,
+  "last_photo": "turn-10-final.jpg",
+  "history": [
+    {
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, shifted",
+      "source": "ink"
+    },
+    {
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, mirrored",
+      "source": "ink"
+    },
+    {
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, turned",
+      "source": "ink"
+    },
+    {
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, shifted",
+      "source": "ink"
+    },
+    {
+      "sees": "A line with a shadow side.",
+      "adds": "a band of dots along its shadow side",
+      "source": "ink"
+    },
+    {
+      "sees": "A shape with an inside.",
+      "adds": "dots inside it, thicker away from the light",
+      "source": "ink"
+    },
+    {
+      "sees": "A crowded world of creatures, flowers and dancing figures.",
+      "adds": "A small green dancing figure in the open lower-right space to balance the crowd.",
+      "source": "claude"
+    },
+    {
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, mirrored",
+      "source": "ink"
+    },
+    {
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, turned",
+      "source": "ink"
+    },
+    {
+      "sees": "A crowded garden of flowers, creatures and dancing figures fills the board.",
+      "adds": "I finish with swirling green skies and a few small suns and hills in the remaining open corners, sweeping the whole scene together.",
+      "source": "claude"
+    }
+  ],
+  "turns": [
+    {
+      "turn": 1,
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, shifted",
+      "source": "ink",
+      "artist": "mimic",
+      "latency_s": 0.0,
+      "error": null,
+      "color": "green",
+      "planned_mm": 254,
+      "coverage": 0.078
+    },
+    {
+      "turn": 2,
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, mirrored",
+      "source": "ink",
+      "artist": "mimic",
+      "latency_s": 0.0,
+      "error": null,
+      "color": "green",
+      "planned_mm": 73,
+      "coverage": 0.098
+    },
+    {
+      "turn": 3,
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, turned",
+      "source": "ink",
+      "artist": "mimic",
+      "latency_s": 0.0,
+      "error": null,
+      "color": "green",
+      "planned_mm": 58,
+      "coverage": 0.121
+    },
+    {
+      "turn": 4,
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, shifted",
+      "source": "ink",
+      "artist": "mimic",
+      "latency_s": 0.0,
+      "error": null,
+      "color": "green",
+      "planned_mm": 79,
+      "coverage": 0.149
+    },
+    {
+      "turn": 5,
+      "sees": "A line with a shadow side.",
+      "adds": "a band of dots along its shadow side",
+      "source": "ink",
+      "artist": "shader",
+      "latency_s": 0.0,
+      "error": null,
+      "color": "green",
+      "planned_mm": 25,
+      "coverage": 0.171
+    },
+    {
+      "turn": 6,
+      "sees": "A shape with an inside.",
+      "adds": "dots inside it, thicker away from the light",
+      "source": "ink",
+      "artist": "shader",
+      "latency_s": 0.0,
+      "error": null,
+      "color": "green",
+      "planned_mm": 15,
+      "coverage": 0.184
+    },
+    {
+      "turn": 7,
+      "sees": "A crowded world of creatures, flowers and dancing figures.",
+      "adds": "A small green dancing figure in the open lower-right space to balance the crowd.",
+      "source": "claude",
+      "artist": "haring",
+      "latency_s": 6.67,
+      "error": null,
+      "color": "green",
+      "planned_mm": 198,
+      "coverage": 0.243
+    },
+    {
+      "turn": 8,
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, mirrored",
+      "source": "ink",
+      "artist": "mimic",
+      "latency_s": 0.0,
+      "error": null,
+      "color": "green",
+      "planned_mm": 34,
+      "coverage": 0.251
+    },
+    {
+      "turn": 9,
+      "sees": "Your new mark, ready to echo.",
+      "adds": "a copy beside it, turned",
+      "source": "ink",
+      "artist": "mimic",
+      "latency_s": 0.0,
+      "error": null,
+      "color": "green",
+      "planned_mm": 169,
+      "coverage": 0.27
+    },
+    {
+      "turn": 10,
+      "sees": "A crowded garden of flowers, creatures and dancing figures fills the board.",
+      "adds": "I finish with swirling green skies and a few small suns and hills in the remaining open corners, sweeping the whole scene together.",
+      "source": "claude",
+      "artist": "vangogh",
+      "latency_s": 11.53,
+      "error": null,
+      "color": "green",
+      "planned_mm": 196,
+      "coverage": 0.293
+    }
+  ],
+  "length": "long",
+  "exchanges": 10
+}

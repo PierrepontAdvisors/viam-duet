@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duet, a robot arm that draws with you</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23ffd400%27/%3E%3Cpath d=%27M6 20q5-9 10 0t10 0%27 fill=%27none%27 stroke=%27%23111%27 stroke-width=%274%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="fredoka.css">
+<link rel="stylesheet" href="deck.css">
+</head>
+<body>
+
+<svg class="defs" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- squiggle motifs on a 160 x 160 tile; the wave and zigzag meet their own ends at the tile edge -->
+    <path id="m-wave" d="M0 24 q10 -14 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0"/>
+    <path id="m-zig" d="M0 140 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14"/>
+    <path id="m-ticks" d="M96 56 l-10 -10 M110 50 l0 -14 M124 56 l10 -10 M90 70 l-14 0 M130 70 l14 0"/>
+    <path id="m-dots" d="M30 70 l.01 0 M50 100 l.01 0" stroke-width="10"/>
+    <path id="m-arcs" d="M14 56 a18 18 0 0 1 36 0 M60 116 a14 14 0 0 0 28 0"/>
+    <pattern id="squiggle" width="160" height="160" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#m-wave"/><use href="#m-zig"/><use href="#m-ticks"/><use href="#m-dots"/><use href="#m-arcs"/>
+      </g>
+    </pattern>
+    <pattern id="squiggle-bright" width="160" height="160" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#m-wave" stroke="#ffd400"/><use href="#m-zig" stroke="#e5322d"/><use href="#m-ticks" stroke="#1f4fd6"/>
+        <use href="#m-dots" stroke="#17a34a"/><use href="#m-arcs" stroke="#ff7a00"/>
+      </g>
+    </pattern>
+    <!-- artist stroke grammars, as chips -->
+    <symbol id="s-vangogh" viewBox="0 0 100 60">
+      <g fill="none" stroke="#1f4fd6" stroke-width="4" stroke-linecap="round">
+        <path d="M6 40 q7 -9 14 -3"/><path d="M24 32 q7 -9 14 -3"/><path d="M42 24 q7 -9 14 -3"/><path d="M60 18 q9 -4 13 5"/>
+        <path d="M76 30 q3 9 -4 13"/><path d="M66 46 q-9 3 -12 -4"/><path d="M54 36 q-3 -7 4 -11"/>
+        <path d="M8 54 q7 -9 14 -3"/><path d="M28 50 q7 -9 14 -3"/><path d="M80 52 q7 -9 14 -3"/><path d="M84 10 q7 -9 14 -3"/>
+      </g>
+    </symbol>
+    <symbol id="s-mondrian" viewBox="0 0 100 60">
+      <g fill="none" stroke="#1f4fd6" stroke-width="4" stroke-linecap="square"><path d="M30 0 V60 M70 0 V60 M0 20 H100 M0 42 H100"/></g>
+      <g fill="none" stroke="#e5322d" stroke-width="3" stroke-linecap="round"><path d="M32 40 L52 22 M42 40 L62 22 M52 40 L68 26 M32 30 L40 22"/></g>
+    </symbol>
+    <symbol id="s-haring" viewBox="0 0 100 60">
+      <g fill="none" stroke="#17a34a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 20 q10 -14 26 -6 q14 8 10 22 q-6 14 -22 14 q-16 -2 -18 -14 q-2 -10 4 -16 z"/>
+        <path d="M24 12 l-8 -6 M46 6 l-1 -6 M68 14 l8 -6 M76 36 l9 2 M22 44 l-8 6 M50 54 l2 6"/>
+      </g>
+    </symbol>
+    <!-- the Duet logo: four toy alphabet blocks and a marker squiggle; ink parts in currentColor -->
+    <symbol id="logo" viewBox="0 0 320 130">
+      <g transform="rotate(-6 52 64)"><rect x="20" y="32" width="64" height="64" rx="12" fill="#ffd400" stroke="currentColor" stroke-width="5"/><text x="52" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">D</text></g>
+      <g transform="rotate(4 124 64)"><rect x="92" y="32" width="64" height="64" rx="12" fill="#e5322d" stroke="currentColor" stroke-width="5"/><text x="124" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">U</text></g>
+      <g transform="rotate(-3 196 64)"><rect x="164" y="32" width="64" height="64" rx="12" fill="#1f4fd6" stroke="currentColor" stroke-width="5"/><text x="196" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">E</text></g>
+      <g transform="rotate(5 268 64)"><rect x="236" y="32" width="64" height="64" rx="12" fill="#17a34a" stroke="currentColor" stroke-width="5"/><text x="268" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">T</text></g>
+      <path d="M40 118 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+    </symbol>
+    <!-- step icons: thick round ink strokes, one plate colour each -->
+    <symbol id="i-look" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M50 16 v-9 M24 26 l-6 -6 M76 26 l6 -6"/><path d="M10 56 q40 -40 80 0 q-40 40 -80 0 z" fill="#1f4fd6"/><circle cx="50" cy="56" r="13" fill="#fff"/><circle cx="50" cy="56" r="6" fill="#111" stroke="none"/></g></symbol>
+    <symbol id="i-think" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 62 q-16 0 -16 -13 q0 -12 12 -13 q2 -14 18 -14 q12 0 16 8 q14 -4 18 8 q12 2 10 13 q-2 11 -15 11 z" fill="#ffd400"/><circle cx="28" cy="76" r="5" fill="#ffd400"/><circle cx="18" cy="88" r="3" fill="#ffd400"/></g></symbol>
+    <symbol id="i-answer" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M34 72 l36 -36 l12 12 l-36 36 l-16 4 z" fill="#17a34a"/><path d="M62 44 l12 12"/><path d="M10 90 q8 -10 16 0 t16 0 t16 0"/></g></symbol>
+    <symbol id="i-draw" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="76" width="40" height="12" rx="4" fill="#e5322d"/><path d="M32 76 l10 -32 l30 -14" stroke-width="9"/><circle cx="42" cy="44" r="6" fill="#e5322d"/><circle cx="72" cy="30" r="6" fill="#e5322d"/><path d="M72 30 l14 12 l-4 6"/></g></symbol>
+    <symbol id="i-own" viewBox="0 0 100 100"><g fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 78 l40 -40 l10 10 l-40 40 l-14 4 z" fill="#ff7a00"/><path d="M56 44 l10 10"/><path d="M76 14 v16 M68 22 h16 M88 40 v8 M84 44 h8"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="stage" data-el="stage">
+
+  <section class="card split thesis plate-yellow" data-card="1" data-el="card 1 — thesis">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-1.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 1 kicker">01 · Thesis</span><span class="wordmark" data-el="card 1 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="words">
+        <p class="line headline" data-el="card 1 line 1">Anyone can now study with the greatest minds.</p>
+        <p class="line headline" data-el="card 1 line 2">Nobody could make art with them.</p>
+        <p class="line display" data-el="card 1 line 3">Until <span class="key">today</span>.</p>
+      </div>
+      <figure class="paper hero figure" data-el="card 1 hero — figure with a book and a marker"><img src="img/hero-thesis.jpg" alt=""></figure>
+    </div>
+    <footer class="band foot"><span class="strip" data-el="card 1 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">1 / 7</span></footer>
+  </section>
+
+  <section class="card split what plate-red" data-card="2" data-el="card 2 — what Duet is">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-2.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 2 kicker">02 · What Duet is</span><span class="wordmark" data-el="card 2 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="words">
+        <h1 class="name" data-el="card 2 wordmark large"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></h1>
+        <p class="sub headline" data-el="card 2 subtitle">A robot arm that draws <span class="key">with</span> you.</p>
+        <p class="body" data-el="card 2 line">You make a mark. It answers back.</p>
+      </div>
+      <figure class="paper hero figure" data-el="card 2 hero — person and robot arm drawing together"><img src="img/hero-duet.jpg" alt=""></figure>
+    </div>
+    <footer class="band foot"><span class="strip" data-el="card 2 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">2 / 7</span></footer>
+  </section>
+
+  <section class="card triptych turn plate-blue" data-card="3" data-el="card 3 — one turn">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-3.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 3 kicker">03 · One turn</span><span class="wordmark" data-el="card 3 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="module m1" data-el="card 3 photo — your mark">
+        <figure class="paper photo"><img src="img/turn-07-human.jpg" alt="The board after the visitor's turn"></figure>
+        <p class="cap body">Your mark</p>
+      </div>
+      <div class="module m2">
+        <div class="paper bubble body" data-el="card 3 speech bubble">
+          <p class="sees" data-el="card 3 speech bubble — sees">A crowded world of creatures, flowers and dancing figures.</p>
+          <p class="adds" data-el="card 3 speech bubble — adds">A small green dancing figure in the open lower-right space to balance the crowd.</p>
+          <span class="pill" data-el="card 3 badge — latency">8 s to look and decide</span>
+        </div>
+      </div>
+      <div class="module m3" data-el="card 3 photo — the answer">
+        <figure class="paper photo"><img src="img/turn-07-robot.jpg" alt="The board after the robot's green figure"></figure>
+        <p class="cap body">Duet answers</p>
+      </div>
+    </div>
+    <footer class="band foot"><span class="strip" data-el="card 3 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">3 / 7</span></footer>
+  </section>
+
+  <section class="card split cocreate plate-green" data-card="4" data-el="card 4 — co-creation">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-4.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 4 kicker">04 · Co-creation</span><span class="wordmark" data-el="card 4 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="words">
+        <h2 class="headline" data-el="card 4 headline">Everyone leaves with a piece made with a <span class="key">partner</span>.</h2>
+        <p class="under body" data-el="card 4 line">Ten exchanges. Two artists. One of them was a robot.</p>
+      </div>
+      <div class="figure flipwrap">
+        <figure class="paper photo flip" data-el="card 4 flipbook image"><img id="flip" src="img/turn-00-start.jpg" alt="The board, turn by turn"></figure>
+        <span class="pill" id="flipLabel" data-el="card 4 flipbook counter">start</span>
+      </div>
+    </div>
+    <footer class="band foot"><span class="strip" data-el="card 4 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">4 / 7</span></footer>
+  </section>
+
+  <section class="card modules learn plate-orange" data-card="5" data-el="card 5 — learning">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-5.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 5 kicker">05 · Learning</span><span class="wordmark" data-el="card 5 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="lead"><h2 class="headline" data-el="card 5 headline">You learn their language by <span class="key">answering back</span>.</h2></div>
+      <ul class="mods four">
+        <li class="paper mod" data-el="card 5 lesson — Haring"><div class="mod-head"><svg class="sample" viewBox="0 0 100 60"><use href="#s-haring" width="100" height="60"/></svg><span class="caption">Haring</span></div><p class="body">Your blob becomes a figure.</p></li>
+        <li class="paper mod" data-el="card 5 lesson — Mondrian"><div class="mod-head"><svg class="sample" viewBox="0 0 100 60"><use href="#s-mondrian" width="100" height="60"/></svg><span class="caption">Mondrian</span></div><p class="body">Your edges run out to a grid.</p></li>
+        <li class="paper mod" data-el="card 5 lesson — Van Gogh"><div class="mod-head"><svg class="sample" viewBox="0 0 100 60"><use href="#s-vangogh" width="100" height="60"/></svg><span class="caption">Van Gogh</span></div><p class="body">Dashes stream around your mark.</p></li>
+        <li class="paper mod own" data-el="card 5 lesson — your own artist"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-own"/></svg><span class="caption">Your own artist</span></div><span class="pill next">Next</span><p class="body">Describe a style. Duet draws in it.</p></li>
+      </ul>
+    </div>
+    <footer class="band foot"><span class="strip" data-el="card 5 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">5 / 7</span></footer>
+  </section>
+
+  <section class="card modules how plate-cream" data-card="6" data-el="card 6 — how it works">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="img/plate-6.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 6 kicker">06 · How it works</span><span class="wordmark" data-el="card 6 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="lead">
+        <h2 class="headline" data-el="card 6 title">Look. Think. Answer. Draw.</h2>
+        <p class="sub body" data-el="card 6 subtitle"><span class="key">Viam</span> under every step.</p>
+      </div>
+      <ol class="mods four">
+        <li class="paper mod node" data-el="card 6 step — Look"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-look"/></svg><h3 class="body">Look</h3></div><p class="body">The camera takes a photo of the board.</p></li>
+        <li class="paper mod node" data-el="card 6 step — Think"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-think"/></svg><h3 class="body">Think</h3></div><p class="body">Claude decides what to add.</p></li>
+        <li class="paper mod node" data-el="card 6 step — Answer"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-answer"/></svg><h3 class="body">Answer</h3></div><p class="body">The artist's style becomes strokes.</p></li>
+        <li class="paper mod node" data-el="card 6 step — Draw"><div class="mod-head"><svg class="icon" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-draw"/></svg><h3 class="body">Draw</h3></div><p class="body">The Viam motion service draws them.</p></li>
+      </ol>
+    </div>
+    <footer class="band foot"><span class="strip" data-el="card 6 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">6 / 7</span></footer>
+  </section>
+
+  <section class="card split build plate-black" data-card="7" data-el="card 7 — the build">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle-bright)"/></svg>
+    <img class="plate-img" src="img/plate-7.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 7 kicker">07 · The build</span><span class="wordmark" data-el="card 7 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="words">
+        <h2 class="headline" data-el="card 7 headline"><span class="key">One person.</span> Two days. Claude and Viam.</h2>
+        <p class="cta display" data-el="card 7 footer — rig instruction">Draw one mark. Duet answers.</p>
+      </div>
+      <figure class="paper photo figure" data-el="card 7 photo — today's finished piece"><img src="img/turn-10-final.jpg" alt="The finished piece from today's session"></figure>
+    </div>
+    <footer class="band foot"><span class="strip" data-el="card 7 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">7 / 7</span></footer>
+  </section>
+
+  <a class="homelink pill" href="../" data-el="home link">&#8962; Home</a>
+  <div class="playbar" data-el="playbar — autoplay controls">
+    <button id="play" class="pill" type="button" aria-pressed="false" data-el="playbar — play button">&#9654; Play</button>
+    <label class="pill" data-el="playbar — speed dropdown">Speed
+      <select id="speed" aria-label="Playback speed">
+        <option value="0.5">0.5&times;</option>
+        <option value="1" selected>1&times;</option>
+        <option value="1.5">1.5&times;</option>
+        <option value="2">2&times;</option>
+      </select>
+    </label>
+  </div>
+
+</div>
+
+<div class="dev-badge">DEV MODE &middot; click an element to copy its name &middot; press D to exit</div>
+<div class="dev-label" id="devLabel"></div>
+<div class="dev-toast" id="devToast"></div>
+
+<script src="deck.js"></script>
+<script src="dev.js"></script>
+</body>
+</html>

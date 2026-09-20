@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duet</title>
+<link rel="stylesheet" href="/static/fredoka.css?v=ds7">
+<link rel="stylesheet" href="/static/tokens.css?v=ds7">
+<link rel="stylesheet" href="/static/duet.css?v=ds7">
+</head>
+<body>
+<!-- Live stream: /stream.mjpg?overlay=0 (set by app.js); state over the WebSocket at /ws. -->
+<div class="mat" id="mat" data-el="mat — plate around the stage">
+<div class="stage" id="stage" data-el="stage">
+  <div class="pic" id="pic" data-el="picture layer (frame, photo, strokes)">
+    <img class="base" id="base" alt="" data-el="base image — live camera">
+    <img class="ov ovimg hidden" id="photo" alt="" data-el="turn photo projected onto the board">
+    <svg width="0" height="0" class="defs" aria-hidden="true"><defs>
+      <filter id="levels" color-interpolation-filters="sRGB"><feComponentTransfer>
+        <feFuncR type="linear" slope="1.9" intercept="-0.38"/><feFuncG type="linear" slope="1.9" intercept="-0.38"/><feFuncB type="linear" slope="1.9" intercept="-0.38"/>
+      </feComponentTransfer></filter>
+      <symbol id="logo" viewBox="0 0 320 130">
+        <g transform="rotate(-6 52 64)"><rect x="20" y="32" width="64" height="64" rx="12" fill="#ffd400" stroke="currentColor" stroke-width="5"/><text x="52" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">D</text></g>
+        <g transform="rotate(4 124 64)"><rect x="92" y="32" width="64" height="64" rx="12" fill="#e5322d" stroke="currentColor" stroke-width="5"/><text x="124" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">U</text></g>
+        <g transform="rotate(-3 196 64)"><rect x="164" y="32" width="64" height="64" rx="12" fill="#1f4fd6" stroke="currentColor" stroke-width="5"/><text x="196" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">E</text></g>
+        <g transform="rotate(5 268 64)"><rect x="236" y="32" width="64" height="64" rx="12" fill="#17a34a" stroke="currentColor" stroke-width="5"/><text x="268" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">T</text></g>
+        <path d="M40 118 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+      </symbol>
+    </defs></svg>
+    <svg class="mask" id="mask" data-el="layer — clean board mask"><path id="maskpath" fill="#fff" fill-rule="evenodd"/></svg>
+    <svg class="ov" id="ov" width="176" height="240" viewBox="0 0 176 240" data-el="overlay svg">
+      <rect class="paper" id="paper" x="0" y="0" width="176" height="240" data-el="layer — paper (vector view)"/>
+      <g class="board hidden" id="l-board" data-el="layer — board outline"><rect x="0" y="0" width="176" height="240"/><rect x="15" y="15" width="146" height="210" stroke-dasharray="3 2"/></g>
+      <g id="fit">
+        <g class="ink" id="l-ink" data-el="layer — human ink"></g>
+        <g class="robot" id="l-done" data-el="layer — robot strokes from earlier turns"></g>
+        <g class="robot" id="l-robot" data-el="layer — plan strokes"></g>
+        <g class="ghost" id="l-ghost" data-el="layer — ghost pen preview"><path id="ghostpath"/><circle id="ghostpen" r="2.2"/></g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="tl" id="chips" data-el="chips — top left">
+    <span class="logo-wrap" id="badge" data-el="logo — Duet"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span>
+    <span class="chip white" id="state" data-el="chip — state">Connecting…</span>
+  </div>
+  <div class="tr" data-el="chips — top right">
+    <span class="chip black" id="count" data-el="chip — exchange counter">Exchange <b>0</b> of 5</span>
+    <button class="chip black" id="sound" title="Sound on or off" data-el="chip — sound toggle">Sound off</button>
+    <a class="chip black hidden" id="site-home" href="../" data-el="chip — home">Home</a>
+  </div>
+  <div class="tr cam" data-el="chip — camera layer"><span class="chip red hidden" id="cam" data-el="chip — camera reconnecting">camera reconnecting…</span></div>
+  <div class="cta" id="cta" data-el="call to action row">
+    <button class="go hidden" id="go" data-el="go robot button">Go, robot!</button>
+    <div class="pick hidden" id="artist-pick" data-el="artist picker">
+      <button class="chip black" id="artist-btn" data-el="artist picker — button">as Abstract ▾</button>
+      <div class="menu hidden" id="artist-menu" data-el="artist picker — menu"></div>
+    </div>
+  </div>
+  <button class="go home hidden" id="home" data-el="return to home button">Return to home</button>
+
+  <div class="sub" id="caption" data-el="bubble">
+    <div class="bubble speech" id="bubble"><p id="words" data-el="bubble — words"></p></div>
+  </div>
+
+  <section class="welcome" id="welcome" data-el="welcome page">
+    <div class="welcome-inner">
+      <svg class="logo welcome-logo" viewBox="0 0 320 130" role="img" aria-label="Duet" data-el="welcome — logo"><use href="#logo"/></svg>
+      <h1 class="welcome-title" data-el="welcome — title">A robot arm that draws <span class="key">with</span> you.</h1>
+      <p class="welcome-line" data-el="welcome — line 1">Draw one mark. Duet looks, understands, and answers in the hand of an artist.</p>
+      <p class="welcome-line" data-el="welcome — line 2">Six exchanges. One of a kind. Yours to keep.</p>
+      <p class="welcome-line welcome-do hidden" id="welcome-do" data-el="welcome — what to do next"></p>
+      <button class="welcome-start" id="start" data-el="welcome — start button" disabled>Getting ready…</button>
+      <a class="welcome-home hidden" id="welcome-home" href="../" data-el="welcome — home link">Back to the homepage</a>
+    </div>
+  </section>
+
+  <div class="corner" data-el="corner buttons">
+    <span class="light" id="light" title="Socket reconnecting" data-el="status light — socket"></span>
+    <button class="gear icon" id="diag-gear" title="Diagnostics (G)" aria-label="Diagnostics" data-el="diagnostics toggle button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
+    <button class="gear" id="gear" title="Show controls (C)" data-el="controls toggle button">Controls</button>
+  </div>
+
+  <div class="panel" id="panel" data-el="controls panel">
+    <span class="lbl">Image</span>
+    <div class="g s3" data-el="image — source"><button id="b-live" data-el="source — live">Live</button><button id="b-prev" data-el="source — previous photo">◀</button><button id="b-next" data-el="source — next photo">▶</button></div>
+    <div class="g s3 pos" id="pos" data-el="source — position label">live · wrist camera</div>
+    <div class="g s2"><button id="b-play" data-el="source — play loop">▶ Play loop</button></div>
+    <div class="g s2 seg" id="crop-seg" data-el="view — full or crop"><button data-v="full" class="on" data-el="view — full frame">Full view</button><button data-v="board" data-el="view — crop to board">Crop</button></div>
+    <div class="g s1"><a id="b-video" class="hidden" target="_blank" data-el="session video link">Video</a></div>
+    <div class="g s1"><button class="hide" id="hide" data-el="hide controls button">Hide</button></div>
+
+    <span class="lbl">Layers</span>
+    <div class="g s6" data-el="layer toggles">
+      <button data-layer="robot" class="on" data-el="layer toggle — plan">Plan</button>
+      <button data-layer="ink" class="on" data-el="layer toggle — ink">Ink</button>
+      <button data-layer="caption" class="on" data-el="layer toggle — bubble">Bubble</button>
+      <button data-layer="chips" class="on" data-el="layer toggle — chips">Chips</button>
+      <button data-layer="board" data-el="layer toggle — board outline">Board</button>
+      <button data-layer="clean" class="on" data-el="layer toggle — clean board">Clean</button>
+      <button data-layer="vector" data-el="layer toggle — ink only">Ink only</button>
+    </div>
+    <div class="g s5 fine" data-el="vector colors and widths">
+      <label class="color" data-el="ink color and width">Ink <input type="color" id="ink-color" value="#111111"><input type="range" id="ink-width" min="4" max="40" value="12" title="ink width"></label>
+      <label class="color" data-el="stroke color and width">Strokes <input type="color" id="stroke-color" value="#1b8f3a"><input type="range" id="stroke-width" min="4" max="40" value="14" title="stroke width"></label>
+    </div>
+    <div class="g s1"><button id="export-svg" data-el="export svg button">Export SVG</button></div>
+
+    <span class="lbl">Picture</span>
+    <div class="g s3 slider" data-el="brightness"><span class="lbl2">Bright</span><input type="range" id="brightness" min="-50" max="50" value="7" data-el="brightness slider"><span class="num" id="brightness-val">+0.07</span></div>
+    <div class="g s3 slider" data-el="contrast"><span class="lbl2">Contrast</span><input type="range" id="contrast" min="50" max="300" value="190" data-el="contrast slider"><span class="num" id="contrast-val">1.90</span></div>
+    <div class="g s3 slider" data-el="exposure"><span class="lbl2">Exposure</span><input type="range" id="exposure" min="-20" max="20" value="0" data-el="exposure slider"><span class="num" id="exposure-val">+0.0</span></div>
+    <div class="g s3"><button id="picture-reset" data-el="picture neutral button">Neutral</button><button id="picture-clean" data-el="picture clean preset button">Clean</button></div>
+
+    <span class="lbl live-only">Session</span>
+    <div class="g s3 seg live-only" id="length-seg" data-el="length setting"><button data-v="short" data-el="length — short">Short</button><button data-v="medium" data-el="length — medium">Medium</button><button data-v="long" data-el="length — long">Long</button></div>
+    <div class="g s2 count live-only" data-el="exchanges"><button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button></div>
+    <div class="g s2 seg live-only" id="handoff-seg" data-el="handoff setting"><button data-v="held" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></div>
+    <div class="g s5 live-only"></div>
+
+    <span class="lbl live-only">Artist</span>
+    <div class="g s12 seg live-only" id="artist-seg" data-el="artist setting"><button data-v="abstract" data-el="artist — abstract">Abstract</button><button data-v="mimic" data-el="artist — mimic">Mimic</button><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" data-el="artist — van gogh">Van Gogh</button><button data-v="architect" data-el="artist — architect">Architect</button><button data-v="designer" data-el="artist — designer">Designer</button><button data-v="shader" data-el="artist — shader">Shader</button></div>
+
+    <span class="lbl live-only">Run</span>
+    <div class="g s2 live-only"><button id="pause" data-el="pause / resume button">Pause</button><button id="pass" data-el="pass turn button">Pass turn</button></div>
+    <div class="g s2 live-only"><button id="end" data-el="end session button" disabled>End session</button></div>
+    <div class="g s2 live-only"><button class="danger" id="relaunch" title="Exit the run so demo.sh starts it again with the code on disk; the page reloads by itself" data-el="relaunch run button">Relaunch run</button></div>
+    <div class="g s2 live-only"></div>
+    <div class="g s2 live-only"><button class="danger" id="reset-arm" title="Stop the arm, clear its error, lift, and return to the look pose" data-el="reset arm button">Reset arm</button></div>
+    <div class="g s2 live-only"><button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button></div>
+
+    <span class="lbl live-only">Light</span>
+    <div class="g s3 slider dial live-only" data-el="light direction dial"><span class="sun" id="sun">☀</span><input type="range" id="direction" min="0" max="359" value="0" data-el="light direction slider"><span class="num" id="direction-val" data-el="light direction value">0°</span></div>
+    <div class="g s3 slider live-only" data-el="energy"><span class="lbl2">Energy</span><input type="range" id="energy" min="0" max="100" value="50" data-el="energy slider"><span class="num" id="energy-val" data-el="energy value">0.50</span></div>
+    <div class="g s6 live-only"></div>
+
+    <div class="status" id="status1" data-el="status line — session"></div>
+    <div class="status" id="status2" data-el="status line — claude"></div>
+    <div class="status" id="status3" data-el="status line — dock and errors"></div>
+  </div>
+  <section class="diag" id="diag" data-el="diagnostics drawer">
+    <div class="diag-head" data-el="diagnostics — header">
+      <span class="lbl">Diagnostics</span>
+      <span class="diag-summary" id="diag-summary" data-el="diagnostics — summary"></span>
+      <button id="diag-hide" data-el="hide diagnostics button">Hide</button>
+    </div>
+    <svg class="diag-timeline" id="diag-timeline" viewBox="0 0 1000 92" data-el="diagnostics — timeline"></svg>
+    <div class="diag-log" data-el="diagnostics — log">
+      <table class="log"><thead><tr><th>time</th><th>dir</th><th>type</th><th>turn</th><th>size</th><th>summary</th></tr></thead><tbody id="diag-rows"></tbody></table>
+    </div>
+  </section>
+</div>
+
+  <div class="dev-badge">DEV MODE · click an element to copy its name · press D to exit</div>
+  <div class="dev-label" id="devLabel"></div>
+  <div class="dev-toast" id="devToast"></div>
+</div>
+<script type="module" src="/static/js/app.js?v=ds7"></script>
+</body>
+</html>
