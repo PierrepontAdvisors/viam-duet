@@ -465,7 +465,7 @@ The Task 2 review measured, with the Task 3 texts in place, spill of 1 to 7cqw b
 .stage.shownotes .card { --display: 6.4cqw; --headline: 4.3cqw; --body: 2.5cqw; --caption: 1.5cqw; }
 ```
 
-(`.foot` and `.notes p` redefine `--caption` on themselves, so they keep their own sizes.) The Task 3 reviewer re-measured after the longer frame line: card 1 is now the worst card (about 8.8cqw of spill), then card 3; measure against those first. Start at that 0.8 scale; if a card still spills, lower `--body` and `--headline` a further 0.1cqw at a time until Step 2 measures clean on all seven, and only then, if a picture is the tallest child, lower its height rule and update the Task 2 test's pinned value. Add a test assertion pinning whatever scale you land on: `assert.match(css, /\.stage\.shownotes \.card \{ --display: [\d.]+cqw; --headline: [\d.]+cqw; --body: [\d.]+cqw; --caption: [\d.]+cqw; \}/);`. Re-run the deck tests.
+(`.foot` and `.notes p` redefine `--caption` on themselves, so they keep their own sizes.) The Task 4 re-review's notes-on sweep, worst first: card 1 8.8cqw, card 7 5.2, card 6 5.0, card 5 4.9, card 3 3.9, card 4 3.0, card 2 1.3; measure against card 1 first. Start at that 0.8 scale; if a card still spills, lower `--body` and `--headline` a further 0.1cqw at a time until Step 2 measures clean on all seven, and only then, if a picture is the tallest child, lower its height rule and update the Task 2 test's pinned value. Add a test assertion pinning whatever scale you land on: `assert.match(css, /\.stage\.shownotes \.card \{ --display: [\d.]+cqw; --headline: [\d.]+cqw; --body: [\d.]+cqw; --caption: [\d.]+cqw; \}/);`. Re-run the deck tests.
 
 - [ ] **Step 4: Check the toggle and the query**
 
