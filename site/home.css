@@ -36,7 +36,7 @@ body { display: flex; align-items: center; justify-content: center; font-family:
 .brand > :nth-child(1) { animation-delay: 0ms; } .brand > :nth-child(2) { animation-delay: 120ms; } .brand > :nth-child(3) { animation-delay: 240ms; }
 .text > :nth-child(1) { animation-delay: 300ms; } .text > :nth-child(2) { animation-delay: 400ms; } .text > :nth-child(3) { animation-delay: 500ms; } .text > :nth-child(4) { animation-delay: 600ms; }
 .hero { margin-top: .4cqw; }
-.foot { position: absolute; left: 0; right: 0; bottom: 1.2cqw; text-align: center; font-size: var(--caption); font-weight: 600; }
+.foot { position: absolute; left: 0; right: 0; bottom: 1.2cqw; text-align: center; font-size: 1.15cqw; font-weight: 600; white-space: nowrap; }
 
 /* a phone held upright: one column, the type scaled to the screen's width */
 @media (max-aspect-ratio: 1 / 1) {
@@ -54,7 +54,7 @@ body { display: flex; align-items: center; justify-content: center; font-family:
   .choices { gap: 3cqw; margin: 1cqw 0; }
   .big { font-size: 4.6cqw; padding: 2.6cqw 5cqw; border-width: .8cqw; box-shadow: .9cqw .9cqw 0 var(--ink); }
   .caption { font-size: 3.2cqw; }
-  .foot { position: static; padding: 0 6cqw; }
+  .foot { position: static; padding: 0 6cqw; font-size: 2.8cqw; white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) { body, .card > *, .big { animation: none; transition: none; } }
 

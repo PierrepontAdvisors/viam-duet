@@ -70,8 +70,8 @@ ul, ol { padding: 0; list-style: none; }
 .kicker { font-size: var(--caption); font-weight: 700; line-height: 1; letter-spacing: .12em; text-transform: uppercase;
           padding: .6cqw 1.2cqw; background: var(--paper); color: var(--ink); border: var(--paper-border) solid var(--ink); border-radius: 999px; }
 .wordmark { font-size: var(--body); font-weight: 700; line-height: 1; }
-.foot { font-size: var(--caption); font-weight: 600; line-height: 1.2; }
-.foot .strip { flex: 1; min-width: 0; }
+.foot { --caption: 1.15cqw; font-size: var(--caption); font-weight: 600; line-height: 1.2; }   /* the caption token, taken in for the footer so the strip with the dates stays one line */
+.foot .strip { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* one line, whatever the card */
 .foot .counter { flex: none; }
 .plate-black .wordmark, .plate-black .foot { color: #fff; }
 
