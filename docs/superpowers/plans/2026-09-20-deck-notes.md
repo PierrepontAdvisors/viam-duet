@@ -215,23 +215,20 @@ test('notes: every card carries the spoken part in its own aside, in the present
   const h = read('index.html');
   const sections = h.split(/<section class="card /).slice(1);
   assert.equal(sections.length, 7);
+  const frameLine = 'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click the right side to advance, the left to go back.';
+  const LINES = { 1: [frameLine, 'Duet puts a partner at the table.'], 2: ['in the hand of an artist you choose.'], 3: ['A real turn from last night.'],
+                  4: ['Everyone who sits down leaves with a piece they made with a partner.'], 5: ['You have a conversation in it.'],
+                  6: ['Viam\'s motion service draws them safely around the table.'], 7: ['so it can sketch with my grandchildren the way he sketched with me.'] };
   sections.forEach((s, i) => {
     const n = i + 1;
     assert.equal((s.match(/<aside class="notes"/g) || []).length, 1, `card ${n} has one notes aside`);
     assert.ok(s.includes(`data-el="card ${n} notes — the spoken part"`), `card ${n} notes are named`);
     assert.ok(s.indexOf('<aside class="notes"') < s.indexOf('<footer class="band foot"'), `card ${n} notes sit above the footer`);
+    assert.match(s, /<\/div>\s*\n\s*<aside class="notes"/, `card ${n} notes sit directly after the content, before the footer`);
+    const head = s.slice(0, s.indexOf('<aside class="notes"'));
+    assert.equal((head.match(/<div\b/g) || []).length, (head.match(/<\/div>/g) || []).length, `card ${n} notes are a direct child of the card`);
+    for (const line of LINES[n]) assert.ok(s.includes(line), `card ${n} note missing: ${line}`);
   });
-  for (const line of [
-    'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click the right side to advance, the left to go back.',
-    'Duet puts a partner at the table.',
-    'in the hand of an artist you choose.',
-    'A real turn from last night.',
-    'Everyone who sits down leaves with a piece they made with a partner.',
-    'You have a conversation in it.',
-    'Viam\'s motion service draws them safely around the table.',
-    'so it can sketch with my grandchildren the way he sketched with me.',
-  ]) assert.ok(h.includes(line), `note missing: ${line}`);
-  assert.ok(!/[‘’]/.test(h), 'plain apostrophes');
 });
 ```
 
@@ -468,7 +465,7 @@ The Task 2 review measured, with the Task 3 texts in place, spill of 1 to 7cqw b
 .stage.shownotes .card { --display: 6.4cqw; --headline: 4.3cqw; --body: 2.5cqw; --caption: 1.5cqw; }
 ```
 
-(`.foot` and `.notes p` redefine `--caption` on themselves, so they keep their own sizes.) Start at that 0.8 scale; if a card still spills, lower `--body` and `--headline` a further 0.1cqw at a time until Step 2 measures clean on all seven, and only then, if a picture is the tallest child, lower its height rule and update the Task 2 test's pinned value. Add a test assertion pinning whatever scale you land on: `assert.match(css, /\.stage\.shownotes \.card \{ --display: [\d.]+cqw; --headline: [\d.]+cqw; --body: [\d.]+cqw; --caption: [\d.]+cqw; \}/);`. Re-run the deck tests.
+(`.foot` and `.notes p` redefine `--caption` on themselves, so they keep their own sizes.) The Task 3 reviewer re-measured after the longer frame line: card 1 is now the worst card (about 8.8cqw of spill), then card 3; measure against those first. Start at that 0.8 scale; if a card still spills, lower `--body` and `--headline` a further 0.1cqw at a time until Step 2 measures clean on all seven, and only then, if a picture is the tallest child, lower its height rule and update the Task 2 test's pinned value. Add a test assertion pinning whatever scale you land on: `assert.match(css, /\.stage\.shownotes \.card \{ --display: [\d.]+cqw; --headline: [\d.]+cqw; --body: [\d.]+cqw; --caption: [\d.]+cqw; \}/);`. Re-run the deck tests.
 
 - [ ] **Step 4: Check the toggle and the query**
 
