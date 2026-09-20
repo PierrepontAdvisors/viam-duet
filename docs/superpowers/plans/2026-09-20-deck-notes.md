@@ -222,7 +222,7 @@ test('notes: every card carries the spoken part in its own aside, in the present
     assert.ok(s.indexOf('<aside class="notes"') < s.indexOf('<footer class="band foot"'), `card ${n} notes sit above the footer`);
   });
   for (const line of [
-    'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click to advance.',
+    'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click the right side to advance, the left to go back.',
     'Duet puts a partner at the table.',
     'in the hand of an artist you choose.',
     'A real turn from last night.',
@@ -246,7 +246,7 @@ In `docs/duet/pitch/index.html`, in each card, insert the aside on its own line 
 
 Card 1:
 ```html
-    <aside class="notes" data-el="card 1 notes — the spoken part"><p>The two-minute pitch, as given at Viam's Fine Motor Skills hackathon, New York, September 19, 2026. Click to advance. Anyone can study with the greatest minds in history now. Nobody can make art with them. Duet puts a partner at the table.</p></aside>
+    <aside class="notes" data-el="card 1 notes — the spoken part"><p>The two-minute pitch, as given at Viam's Fine Motor Skills hackathon, New York, September 19, 2026. Click the right side to advance, the left to go back. Anyone can study with the greatest minds in history now. Nobody can make art with them. Duet puts a partner at the table.</p></aside>
 ```
 
 Card 2:
