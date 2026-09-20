@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { schedule, words, clip, drawMs, Player, PACE, WORDS } from '../duet/static/js/replay.js';
+import { schedule, words, clip, drawMs, Player, PACE, WORDS, DEFAULT_ARTIST } from '../duet/static/js/replay.js';
 
 const SQ = [[40, 40], [80, 40], [80, 80], [40, 80], [40, 40]];
 const LINE = [[100, 100], [140, 100]];
@@ -32,7 +32,7 @@ test('words: ink artists speak from their banks by exchange, Claude turns take t
 test('schedule: look and the start shot, then per turn the states and messages the socket would carry', () => {
   const steps = schedule(REPLAY);
   const m = emits(steps);
-  assert.equal(m[0].type, 'state'); assert.equal(m[0].state, 'look'); assert.equal(m[0].turn, 0); assert.equal(m[0].session, 'sess'); assert.equal(m[0].artist, 'mimic');
+  assert.equal(m[0].type, 'state'); assert.equal(m[0].state, 'look'); assert.equal(m[0].turn, 0); assert.equal(m[0].session, 'sess'); assert.equal(m[0].artist, 'abstract');
   assert.deepEqual(m[1], { type: 'shot', url: 'sessions/sess/turn-00-start.jpg', turn: 0, who: 'start', frame_url: 'sessions/sess/turn-00-start-frame.jpg' });
   const states = m.filter(x => x.type === 'state').map(x => `${x.state}:${x.turn}`);
   assert.deepEqual(states, ['look:0', 'human_turn:0', 'capture:0', 'interpret:0', 'plan:0', 'robot_draw:0', 'look:1',
@@ -53,6 +53,22 @@ test('schedule: look and the start shot, then per turn the states and messages t
   assert.deepEqual(m[m.length - 1], { type: 'video', url: 'sessions/sess/session.mp4' });
   const finished = m.filter(x => x.state === 'finished')[0];
   assert.equal(finished.coverage, 0.11); assert.equal(finished.exchanges, 2); assert.equal(finished.hand_guard, 'off');
+});
+
+test('schedule: the picker setting is Abstract, then each exchange\'s artist; a cue per human turn picks on a switch, else Go', () => {
+  assert.equal(DEFAULT_ARTIST, 'abstract');
+  const steps = schedule(REPLAY);
+  const cues = steps.filter(s => s.cue).map(s => s.cue);
+  assert.deepEqual(cues, [{ hand: 'pick', artist: 'mimic' }, { hand: 'pick', artist: 'haring' }]);
+  const same = schedule({ ...REPLAY, turns: [REPLAY.turns[0], { ...REPLAY.turns[1], artist: 'mimic' }] });
+  assert.deepEqual(same.filter(s => s.cue).map(s => s.cue), [{ hand: 'pick', artist: 'mimic' }, { hand: 'go' }]);
+  const states = emits(steps).filter(x => x.type === 'state').map(x => `${x.state}:${x.artist}`);
+  assert.deepEqual(states.slice(0, 8), ['look:abstract', 'human_turn:abstract', 'capture:mimic', 'interpret:mimic', 'plan:mimic', 'robot_draw:mimic', 'look:mimic', 'human_turn:mimic']);
+  assert.equal(states[8], 'capture:haring');
+  const i = steps.findIndex(s => s.emit && s.emit.state === 'human_turn');
+  assert.ok(steps[i + 1].cue, 'the cue follows the human_turn state');
+  assert.deepEqual(steps[i + 2], { wait: PACE.human, on: 'pass' });
+  assert.equal(PACE.human, 6000);
 });
 
 test('drawMs: 350 ms a stroke, never under 3 s or over 12 s, divided by the speed; the player carries its speed', () => {
@@ -99,13 +115,15 @@ test('Player: boot primes the page, start runs the piece, pass cuts the human wa
   assert.ok(after.includes('finish') && after[after.length - 1] === 'finished' && !after.includes('human_turn'), after.join(','));
 });
 
-test('Player: pause holds the clock and shows Paused, resume restores the state, settings are ignored', async () => {
+test('Player: pause holds the clock and shows Paused, resume restores the state, other settings are ignored', async () => {
   let clock = 0;
   const seen = [];
   const player = new Player(REPLAY, (m) => seen.push(m), { now: () => clock, sleep: tickSleep(() => { clock += 100; }) });
   const p = player.start();
   await tick();
-  player.command({ type: 'set', artist: 'shader' });
+  const n = seen.length;
+  player.command({ type: 'set', length: 'short' });
+  assert.equal(seen.length, n, 'a length setting changes nothing');
   player.command({ type: 'pause' });
   assert.equal(seen[seen.length - 1].state, 'paused');
   const at = seen.length;
@@ -113,6 +131,36 @@ test('Player: pause holds the clock and shows Paused, resume restores the state,
   assert.equal(seen.length, at, 'nothing moves while paused');
   player.command({ type: 'resume' });
   assert.equal(seen[seen.length - 1].state, 'look');
+  player.stop();
+  await p;
+});
+
+test('Player: cues reach the callback, boot starts on Abstract, a pick relabels the state until capture, restart forgets it', async () => {
+  let clock = 0;
+  const seen = [], cues = [];
+  const player = new Player(REPLAY, (m) => seen.push(m), { now: () => clock, sleep: tickSleep(() => { clock += 100; }), cue: (c) => cues.push(c) });
+  player.boot();
+  assert.equal(seen[1].state, 'human_turn'); assert.equal(seen[1].artist, 'abstract');
+  const p = player.start();
+  for (let i = 0; i < 12; i++) await tick();                           // into the first human turn
+  assert.equal(player.lastState.state, 'human_turn'); assert.equal(player.lastState.artist, 'abstract');
+  assert.deepEqual(cues, [{ hand: 'pick', artist: 'mimic' }]);
+  player.command({ type: 'set', artist: 'shader' });                   // a visitor's pick, or the hand's
+  assert.equal(seen[seen.length - 1].state, 'human_turn'); assert.equal(seen[seen.length - 1].artist, 'shader');
+  player.command({ type: 'set', artist: 'nobody' });                   // not on the roster: ignored
+  assert.equal(seen[seen.length - 1].artist, 'shader');
+  player.command({ type: 'pass' });
+  await tick(); await tick();
+  const capture = seen.filter(m => m.state === 'capture')[0];
+  assert.equal(capture.artist, 'mimic', 'the recording draws');
+  assert.equal(player.pick, null);
+  while (!(player.lastState && player.lastState.state === 'human_turn' && player.lastState.turn === 1)) await tick();
+  assert.equal(player.lastState.artist, 'mimic', 'the setting after exchange 1');
+  player.command({ type: 'set', artist: 'vangogh' });
+  assert.equal(player.lastState.artist, 'vangogh');
+  player.command({ type: 'restart' });
+  await tick();
+  assert.equal(player.pick, null); assert.equal(player.lastState.state, 'look'); assert.equal(player.lastState.artist, 'abstract');
   player.stop();
   await p;
 });
