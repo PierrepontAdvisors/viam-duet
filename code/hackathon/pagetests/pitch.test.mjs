@@ -275,10 +275,23 @@ test('notes: parseNotes reads ?notes=0 as hidden and everything else as shown', 
 
 test('notes: N and the Notes pill toggle them; the stage learns the setting from the URL at load', () => {
   const js = read('deck.js');
-  assert.match(js, /case 'n':[\s\S]{0,40}setNotes\(!notes\)/);
+  assert.match(js, /case 'n':[\s\S]{0,40}setNotes\(!notes\);\s*return;/);
   assert.match(js, /notesBtn\.addEventListener\('click'/);
   assert.match(js, /stage\.classList\.toggle\('shownotes', on\)/);
   assert.match(js, /setNotes\(parseNotes\(location\.search\)\)/);
   const h = read('index.html');
   assert.match(h, /<button id="notes" class="pill" type="button" aria-pressed="true" data-el="playbar — notes button">Notes<\/button>/);
+});
+
+test('notes: a fourth card row holds a paper speech bubble, shown only with the stage shownotes class, and the photos make room', () => {
+  const css = read('deck.css');
+  assert.match(css, /\.card \{[^}]*grid-template-rows: auto minmax\(0, 1fr\) auto auto;/);
+  assert.match(css, /\.notes \{ display: none; \}/);
+  assert.match(css, /\.stage\.shownotes \.notes \{ display: flex; \}/);
+  assert.match(css, /\.notes p \{[^}]*--caption: 1\.45cqw; font-size: var\(--caption\);/);
+  assert.match(css, /\.notes p::before/);
+  assert.match(css, /\.stage\.shownotes \.photo img \{ height: 22cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.flip img \{ height: 23cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 26cqw; height: 26cqw; \}/);
 });
