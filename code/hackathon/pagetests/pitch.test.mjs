@@ -170,6 +170,7 @@ test('the deck has seven cards in order carrying the agreed copy, with plain apo
     'Nicholas Fjellberg Swerdlowe', 'Draw one mark. Duet answers.',
   ];
   for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
+  assert.match(h, /<div class="paper bubble body"[^>]*>\s*<span class="caption says"/, 'card 3 names the speaker at the top of its bubble');
   assert.ok(!/[‘’]/.test(h), 'use plain apostrophes so quotes are searchable');
 });
 
@@ -254,7 +255,7 @@ test('card 6 steps carry icons, card 5 has four modules, motion is defined', () 
   }
   const sections = h.split(/<section class="card /).slice(1);
   assert.equal((sections[4].match(/class="paper mod/g) || []).length, 4, 'card 5 has four modules');
-  assert.ok(sections[4].includes('Your own artist') && sections[4].includes('>Coming next<'), 'fourth module is marked Next');
+  assert.ok(sections[4].includes('Your own artist') && sections[4].includes('>Coming next<'), 'fourth module is marked Coming next');
   assert.equal((sections[5].match(/class="viam caption"/g) || []).length, 0, 'card 6 Viam lines folded into the boxes for the big room');
   assert.ok(sections[5].includes('<span class="key">Viam</span> under every step.'), 'card 6 still credits Viam');
   assert.ok(!sections[4].includes('class="pill prompt"'), 'card 5 prompt pill dropped for the big room');
@@ -296,6 +297,7 @@ test('notes: a fourth card row holds a paper speech bubble, shown only with the 
   assert.match(css, /\.stage\.shownotes \.flip img \{ height: 23cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 26cqw; height: 26cqw; \}/);
+  assert.match(css, /\.triptych \.m2 \.bubble \{ --body: 2\.8cqw; \}/);
 });
 
 test('notes: every card carries the spoken part in its own aside, in the present tense of the day', () => {

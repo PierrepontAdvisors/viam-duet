@@ -125,7 +125,9 @@ ul, ol { padding: 0; list-style: none; }
 .bubble { position: relative; width: 100%; background: var(--yellow); padding: var(--s2); display: flex; flex-direction: column; gap: var(--s1); text-align: center; }
 .bubble .adds { color: var(--robot); }
 .bubble .pill { align-self: center; }
-.bubble .says { align-self: center; letter-spacing: .12em; text-transform: uppercase; }
+.bubble .says { align-self: center; letter-spacing: .12em; text-transform: uppercase; margin-bottom: calc(-1 * var(--s1)); }
+/* card 3's bubble grew a label; the body token comes in a step on that card so the module still clears the footer */
+.triptych .m2 .bubble { --body: 2.8cqw; }
 .bubble::before { content: ""; position: absolute; top: 50%; right: calc(-1 * var(--s2) - var(--paper-border)); transform: translateY(-50%);
                   border: 1.4cqw solid transparent; border-right: 0; border-left: var(--s2) solid var(--ink); }
 .bubble::after  { content: ""; position: absolute; top: 50%; right: calc(-1 * var(--s2) + .55cqw); transform: translateY(-50%);
