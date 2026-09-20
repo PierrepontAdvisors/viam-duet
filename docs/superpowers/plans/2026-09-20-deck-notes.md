@@ -358,7 +358,7 @@ git commit -m "feat(deck): card 3 names who is speaking and how long it took; ca
 
 **Files:**
 - Modify: `docs/duet/pitch/index.html` (card 7's `.words`)
-- Modify: `docs/duet/pitch/deck.css` (`.cta` becomes `.next`; a `.pill.demo`)
+- Modify: `docs/duet/pitch/deck.css` (`.cta` becomes `.vision`; a `.pill.demo`)
 - Test: `code/hackathon/pagetests/pitch.test.mjs`
 
 - [ ] **Step 1: Update the tests first**
@@ -368,14 +368,15 @@ In the `copy` array, replace `'Draw one mark. Duet answers.'` with `'Next: artis
 ```js
 test('card 7 is the vision card: the rig line is gone, the next step and a way into the demo are on it', () => {
   const h = read('index.html');
-  const card7 = h.split(/<section class="card /)[7];
+  const card7 = h.split(/<section class="card /)[7].split('</section>')[0];
   assert.ok(!card7.includes('Draw one mark. Duet answers.'), 'the in-room rig instruction is gone');
   assert.ok(!card7.includes('class="cta'), 'no cta element');
-  assert.match(card7, /<p class="next body" data-el="card 7 next">Next: artists you <span class="key">train yourself<\/span>\.<\/p>/);
-  assert.match(card7, /<a class="pill demo" href="\.\.\/demo\/" data-el="card 7 — play the demo">/);
+  assert.match(card7, /<p class="vision body" data-el="card 7 next">Next: artists you <span class="key">train yourself<\/span>\.<\/p>/);
+  assert.match(card7, /<a class="pill demo" href="\.\.\/demo\/" data-el="card 7 demo link — play the demo">/);
   const css = read('deck.css');
   assert.ok(!css.includes('.cta {'), 'the cta rule went with its element');
-  assert.match(css, /\.next \{ color: var\(--yellow\); margin-top: var\(--s1\); \}/);
+  assert.match(css, /\.vision \{ color: #fff; margin-top: var\(--s1\); \}/);
+  assert.ok(!/(^|\n)\.next \{/.test(css), 'no bare .next rule: it would restyle card 5\'s pill next badge');
   assert.match(css, /\.pill\.demo \{[^}]*background: var\(--green\)/);
 });
 ```
@@ -396,19 +397,21 @@ Replace, in card 7's `.words`:
 with:
 
 ```html
-        <p class="next body" data-el="card 7 next">Next: artists you <span class="key">train yourself</span>.</p>
-        <a class="pill demo" href="../demo/" data-el="card 7 — play the demo">&#9654; Play the demo</a>
+        <p class="vision body" data-el="card 7 next">Next: artists you <span class="key">train yourself</span>.</p>
+        <a class="pill demo" href="../demo/" data-el="card 7 demo link — play the demo">&#9654; Play the demo</a>
 ```
 
 In `deck.css`, replace `.cta { color: var(--yellow); margin-top: var(--s1); }` with:
 
 ```css
-.next { color: var(--yellow); margin-top: var(--s1); }
+.vision { color: #fff; margin-top: var(--s1); }   /* white: the keyline word carries the yellow, as in the headline; a bare .next would restyle card 5's pill next badge */
 .pill.demo { align-self: flex-start; background: var(--green); color: #fff; text-decoration: none; font-size: var(--body); font-weight: 700; padding: .6cqw 1.8cqw; }
 .pill.demo:hover { background: var(--yellow); color: var(--ink); }
+.pill.demo:focus-visible { background: var(--yellow); color: var(--ink); outline: none; }
+.plate-black .pill.demo { border-color: #fff; }
 ```
 
-(`../demo/` resolves on the site, where the deck lives at `presentation/`; opened from `docs/duet/pitch/` it points at nothing, and the deck README says so.) The test `every local file the deck references exists, and the four support files are linked` resolves every `href` against the deck folder, and `../demo/` does not exist there (the Home link's `../` only passed because a parent directory always exists). In that test, skip references that start with `../` with the comment `// links that leave the folder are the showcase site's (../ home, ../demo/), resolved only when the deck is served from site/presentation/`, and add at its end `assert.deepEqual([...h.matchAll(/href="(\.\.\/[^"]*)"/g)].map((m) => m[1]).sort(), ['../', '../demo/'], 'exactly two links leave the deck folder');` so the excusal is deliberate.
+(`../demo/` resolves on the site, where the deck lives at `presentation/`; opened from `docs/duet/pitch/` it points at nothing, and the deck README says so.) The test `every local file the deck references exists, and the four support files are linked` resolves every `href` against the deck folder, and `../demo/` does not exist there (the Home link's `../` only passed because a parent directory always exists). In that test, skip `href` references (not `src`) that start with `../` with the comment `// links that leave the folder are the showcase site's (../ home, ../demo/), resolved only when the deck is served from site/presentation/`, and add at its end `assert.deepEqual([...h.matchAll(/href="(\.\.\/[^"]*)"/g)].map((m) => m[1]).sort(), ['../', '../demo/'], 'exactly two links leave the deck folder');` so the excusal is deliberate.
 
 - [ ] **Step 4: Run the tests to see them pass**
 
