@@ -136,7 +136,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     const st = app.state;
     if (!st) return { kind: 'speech', text: 'One moment…', record: null, who: 'start', thinking: false };
     const rec = app.book.get(app.currentTurn ?? st.turn), reseat = !!(app.dock && app.dock.reseat.length);
-    const b = bubbleForState(st.state, rec, { reseat, elapsedMs: Date.now() - view.thinkingSince });
+    const b = bubbleForState(st.state, rec, { reseat, elapsedMs: Date.now() - view.thinkingSince, replay: !!app.replay });
     const who = st.state === 'human_turn' || st.state === 'idle' || st.state === 'look' ? 'start' : (b.kind === 'thought' ? 'human' : 'robot');
     return { ...b, record: rec, who, thinking: b.kind === 'thought' && !(rec && rec.thought) };
   }
@@ -239,7 +239,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     renderStatus();
   }
   function renderStatus() {
-    const st = app.state, ws = app.connected ? 'connected' : '<span class="err">reconnecting</span>';
+    const st = app.state, ws = app.replay ? '<b>replay</b>' : (app.connected ? 'connected' : '<span class="err">reconnecting</span>');
     $('status1').innerHTML = st
       ? `state <b>${esc(st.state)}</b> · turn <b>${st.turn}</b> of <b>${st.exchanges}</b> · length <b>${esc(st.length)}</b> · handoff <b>${esc(st.handoff)}</b> · hand guard <b>${esc(st.hand_guard || '?')}</b> · error ${st.error ? `<span class="err">${esc(st.error)}</span>` : '<b>none</b>'} · ws ${ws}`
       : `waiting for the first state message · ws ${ws}`;
@@ -264,7 +264,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     if (!welcome.shown && welcomeReturns(welcome.prev, state)) showWelcome(true);
     $('home').classList.toggle('hidden', !(state === 'finished' && !welcome.shown));   // the piece stays up until someone chooses to leave it
     if (welcome.shown && welcome.pressed && state === 'human_turn') { welcome.pressed = false; showWelcome(false); }
-    const prompt = welcomePrompt(state, app.state ? app.state.coverage : 0);
+    const prompt = welcomePrompt(state, app.state ? app.state.coverage : 0, !!app.replay);
     $('welcome-do').classList.toggle('hidden', !prompt);
     if (prompt && $('welcome-do').textContent !== prompt) $('welcome-do').textContent = prompt;
     const b = welcomeButton(state, welcome.waiting);
@@ -278,6 +278,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     const state = app.state ? app.state.state : null;
     if (state === 'finished' || state === 'wipe') { welcome.waiting = true; welcome.pressed = true; sendCommand('restart'); renderWelcome(); return; }   // wipe: the start photo is taken again
     welcome.pressed = false; showWelcome(false);
+    if (app.replay) app.replay.start();                     // the recording begins when the visitor presses Start
   };
   const renderAll = () => { renderChips(); renderPicker(); renderBubble(); renderPanel(); renderWelcome(); };
 

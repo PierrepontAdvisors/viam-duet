@@ -17,6 +17,9 @@ export const FIXED = {
   oldThought: 'Hmm, what was this?',
   oldQuip: 'I remember this one!',
   wipe: 'The board is still full. Wipe it clean, then press Start.',
+  replayEnd: 'The end! Watch the photos loop, or start it again from the welcome.',
+  replayIntro: 'A recording of the longest piece of the day: ten exchanges. Press Start to watch.',
+  replayAgain: 'That was the whole piece. Press Start to watch it again.',
 };
 
 /* ---- artists: the picker's names and one-line descriptions, in the backend's display order ---- */
@@ -72,8 +75,9 @@ export function placeholderAt(ms) {
 }
 
 /** What the bubble shows for a live session state. `record` is this turn's TurnBook entry or null. */
-export function bubbleForState(state, record, { reseat = false, elapsedMs = 0 } = {}) {
+export function bubbleForState(state, record, { reseat = false, elapsedMs = 0, replay = false } = {}) {
   if (reseat) return { kind: 'speech', text: FIXED.reseat };
+  if (replay && state === 'finished') return { kind: 'speech', text: FIXED.replayEnd };   // no board to wipe on the showcase site
   const [kind, spec] = (TABLE[state] || TABLE.idle).bubble;
   if (spec === null) return { kind, text: (record && record.thought) || placeholderAt(elapsedMs) };
   if (spec === 'quip') return { kind, text: (record && record.quip) || FIXED.noQuip };
@@ -146,7 +150,8 @@ export function welcomeButton(state, waiting = false) {
 }
 /** The welcome's what-to-do-next line: after a piece, and while the start photo still shows the last
  *  visitor's ink (`coverage` is the state's inked fraction). Null when there is nothing to ask. */
-export function welcomePrompt(state, coverage) {
+export function welcomePrompt(state, coverage, replay = false) {
+  if (replay) return state === 'finished' ? FIXED.replayAgain : state === 'human_turn' ? FIXED.replayIntro : null;
   if (state === 'wipe') return `The board is still ${Math.round((coverage || 0) * 100)}% full. Wipe it clean, then press Start.`;
   if (state === 'finished') return 'Wipe the board clean for the next artist, then press Start.';
   return null;

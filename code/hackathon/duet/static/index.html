@@ -47,6 +47,7 @@
   <div class="tr" data-el="chips — top right">
     <span class="chip black" id="count" data-el="chip — exchange counter">Exchange <b>0</b> of 5</span>
     <button class="chip black" id="sound" title="Sound on or off" data-el="chip — sound toggle">Sound off</button>
+    <a class="chip black hidden" id="site-home" href="../" data-el="chip — home">Home</a>
   </div>
   <div class="tr cam" data-el="chip — camera layer"><span class="chip red hidden" id="cam" data-el="chip — camera reconnecting">camera reconnecting…</span></div>
   <div class="cta" id="cta" data-el="call to action row">
@@ -70,6 +71,7 @@
       <p class="welcome-line" data-el="welcome — line 2">Six exchanges. One of a kind. Yours to keep.</p>
       <p class="welcome-line welcome-do hidden" id="welcome-do" data-el="welcome — what to do next"></p>
       <button class="welcome-start" id="start" data-el="welcome — start button" disabled>Getting ready…</button>
+      <a class="welcome-home hidden" id="welcome-home" href="../" data-el="welcome — home link">Back to the homepage</a>
     </div>
   </section>
 
@@ -110,27 +112,27 @@
     <div class="g s3 slider" data-el="exposure"><span class="lbl2">Exposure</span><input type="range" id="exposure" min="-20" max="20" value="0" data-el="exposure slider"><span class="num" id="exposure-val">+0.0</span></div>
     <div class="g s3"><button id="picture-reset" data-el="picture neutral button">Neutral</button><button id="picture-clean" data-el="picture clean preset button">Clean</button></div>
 
-    <span class="lbl">Session</span>
-    <div class="g s3 seg" id="length-seg" data-el="length setting"><button data-v="short" data-el="length — short">Short</button><button data-v="medium" data-el="length — medium">Medium</button><button data-v="long" data-el="length — long">Long</button></div>
-    <div class="g s2 count" data-el="exchanges"><button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button></div>
-    <div class="g s2 seg" id="handoff-seg" data-el="handoff setting"><button data-v="held" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></div>
-    <div class="g s5"></div>
+    <span class="lbl live-only">Session</span>
+    <div class="g s3 seg live-only" id="length-seg" data-el="length setting"><button data-v="short" data-el="length — short">Short</button><button data-v="medium" data-el="length — medium">Medium</button><button data-v="long" data-el="length — long">Long</button></div>
+    <div class="g s2 count live-only" data-el="exchanges"><button id="ex-minus" data-el="exchanges — minus">−</button><span class="num" id="ex" data-el="exchanges — value">5</span><button id="ex-plus" data-el="exchanges — plus">+</button></div>
+    <div class="g s2 seg live-only" id="handoff-seg" data-el="handoff setting"><button data-v="held" data-el="handoff — held">Held</button><button data-v="dock" data-el="handoff — dock">Dock</button></div>
+    <div class="g s5 live-only"></div>
 
-    <span class="lbl">Artist</span>
-    <div class="g s12 seg" id="artist-seg" data-el="artist setting"><button data-v="abstract" data-el="artist — abstract">Abstract</button><button data-v="mimic" data-el="artist — mimic">Mimic</button><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" data-el="artist — van gogh">Van Gogh</button><button data-v="architect" data-el="artist — architect">Architect</button><button data-v="designer" data-el="artist — designer">Designer</button><button data-v="shader" data-el="artist — shader">Shader</button></div>
+    <span class="lbl live-only">Artist</span>
+    <div class="g s12 seg live-only" id="artist-seg" data-el="artist setting"><button data-v="abstract" data-el="artist — abstract">Abstract</button><button data-v="mimic" data-el="artist — mimic">Mimic</button><button data-v="haring" data-el="artist — haring">Haring</button><button data-v="mondrian" data-el="artist — mondrian">Mondrian</button><button data-v="vangogh" data-el="artist — van gogh">Van Gogh</button><button data-v="architect" data-el="artist — architect">Architect</button><button data-v="designer" data-el="artist — designer">Designer</button><button data-v="shader" data-el="artist — shader">Shader</button></div>
 
-    <span class="lbl">Run</span>
-    <div class="g s2"><button id="pause" data-el="pause / resume button">Pause</button><button id="pass" data-el="pass turn button">Pass turn</button></div>
-    <div class="g s2"><button id="end" data-el="end session button" disabled>End session</button></div>
-    <div class="g s2"><button class="danger" id="relaunch" title="Exit the run so demo.sh starts it again with the code on disk; the page reloads by itself" data-el="relaunch run button">Relaunch run</button></div>
-    <div class="g s2"></div>
-    <div class="g s2"><button class="danger" id="reset-arm" title="Stop the arm, clear its error, lift, and return to the look pose" data-el="reset arm button">Reset arm</button></div>
-    <div class="g s2"><button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button></div>
+    <span class="lbl live-only">Run</span>
+    <div class="g s2 live-only"><button id="pause" data-el="pause / resume button">Pause</button><button id="pass" data-el="pass turn button">Pass turn</button></div>
+    <div class="g s2 live-only"><button id="end" data-el="end session button" disabled>End session</button></div>
+    <div class="g s2 live-only"><button class="danger" id="relaunch" title="Exit the run so demo.sh starts it again with the code on disk; the page reloads by itself" data-el="relaunch run button">Relaunch run</button></div>
+    <div class="g s2 live-only"></div>
+    <div class="g s2 live-only"><button class="danger" id="reset-arm" title="Stop the arm, clear its error, lift, and return to the look pose" data-el="reset arm button">Reset arm</button></div>
+    <div class="g s2 live-only"><button class="danger" id="clear" data-el="clear arm error button">Clear arm error</button></div>
 
-    <span class="lbl">Light</span>
-    <div class="g s3 slider dial" data-el="light direction dial"><span class="sun" id="sun">☀</span><input type="range" id="direction" min="0" max="359" value="0" data-el="light direction slider"><span class="num" id="direction-val" data-el="light direction value">0°</span></div>
-    <div class="g s3 slider" data-el="energy"><span class="lbl2">Energy</span><input type="range" id="energy" min="0" max="100" value="50" data-el="energy slider"><span class="num" id="energy-val" data-el="energy value">0.50</span></div>
-    <div class="g s6"></div>
+    <span class="lbl live-only">Light</span>
+    <div class="g s3 slider dial live-only" data-el="light direction dial"><span class="sun" id="sun">☀</span><input type="range" id="direction" min="0" max="359" value="0" data-el="light direction slider"><span class="num" id="direction-val" data-el="light direction value">0°</span></div>
+    <div class="g s3 slider live-only" data-el="energy"><span class="lbl2">Energy</span><input type="range" id="energy" min="0" max="100" value="50" data-el="energy slider"><span class="num" id="energy-val" data-el="energy value">0.50</span></div>
+    <div class="g s6 live-only"></div>
 
     <div class="status" id="status1" data-el="status line — session"></div>
     <div class="status" id="status2" data-el="status line — claude"></div>

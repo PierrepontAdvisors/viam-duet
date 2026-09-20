@@ -137,3 +137,12 @@ test('a full board at start: the wipe state instructs, the welcome prompts, and 
   assert.match(bubbleForState('finished', null, {}).text, /wipe/i);
   assert.equal(welcomeReturns('start', 'wipe'), false);
 });
+
+test('replay mode on the showcase site: the welcome introduces the recording, the end offers it again, nothing asks for a wipe', () => {
+  assert.equal(welcomePrompt('human_turn', 0, true), FIXED.replayIntro);
+  assert.equal(welcomePrompt('finished', 0.3, true), FIXED.replayAgain);
+  assert.equal(welcomePrompt('robot_draw', 0.3, true), null);
+  assert.deepEqual(bubbleForState('finished', null, { replay: true }), { kind: 'speech', text: FIXED.replayEnd });
+  assert.match(bubbleForState('finished', null, {}).text, /wipe/i);
+  assert.doesNotMatch(FIXED.replayEnd + FIXED.replayIntro + FIXED.replayAgain, /wipe/i);
+});

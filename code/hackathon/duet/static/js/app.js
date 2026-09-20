@@ -12,10 +12,12 @@ import { append, frameEntry, sentEntry, socketEntry } from './diag.js?v=ds7';
 import { initDiagView } from './diagview.js?v=ds7';
 
 const $ = (id) => document.getElementById(id);
+/** The showcase site sets <meta name="duet-replay" content="replay.json">: no socket, a recording drives the page. */
+const REPLAY_URL = (document.querySelector('meta[name="duet-replay"]') || {}).content || null;
 export const app = {
   book: new TurnBook(),
   state: null, currentTurn: null, session: null, robotDone: [], calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
-  feed: null,
+  feed: null, replay: null,
   ws: null, connected: false,
   diag: { entries: [], seq: 0 }, diagView: null,
   viewer: null,
@@ -34,7 +36,9 @@ function record(make) {
   if (app.diagView) app.diagView.onEntry(app.diag.entries);
 }
 export function send(msg) {
-  if (!(msg && app.ws && app.ws.readyState === 1)) return;
+  if (!msg) return;
+  if (app.replay) { app.replay.command(msg); record((t, seq) => sentEntry(msg, t, seq)); return; }   // the recording answers Go, Pause, and Start
+  if (!(app.ws && app.ws.readyState === 1)) return;
   app.ws.send(JSON.stringify(msg));
   record((t, seq) => sentEntry(msg, t, seq));
 }
@@ -57,6 +61,7 @@ function startSession() {
 /** A page that joins mid-session only gets the latest plan in the snapshot. The recorder saved every
  *  earlier plan as plan-NN.svg, so fetch the completed turns' robot strokes from there, once each. */
 async function backfillPlans(session, completedTurns) {
+  if (REPLAY_URL) return;                                  // every plan arrives from the recording in order
   app.backfilled = app.backfilled || new Set();
   for (let t = 1; t <= completedTurns; t++) {
     if (app.backfilled.has(t) || (app.book.get(t) || {}).plan) continue;
@@ -94,6 +99,7 @@ function handle(msg) {
       const known = app.book.shots.length;
       if (!known) app.book.backfill(msg).forEach(s => app.book.addShot(s));
       if (msg.artist && msg.who !== 'start') app.book.note(msg.turn, { artist: msg.artist });
+      if (REPLAY_URL && msg.frame_url) { app.viewer.streamUrl = msg.frame_url; if (app.viewer.live) app.viewer.showLive(); }   // the latest camera frame stands in for the stream
       app.book.addShot(msg); break;
     }
     case 'video': app.video = msg; break;
@@ -116,11 +122,27 @@ function connect() {
   };
 }
 
+/** Replay: load the recording and the player, then drive `handle` as the socket would. */
+async function startReplay(url) {
+  document.body.classList.add('replay');
+  for (const id of ['site-home', 'welcome-home']) { const el = $(id); if (el) el.classList.remove('hidden'); }
+  try {
+    const [{ Player }, replay] = await Promise.all([import('./replay.js?v=ds7'), fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} for ${url}`); return r.json(); })]);
+    const speed = Number(new URLSearchParams(location.search).get('speed')) || 1;
+    const feed = (msg) => { const text = JSON.stringify(msg); const m = parseMessage(text); record((t, seq) => frameEntry(text, m, t, seq)); app.diagView.blink(); if (m) handle(m); };
+    app.replay = new Player(replay, feed, { speed });
+    app.connected = true; app.diagView.setConnected(true); notify({ type: 'socket', connected: true });
+    app.replay.boot();
+  } catch (err) {
+    console.error(err); notify({ type: 'error', message: `the recording did not load: ${err.message}` });
+  }
+}
+
 export function boot() {
   app.viewer = new Viewer({ stage: $('stage'), pic: $('pic'), base: $('base'), photo: $('photo'), ov: $('ov'), fit: $('fit'),
                             mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot'), done: $('l-done') });
   app.ghost = new GhostPen($('l-ghost'), $('ghostpath'), $('ghostpen'));
-  app.viewer.setStream('/stream.mjpg?overlay=0');
+  if (!REPLAY_URL) app.viewer.setStream('/stream.mjpg?overlay=0');
   app.diagView = initDiagView({ light: $('light'), summary: $('diag-summary'), svg: $('diag-timeline'), tbody: $('diag-rows') });
   app.ui = initUI(app, { sendSet, sendCommand, on });
   app.sound = new Sound();
@@ -146,7 +168,7 @@ export function boot() {
       app.prevState = msg.state;
     }
   });
-  connect();
+  if (REPLAY_URL) startReplay(REPLAY_URL); else connect();
 }
 
 boot();
