@@ -43,3 +43,16 @@ test('buttons are toy presses: shadow at rest, lift on hover, squash on press, w
   assert.match(css, /\.go\.pop, \.welcome-start\.pop \{ animation: pop .*?, wiggle/);
   assert.match(css, /prefers-reduced-motion: reduce\) \{\s*button\.chip, \.gear, \.go, \.welcome-start, \.panel button, \.panel a \{ transition: none; \}/);
 });
+
+test('the demo hand: an element in the stage with the pointing-hand SVG, above the menu, out of the way of a real pointer, still under reduced motion', () => {
+  const h = read('index.html');
+  assert.match(h, /<div class="hand hidden" id="hand" data-el="demo hand">\s*<svg viewBox="0 0 60 72" aria-hidden="true">/);
+  assert.ok(h.includes('class="skin"') && h.includes('class="cuff"'), 'the hand has skin and a cuff');
+  assert.ok(h.indexOf('id="hand"') > h.indexOf('id="artist-menu"') && h.indexOf('id="hand"') < h.indexOf('id="caption"'), 'after the CTA row, before the bubble');
+  const css = read('duet.css');
+  assert.match(css, /\.hand \{[^}]*z-index: 5;[^}]*pointer-events: none;/);
+  assert.match(css, /\.hand \{[^}]*transition: left \.5s ease, top \.5s ease/);
+  assert.match(css, /\.hand\.press \{ transform: [^}]*scale\(\.88\)/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.hand \{ transition: none; \} \.hand\.press \{ transform: translate\(-1\.17cqw, -\.17cqw\); \} \}/);
+  assert.ok(!css.includes('#artist-btn { pointer-events: none; }'), 'the picker takes clicks in replay mode');
+});
