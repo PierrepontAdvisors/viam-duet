@@ -86,6 +86,7 @@ function handle(msg) {
       if (msg.session) app.session = msg.session;
       app.state = msg;
       if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop();
+      if (REPLAY_URL && msg.state === 'robot_draw' && app.plan && app.replay) app.ghost.play(app.plan.polylines, { durationMs: app.replay.drawMs(app.plan.polylines.length) });   // the ghost pen is the arm
       if (msg.state === 'finished') archivePlan();                                        // the signature joins the finished vector
       if (msg.session && msg.turn > 0) backfillPlans(msg.session, msg.turn);
       break;
@@ -93,7 +94,7 @@ function handle(msg) {
     case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s, ...(msg.artist ? { artist: msg.artist } : {}) }); break;
     case 'plan': archivePlan(); app.plan = msg;
       if (msg.artist) app.book.note(turnOf(msg), { artist: msg.artist });
-      if (app.state && app.state.state === 'finished') { app.book.note(turnOf(msg), { plan: msg.polylines }); archivePlan(); break; } app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); (app.backfilled = app.backfilled || new Set()).add(turnOf(msg)); app.ghost.play(msg.polylines); break;
+      if (app.state && app.state.state === 'finished') { app.book.note(turnOf(msg), { plan: msg.polylines }); archivePlan(); break; } app.progress = -1; app.viewer.setPlan(msg.polylines, -1); app.book.note(turnOf(msg), { plan: msg.polylines }); (app.backfilled = app.backfilled || new Set()).add(turnOf(msg)); if (!REPLAY_URL) app.ghost.play(msg.polylines); break;   // live: a preview ahead of the arm; replay: the pen waits for robot_draw
     case 'progress': app.progress = msg.stroke; if (app.plan) app.viewer.setPlan(app.plan.polylines, msg.stroke); turnOf(msg); break;
     case 'shot': {
       const known = app.book.shots.length;

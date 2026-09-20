@@ -14,6 +14,12 @@ export const WORDS = {
 };
 const BUDGET_MM = { short: 400, medium: 1200, long: 4000 };
 
+/** How long the scripted arm draws a plan of n strokes, in ms at the given speed: 350 ms a stroke within 3 to 12 s. */
+export function drawMs(strokeCount, speed = 1) {
+  if (!strokeCount) return 0;
+  return Math.round(Math.min(PACE.drawMax, Math.max(PACE.drawMin, strokeCount * PACE.strokeMs)) / (speed > 0 ? speed : 1));
+}
+
 const pad = (n) => String(n).padStart(2, '0');
 const strokeLength = (pl) => pl.reduce((s, p, i) => (i ? s + Math.hypot(p[0] - pl[i - 1][0], p[1] - pl[i - 1][1]) : 0), 0);
 
@@ -67,7 +73,7 @@ export function schedule(replay, speed = 1, session = replay.session) {
     const plan = t.plan || [];
     steps.push(st('plan', n - 1), e({ type: 'plan', polylines: plan, color: t.color || '#1b8f3a', budget_mm: BUDGET_MM[replay.length] || 4000, turn: n, artist }), w(PACE.plan));
     steps.push(st('robot_draw', n - 1), e({ type: 'feed', source: 'held' }));
-    const per = plan.length ? Math.min(PACE.drawMax, Math.max(PACE.drawMin, plan.length * PACE.strokeMs)) / plan.length : 0;
+    const per = plan.length ? drawMs(plan.length) / plan.length : 0;
     let drawn = 0;
     plan.forEach((pl, i) => { drawn += strokeLength(pl); steps.push(w(per), e({ type: 'progress', stroke: i, drawn_mm: Math.round(drawn), turn: n })); });
     coverage = t.coverage ?? coverage;
@@ -92,6 +98,8 @@ export class Player {
     this.lastState = null;
   }
   sessionId() { return this.run <= 1 ? this.replay.session : `${this.replay.session}-r${this.run}`; }
+  /** The page paces its ghost pen to this so the simulated arm finishes as the last progress lands. */
+  drawMs(strokeCount) { return drawMs(strokeCount, this.speed); }
   feed(msg) { if (msg.type === 'state') this.lastState = msg; this.rawFeed(msg); }
   /** Before Start: the calibration and a first state so the page renders and the welcome's Start is live. */
   boot() {

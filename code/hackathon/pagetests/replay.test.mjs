@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { schedule, words, clip, Player, PACE, WORDS } from '../duet/static/js/replay.js';
+import { schedule, words, clip, drawMs, Player, PACE, WORDS } from '../duet/static/js/replay.js';
 
 const SQ = [[40, 40], [80, 40], [80, 80], [40, 80], [40, 40]];
 const LINE = [[100, 100], [140, 100]];
@@ -53,6 +53,12 @@ test('schedule: look and the start shot, then per turn the states and messages t
   assert.deepEqual(m[m.length - 1], { type: 'video', url: 'sessions/sess/session.mp4' });
   const finished = m.filter(x => x.state === 'finished')[0];
   assert.equal(finished.coverage, 0.11); assert.equal(finished.exchanges, 2); assert.equal(finished.hand_guard, 'off');
+});
+
+test('drawMs: 350 ms a stroke, never under 3 s or over 12 s, divided by the speed; the player carries its speed', () => {
+  assert.equal(drawMs(0), 0); assert.equal(drawMs(2), PACE.drawMin); assert.equal(drawMs(10), 3500); assert.equal(drawMs(40), PACE.drawMax);
+  assert.equal(drawMs(10, 2), 1750);
+  assert.equal(new Player(REPLAY, () => {}, { speed: 4 }).drawMs(10), 875);
 });
 
 test('schedule: the human turn waits on Go, drawing is paced by stroke count within bounds, speed divides every wait', () => {
