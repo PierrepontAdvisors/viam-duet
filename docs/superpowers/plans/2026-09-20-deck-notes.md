@@ -145,7 +145,7 @@ test('notes: a fourth card row holds a paper speech bubble, shown only with the 
   assert.match(css, /\.notes p \{[^}]*--caption: 1\.45cqw; font-size: var\(--caption\);/);
   assert.match(css, /\.notes p::before/);
   assert.match(css, /\.stage\.shownotes \.photo img \{ height: 22cqw; \}/);
-  assert.match(css, /\.stage\.shownotes \.flip img \{ height: 23cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.flip img \{ height: 22cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 26cqw; height: 26cqw; \}/);
 });
@@ -179,7 +179,7 @@ Append, before the `/* developer mode */` block:
                         animation-delay: calc(var(--i, 2) * var(--stagger, 80ms) / var(--speed, 1)); }
 /* the fixed-height pictures give the row its space */
 .stage.shownotes .photo img { height: 22cqw; }
-.stage.shownotes .flip img { height: 23cqw; }
+.stage.shownotes .flip img { height: 22cqw; }
 .stage.shownotes .build .photo img { height: 20cqw; }
 .stage.shownotes .what .hero img { width: 26cqw; height: 26cqw; }
 ```
@@ -468,7 +468,7 @@ The Task 2 review measured, with the Task 3 texts in place, spill of 1 to 7cqw b
 .stage.shownotes .card { --display: 6.4cqw; --headline: 4.3cqw; --body: 2.5cqw; --caption: 1.5cqw; }
 ```
 
-(`.foot` and `.notes p` redefine `--caption` on themselves, so they keep their own sizes.) The Task 4 re-review's notes-on sweep, worst first: card 1 8.8cqw, card 7 5.2, card 6 5.0, card 5 4.9, card 3 3.9, card 4 3.0, card 2 1.3; measure against card 1 first. Start at that 0.8 scale; if a card still spills, lower `--body` and `--headline` a further 0.1cqw at a time until Step 2 measures clean on all seven, and only then, if a picture is the tallest child, lower its height rule and update the Task 2 test's pinned value. Add a test assertion pinning whatever scale you land on: `assert.match(css, /\.stage\.shownotes \.card \{ --display: [\d.]+cqw; --headline: [\d.]+cqw; --body: [\d.]+cqw; --caption: [\d.]+cqw; \}/);`. Re-run the deck tests.
+(`.foot` and `.notes p` redefine `--caption` on themselves, so they keep their own sizes.) The Task 4 re-review's notes-on sweep, worst first: card 1 8.8cqw, card 7 5.2, card 6 5.0, card 5 4.9, card 3 3.9, card 4 3.0, card 2 1.3; measure against card 1 first. Start at that 0.8 scale; if a card still spills, lower `--body` and `--headline` a further 0.1cqw at a time until Step 2 measures clean on all seven, and only then, if a picture is the tallest child, lower its height rule and update the Task 2 test's pinned value. What landed (781d8fc): `--display: 6.4cqw; --headline: 4.1cqw; --body: 2.5cqw; --caption: 1.5cqw` (the headline two steps down, since card 1's second thesis line reflows to one line at 4.1; the body held, since no card's tallest child is body text), plus `.stage.shownotes .triptych .m2 .bubble { --body: 2.6cqw; }` because card 3's bubble sets its own token and the card-level scale cannot reach it, and `.stage.shownotes .flip img` at 22cqw. Every card measures 0 overflow with the notes on from 1024 to 1920 wide; the room version is unchanged. Add a test assertion pinning whatever scale you land on: `assert.match(css, /\.stage\.shownotes \.card \{ --display: [\d.]+cqw; --headline: [\d.]+cqw; --body: [\d.]+cqw; --caption: [\d.]+cqw; \}/);`. Re-run the deck tests.
 
 - [ ] **Step 4: Check the toggle and the query**
 
