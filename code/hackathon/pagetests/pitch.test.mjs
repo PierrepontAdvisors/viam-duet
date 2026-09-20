@@ -323,6 +323,7 @@ test('notes: a speech bubble row under the content, shown only with the stage sh
   assert.match(css, /\.triptych \.m2 \.bubble \{ --body: 2\.8cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.card \{ --display: 6\.4cqw; --headline: 4\.1cqw; --body: 2\.5cqw; --caption: 1\.7cqw; \}/);
   assert.match(css, /\.stage\.shownotes \.triptych \.m2 \.bubble \{ --body: 2\.6cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.modules \.mod \.body \{ --body: 2\.3cqw; \}/);
 });
 
 test('notes: every card carries the spoken part in its own aside, in the present tense of the day', () => {

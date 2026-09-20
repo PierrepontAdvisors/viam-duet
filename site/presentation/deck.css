@@ -217,6 +217,7 @@ ul, ol { padding: 0; list-style: none; }
 .stage.shownotes .card { --display: 6.4cqw; --headline: 4.1cqw; --body: 2.5cqw; --caption: 1.7cqw; }
 /* card 3's bubble sets --body on itself, out of that rule's reach; with the notes on it takes the step too */
 .stage.shownotes .triptych .m2 .bubble { --body: 2.6cqw; }
+.stage.shownotes .modules .mod .body { --body: 2.3cqw; }   /* the four-module cards are body-bound; 2.4 still left card 6 0.43cqw at 1920, 2.3 buys it 0.74 */
 
 /* developer mode (press D), from ~/.claude/rules/common/preview-dev-mode.md */
 body.dev [data-el]{outline:1px dashed rgba(39,67,227,.4);outline-offset:-1px;}
