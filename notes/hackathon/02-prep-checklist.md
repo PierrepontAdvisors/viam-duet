@@ -11,7 +11,7 @@
 
 ## Do before hacking starts
 - [ ] `viam login` in a terminal (opens a browser; sign in with the same account as app.viam.com)
-- [ ] Join the hackathon Discord: https://discord.gg/ppFZ9xRKG
+- [ ] Join the hackathon Discord (invite on the Luma event page)
 - [ ] Optionally add Viam's MCP server (https://app.viam.com/mcp) as a connector in Claude so it can read the machine directly
 - [ ] Decide the challenge with the team. Note the pick in `03-plan.md`
 
