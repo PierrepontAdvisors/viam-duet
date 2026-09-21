@@ -1,23 +1,26 @@
 /** Boot: the WebSocket with snapshot and reconnect, message dispatch, and the modules. */
-import { parseMessage, setCommand, command } from './protocol.js?v=ds7';
-import { TurnBook } from './story.js?v=ds7';
-import { Viewer } from './viewer.js?v=ds7';
-import { initUI } from './ui.js?v=ds7';
-import { GhostPen } from './preview.js?v=ds7';
-import { Sound } from './audio.js?v=ds7';
-import { polylinesFromSvg } from './picture.js?v=ds7';
-import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds7';
+import { parseMessage, setCommand, command } from './protocol.js?v=ds8';
+import { TurnBook } from './story.js?v=ds8';
+import { Viewer } from './viewer.js?v=ds8';
+import { initUI, defaultsFor } from './ui.js?v=ds8';
+import { GhostPen } from './preview.js?v=ds8';
+import { Hand } from './hand.js?v=ds8';
+import { Sound } from './audio.js?v=ds8';
+import { polylinesFromSvg } from './picture.js?v=ds8';
+import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds8';
 
-import { append, frameEntry, sentEntry, socketEntry } from './diag.js?v=ds7';
-import { initDiagView } from './diagview.js?v=ds7';
+import { append, frameEntry, sentEntry, socketEntry } from './diag.js?v=ds8';
+import { initDiagView } from './diagview.js?v=ds8';
 
 const $ = (id) => document.getElementById(id);
 /** The showcase site sets <meta name="duet-replay" content="replay.json">: no socket, a recording drives the page. */
 const REPLAY_URL = (document.querySelector('meta[name="duet-replay"]') || {}).content || null;
+/** `?speed=2` runs the recording, and the hand, twice as fast. */
+const SPEED = Number(new URLSearchParams(location.search).get('speed')) || 1;
 export const app = {
   book: new TurnBook(),
   state: null, currentTurn: null, session: null, robotDone: [], calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
-  feed: null, replay: null,
+  feed: null, replay: null, hand: null,
   ws: null, connected: false,
   diag: { entries: [], seq: 0 }, diagView: null,
   viewer: null,
@@ -37,7 +40,10 @@ function record(make) {
 }
 export function send(msg) {
   if (!msg) return;
-  if (app.replay) { app.replay.command(msg); record((t, seq) => sentEntry(msg, t, seq)); return; }   // the recording answers Go, Pause, and Start
+  if (app.replay) {                                                  // the recording answers Go, Pause, Start, and an artist pick
+    if (msg.type === 'restart' && app.hand) app.hand.cancel();
+    app.replay.command(msg); record((t, seq) => sentEntry(msg, t, seq)); return;
+  }
   if (!(app.ws && app.ws.readyState === 1)) return;
   app.ws.send(JSON.stringify(msg));
   record((t, seq) => sentEntry(msg, t, seq));
@@ -85,6 +91,7 @@ function handle(msg) {
       if (msg.session && app.session && msg.session !== app.session) { startSession(); msg.fresh = true; }   // a new piece: forget the last one's strokes, and tell the listeners
       if (msg.session) app.session = msg.session;
       app.state = msg;
+      if (app.hand && msg.state !== 'human_turn') app.hand.cancel();                 // the visitor's part is over
       if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop();
       if (REPLAY_URL && msg.state === 'robot_draw' && app.plan && app.replay) app.ghost.play(app.plan.polylines, { durationMs: app.replay.drawMs(app.plan.polylines.length) });   // the ghost pen is the arm
       if (msg.state === 'finished') archivePlan();                                        // the signature joins the finished vector
@@ -128,10 +135,9 @@ async function startReplay(url) {
   document.body.classList.add('replay');
   for (const id of ['site-home', 'welcome-home']) { const el = $(id); if (el) el.classList.remove('hidden'); }
   try {
-    const [{ Player }, replay] = await Promise.all([import('./replay.js?v=ds7'), fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} for ${url}`); return r.json(); })]);
-    const speed = Number(new URLSearchParams(location.search).get('speed')) || 1;
+    const [{ Player }, replay] = await Promise.all([import('./replay.js?v=ds8'), fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} for ${url}`); return r.json(); })]);
     const feed = (msg) => { const text = JSON.stringify(msg); const m = parseMessage(text); record((t, seq) => frameEntry(text, m, t, seq)); app.diagView.blink(); if (m) handle(m); };
-    app.replay = new Player(replay, feed, { speed });
+    app.replay = new Player(replay, feed, { speed: SPEED, cue: (c) => app.hand && app.hand.run(c) });
     app.connected = true; app.diagView.setConnected(true); notify({ type: 'socket', connected: true });
     app.replay.boot();
   } catch (err) {
@@ -143,9 +149,12 @@ export function boot() {
   app.viewer = new Viewer({ stage: $('stage'), pic: $('pic'), base: $('base'), photo: $('photo'), ov: $('ov'), fit: $('fit'),
                             mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot'), done: $('l-done') });
   app.ghost = new GhostPen($('l-ghost'), $('ghostpath'), $('ghostpen'));
+  const handTarget = (name, cue) => (name === 'picker' ? $('artist-btn') : name === 'go' ? $('go')
+    : document.querySelector(`#artist-menu button[data-v="${CSS.escape(cue.artist || '')}"]`));
+  if (REPLAY_URL) app.hand = new Hand($('hand'), { stage: $('stage'), targets: handTarget, speed: SPEED });
   if (!REPLAY_URL) app.viewer.setStream('/stream.mjpg?overlay=0');
   app.diagView = initDiagView({ light: $('light'), summary: $('diag-summary'), svg: $('diag-timeline'), tbody: $('diag-rows') });
-  app.ui = initUI(app, { sendSet, sendCommand, on });
+  app.ui = initUI(app, { sendSet, sendCommand, on, replay: !!REPLAY_URL });
   app.sound = new Sound();
   const soundBtn = $('sound');
   const setSound = (onOff) => {
@@ -154,9 +163,11 @@ export function boot() {
     try { localStorage.setItem('duet.sound', JSON.stringify(onOff)); } catch { /* fine */ }
   };
   soundBtn.onclick = () => setSound(!app.sound.on);
-  let remembered = false;
-  try { remembered = JSON.parse(localStorage.getItem('duet.sound') || 'false'); } catch { /* fine */ }
-  if (remembered) soundBtn.textContent = 'Sound: click to enable';       // audio needs a gesture; the label invites it
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem('duet.sound')); } catch { /* fine */ }
+  const wantsSound = stored === null ? defaultsFor(!!REPLAY_URL).sound : stored;
+  if (wantsSound) soundBtn.textContent = 'Sound: click to enable';        // audio needs a gesture; the label invites it
+  if (wantsSound && REPLAY_URL) $('start').addEventListener('click', () => { if (!app.sound.on) setSound(true); }, { once: true });   // the demo: Start is the first gesture, so sound comes on there
   on((msg) => {
     const s = app.sound;
     if (msg.type === 'interpretation') s.speak(msg.thought);

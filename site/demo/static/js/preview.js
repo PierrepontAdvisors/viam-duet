@@ -1,6 +1,6 @@
 /** The ghost pen: traces the whole plan once at a constant speed, ahead of the real arm. In replay mode it
  *  is the arm: `play(plan, { durationMs })` paces the trace to the scripted drawing time. */
-import { polylineLength, pointAlong, tracePath } from './geometry.js?v=ds7';
+import { polylineLength, pointAlong, tracePath } from './geometry.js?v=ds8';
 
 export class GhostPen {
   constructor(group, path, pen, { mmPerSec = 60 } = {}) {

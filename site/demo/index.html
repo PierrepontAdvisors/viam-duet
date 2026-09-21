@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="duet-replay" content="replay.json">
 <title>Duet · demo</title>
-<link rel="stylesheet" href="static/fredoka.css?v=ds7">
-<link rel="stylesheet" href="static/tokens.css?v=ds7">
-<link rel="stylesheet" href="static/duet.css?v=ds7">
+<link rel="stylesheet" href="static/fredoka.css?v=ds8">
+<link rel="stylesheet" href="static/tokens.css?v=ds8">
+<link rel="stylesheet" href="static/duet.css?v=ds8">
 </head>
 <body>
 <!-- Live stream: /stream.mjpg?overlay=0 (set by app.js); state over the WebSocket at /ws. -->
@@ -59,6 +59,13 @@
     </div>
   </div>
   <button class="go home hidden" id="home" data-el="return to home button">Return to home</button>
+  <div class="hand hidden" id="hand" data-el="demo hand">
+    <svg viewBox="0 0 60 72" aria-hidden="true">
+      <rect class="cuff" x="19" y="56" width="37" height="14" rx="4"/>
+      <path class="skin" d="M14 2c-3.4 0-6 2.6-6 6v32c-2-2-5.4-2.4-7.4-.5-1.5 1.5-1 3.6.5 5.1l10 12.4c4 4.6 9 6.8 15 6.8h12c8 0 14-6.2 14-14.2v-14c0-3-2.5-5.5-5.5-5.5-1.5 0-3 .6-4 1.6-.6-2.6-3-4.6-5.8-4.6-1.7 0-3.3.7-4.4 1.9-.9-2.3-3.1-3.9-5.6-3.9-1.3 0-2.5.4-3.5 1.1V8c0-3.4-2.7-6-6-6z"/>
+      <path class="line" d="M30.5 30.5v9M40.5 31.5v9M50 33.5v8"/>
+    </svg>
+  </div>
 
   <div class="sub" id="caption" data-el="bubble">
     <div class="bubble speech" id="bubble"><p id="words" data-el="bubble — words"></p></div>
@@ -156,6 +163,6 @@
   <div class="dev-label" id="devLabel"></div>
   <div class="dev-toast" id="devToast"></div>
 </div>
-<script type="module" src="static/js/app.js?v=ds7"></script>
+<script type="module" src="static/js/app.js?v=ds8"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 /** The diagnostics drawer's DOM: the status light, the header numbers, the timeline SVG, and the log table.
  *  Redraws once a second while open; the table only when an entry arrives, so it never flickers while read. */
-import { WINDOW_MS, summarize, fold, clock, header, timeline } from './diag.js?v=ds7';
+import { WINDOW_MS, summarize, fold, clock, header, timeline } from './diag.js?v=ds8';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const VB_W = 1000, VB_H = 92, LABEL_W = 92, BAND_H = 8, TICK_H = 10;   // viewBox units

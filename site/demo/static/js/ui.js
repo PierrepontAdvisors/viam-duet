@@ -1,18 +1,27 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns, welcomePrompt, ARTIST_INFO, artistName, pickerText } from './story.js?v=ds7';
-import { bubblePosition } from './geometry.js?v=ds7';
-import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds7';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns, welcomePrompt, ARTIST_INFO, artistName, pickerText } from './story.js?v=ds8';
+import { bubblePosition } from './geometry.js?v=ds8';
+import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds8';
 
 const $ = (id) => document.getElementById(id);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(`duet.${k}`); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(`duet.${k}`, JSON.stringify(v)); } catch { /* private window: fine */ } },
 };
-const LAYER_DEFAULTS = { robot: true, ink: true, caption: true, chips: true, board: false, clean: true, vector: false };
+/** The page's defaults where the visitor's browser has nothing stored. The live page shows every layer over the
+ *  camera; the showcase demo opens as Nicholas's screenshot of 2026-09-20 shows: cropped to the board, no ink
+ *  layer (the photos already show the ink), two greens and wider lines, its own levels, sound on. A stroke
+ *  colour in the table is locked: a plan's colour does not replace it. */
+export const LIVE_DEFAULTS = { layers: { robot: true, ink: true, caption: true, chips: true, board: false, clean: true, vector: false },
+                               ink: '#111111', inkWidth: 12, stroke: null, strokeWidth: 14, picture: CLEAN_LEVELS, crop: false, sound: false };
+export const DEMO_DEFAULTS = { layers: { ...LIVE_DEFAULTS.layers, ink: false }, ink: '#37e65b', inkWidth: 38, stroke: '#1fcf4f', strokeWidth: 24,
+                               picture: { brightness: 0, contrast: 0.84, exposure: 1.4 }, crop: true, sound: true };
+export const defaultsFor = (replay) => (replay ? DEMO_DEFAULTS : LIVE_DEFAULTS);
 const LAYER_NODES = { ink: 'l-ink', board: 'l-board' };
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
-export function initUI(app, { sendSet, sendCommand, on }) {
+export function initUI(app, { sendSet, sendCommand, on, replay = false }) {
+  const D = defaultsFor(replay);
   const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null, relaunching: false };
   const stage = $('stage'), viewer = app.viewer;
 
@@ -29,13 +38,13 @@ export function initUI(app, { sendSet, sendCommand, on }) {
   }
   for (const b of document.querySelectorAll('[data-layer]')) {
     const name = b.dataset.layer;
-    applyLayer(name, store.get(`layer.${name}`, LAYER_DEFAULTS[name]));
+    applyLayer(name, store.get(`layer.${name}`, D.layers[name]));
     b.onclick = () => applyLayer(name, !b.classList.contains('on'));
   }
   const inkColor = $('ink-color'), strokeColor = $('stroke-color');
-  inkColor.value = store.get('color.ink', '#111111'); stage.style.setProperty('--vec-ink', inkColor.value);
+  inkColor.value = store.get('color.ink', D.ink); stage.style.setProperty('--vec-ink', inkColor.value);
   inkColor.oninput = () => { stage.style.setProperty('--vec-ink', inkColor.value); store.set('color.ink', inkColor.value); };
-  const lockedStroke = store.get('color.stroke', null);
+  const lockedStroke = store.get('color.stroke', D.stroke);
   if (lockedStroke) { view.strokeLocked = true; strokeColor.value = lockedStroke; stage.style.setProperty('--vec-stroke', lockedStroke); }
   strokeColor.oninput = () => { view.strokeLocked = true; stage.style.setProperty('--vec-stroke', strokeColor.value); store.set('color.stroke', strokeColor.value); };
   const inkWidth = $('ink-width'), strokeWidth = $('stroke-width');
@@ -43,7 +52,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     stage.style.setProperty('--ink-w', inkWidth.value / 10); stage.style.setProperty('--stroke-w', strokeWidth.value / 10);
     store.set('width.ink', +inkWidth.value); store.set('width.stroke', +strokeWidth.value);
   }
-  inkWidth.value = store.get('width.ink', 12); strokeWidth.value = store.get('width.stroke', 14); applyWidths();
+  inkWidth.value = store.get('width.ink', D.inkWidth); strokeWidth.value = store.get('width.stroke', D.strokeWidth); applyWidths();
   inkWidth.oninput = strokeWidth.oninput = applyWidths;
 
   // ---- picture: brightness, contrast, exposure drive the levels filter on the live frame and the photos ----
@@ -58,7 +67,7 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     $('exposure-val').textContent = `${p.exposure >= 0 ? '+' : ''}${p.exposure.toFixed(1)}`;
     store.set('picture', p);
   }
-  applyPicture({ ...CLEAN_LEVELS, ...store.get('picture', {}) });
+  applyPicture({ ...D.picture, ...store.get('picture', {}) });
   for (const id of ['brightness', 'contrast', 'exposure']) $(id).oninput = () => applyPicture(readPicture());
   $('picture-reset').onclick = () => applyPicture({ ...NEUTRAL_LEVELS });
   $('picture-clean').onclick = () => applyPicture({ ...CLEAN_LEVELS });
@@ -73,6 +82,9 @@ export function initUI(app, { sendSet, sendCommand, on }) {
     a.download = `duet-${app.session || 'session'}-turn-${app.state ? app.state.turn : 0}.svg`;
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
+
+  // ---- view ----
+  if (D.crop) viewer.setCrop(true);                                   // the demo starts cropped; crop is not stored
 
   // ---- chips ----
   function renderChips() {
