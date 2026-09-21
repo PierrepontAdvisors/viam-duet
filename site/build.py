@@ -183,13 +183,33 @@ def replay_data(session_dir: Path, calibration: dict, words: dict[int, tuple[str
     }
 
 
+SITE = "https://viam-duet.vercel.app"
+PREVIEW_DESCRIPTION = ("You draw one mark. Duet looks, understands, and answers in the hand of an artist. "
+                       "Built at Viam's Fine Motor Skills hackathon, New York, September 2026. Honorable mention.")
+PREVIEW_ALT = "A visitor with a red marker and a robot arm with a green marker drawing loops together on a whiteboard."
+
+
+def preview_tags(url: str, title: str) -> str:
+    """Open Graph and Twitter card tags, so a shared link unfurls with the illustration (site/img/og-card.jpg)."""
+    return "\n".join([
+        '<meta property="og:type" content="website">', '<meta property="og:site_name" content="Duet">',
+        f'<meta property="og:title" content="{title}">', f'<meta property="og:description" content="{PREVIEW_DESCRIPTION}">',
+        f'<meta property="og:url" content="{url}">', f'<meta property="og:image" content="{SITE}/img/og-card.jpg">',
+        '<meta property="og:image:width" content="1200">', '<meta property="og:image:height" content="630">',
+        f'<meta property="og:image:alt" content="{PREVIEW_ALT}">', '<meta name="twitter:card" content="summary_large_image">',
+        f'<meta name="twitter:title" content="{title}">', f'<meta name="twitter:description" content="{PREVIEW_DESCRIPTION}">',
+        f'<meta name="twitter:image" content="{SITE}/img/og-card.jpg">', f'<meta name="twitter:image:alt" content="{PREVIEW_ALT}">',
+    ])
+
+
 def rewrite_index(html: str, replay_url: str = "replay.json") -> str:
-    """The page's index for the site: assets relative to demo/, the replay meta tag, a title."""
+    """The page's index for the site: assets relative to demo/, the replay meta tag, a title, the link preview tags."""
     out = html.replace('href="/static/', 'href="static/').replace('src="/static/', 'src="static/')
     marker = '<meta name="viewport" content="width=device-width, initial-scale=1">'
     assert marker in out, "the page's viewport meta moved"
     out = out.replace(marker, f'{marker}\n<meta name="duet-replay" content="{replay_url}">', 1)
-    return out.replace("<title>Duet</title>", "<title>Duet · demo</title>", 1)
+    out = out.replace("<title>Duet</title>", "<title>Duet · demo</title>\n" + preview_tags(f"{SITE}/demo/", "Duet: the demo"), 1)
+    return out
 
 
 def copy_tree(src: Path, dst: Path, skip: set[str] = frozenset()) -> None:
