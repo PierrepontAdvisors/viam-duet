@@ -38,7 +38,7 @@
 .clips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--gutter); }
 .clip { display: flex; flex-direction: column; align-items: center; gap: .6cqw; min-width: 0; }
 .clip video { display: block; height: 30cqw; width: 100%; object-fit: cover; border-radius: calc(var(--paper-radius) - .4cqw); background: #000; }
-.clip .cap { --body: 2.2cqw; min-height: 1.3em; }
+.clip .cap { --body: 2.2cqw; min-height: 1.3em; color: var(--ink); }
 
 /* card 4: four lines on the black plate */
 .lines .words { grid-column: 1 / 13; gap: var(--s2); }
@@ -104,11 +104,12 @@
 .stage.shownotes .duo .photo img { height: 14cqw; }
 .stage.shownotes .clip video { height: 24cqw; }
 .stage.shownotes .lines .line { --headline: 3.3cqw; }
-.stage.shownotes .half .photo img { height: 24cqw; }
+.stage.shownotes .callouts .photo img { height: 24cqw; }
 .stage.shownotes .callouts .headline { --headline: 3.6cqw; }
 .stage.shownotes .callouts .list .paper { --body: 2cqw; }
 .stage.shownotes .oneturn .photo img { height: 16cqw; }
 .stage.shownotes .oneturn .cap { --body: 1.8cqw; }
 .stage.shownotes .oneturn .verb { --display: 4.5cqw; }
 .stage.shownotes .oneturn .m2 .bubble { --body: 2.2cqw; }
-.stage.shownotes .codepanel pre { --body: 1.4cqw; }
+.stage.shownotes .codepanel pre { --body: 1.2cqw; }
+.stage.shownotes .watch .closing { --body: 0.8cqw; }

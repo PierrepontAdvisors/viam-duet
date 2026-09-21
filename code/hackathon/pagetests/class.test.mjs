@@ -211,6 +211,9 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   const sizes = [...css.matchAll(/font-size:\s*([^;}]+)/g)].map((m) => m[1].trim());
   for (const v of sizes) assert.match(v, /^var\(--(display|headline|body|caption)\)$/, `font-size "${v}" is not a token`);
   assert.ok(!/^:root \{[^}]*--(display|headline|body|caption):/m.test(css), 'the type scale stays in deck.css');
+  assert.match(css, /\.oneturn \.cap \{[^}]*color: var\(--ink\)/);
+  assert.match(css, /\.watch \.closing \{[^}]*color: var\(--ink\)/);
+  assert.match(css, /\.clip \.cap \{[^}]*color: var\(--ink\)/);
 });
 
 test('Act 2: the setup with callouts, one turn with three verbs, the two code panels, the flipbook', () => {
