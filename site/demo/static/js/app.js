@@ -1,23 +1,27 @@
 /** Boot: the WebSocket with snapshot and reconnect, message dispatch, and the modules. */
-import { parseMessage, setCommand, command } from './protocol.js?v=ds7';
-import { TurnBook } from './story.js?v=ds7';
-import { Viewer } from './viewer.js?v=ds7';
-import { initUI } from './ui.js?v=ds7';
-import { GhostPen } from './preview.js?v=ds7';
-import { Sound } from './audio.js?v=ds7';
-import { polylinesFromSvg } from './picture.js?v=ds7';
-import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds7';
+import { parseMessage, setCommand, command } from './protocol.js?v=ds9';
+import { TurnBook } from './story.js?v=ds9';
+import { Viewer } from './viewer.js?v=ds9';
+import { initUI, defaultsFor } from './ui.js?v=ds9';
+import { GhostPen } from './preview.js?v=ds9';
+import { Hand } from './hand.js?v=ds9';
+import { Clock } from './clock.js?v=ds9';
+import { Sound } from './audio.js?v=ds9';
+import { polylinesFromSvg } from './picture.js?v=ds9';
+import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds9';
 
-import { append, frameEntry, sentEntry, socketEntry } from './diag.js?v=ds7';
-import { initDiagView } from './diagview.js?v=ds7';
+import { append, frameEntry, sentEntry, socketEntry } from './diag.js?v=ds9';
+import { initDiagView } from './diagview.js?v=ds9';
 
 const $ = (id) => document.getElementById(id);
 /** The showcase site sets <meta name="duet-replay" content="replay.json">: no socket, a recording drives the page. */
 const REPLAY_URL = (document.querySelector('meta[name="duet-replay"]') || {}).content || null;
+/** `?speed=2` runs the recording, and the hand, twice as fast. */
+const SPEED = Number(new URLSearchParams(location.search).get('speed')) || 1;
 export const app = {
   book: new TurnBook(),
   state: null, currentTurn: null, session: null, robotDone: [], calib: null, human: { polylines: [], new: [] }, plan: null, progress: -1, interpretation: null, dock: null, video: null,
-  feed: null, replay: null,
+  feed: null, replay: null, hand: null, pen: null, clock: null,
   ws: null, connected: false,
   diag: { entries: [], seq: 0 }, diagView: null,
   viewer: null,
@@ -37,13 +41,22 @@ function record(make) {
 }
 export function send(msg) {
   if (!msg) return;
-  if (app.replay) { app.replay.command(msg); record((t, seq) => sentEntry(msg, t, seq)); return; }   // the recording answers Go, Pause, and Start
+  if (app.replay) {                                                  // the recording answers Go, Pause, Start, and an artist pick
+    if (msg.type === 'restart' && app.hand) app.hand.cancel();
+    app.replay.command(msg); record((t, seq) => sentEntry(msg, t, seq)); return;
+  }
   if (!(app.ws && app.ws.readyState === 1)) return;
   app.ws.send(JSON.stringify(msg));
   record((t, seq) => sentEntry(msg, t, seq));
 }
 export const sendSet = (changes) => send(setCommand(changes));
 export const sendCommand = (kind) => send(command(kind));
+/** Arrow keys in the demo: the recording moves by a half-exchange, after what animates on its own has stopped. */
+function seek(delta) {
+  if (!app.replay) return;
+  app.hand.cancel(); app.ghost.stop(); app.clock.stop();
+  send({ type: 'seek', delta });
+}
 
 /** The current plan's strokes are done once the next plan arrives or the piece finishes; keep them. */
 function archivePlan() {
@@ -78,18 +91,33 @@ async function backfillPlans(session, completedTurns) {
   }
 }
 
+/** The robot arm rides the robot pen's point during its turn: a board point places its tip, null hides it. */
+const placeArm = (p) => { const arm = $('arm'), q = p && app.viewer.boardToStage(p); arm.classList.toggle('hidden', !q); if (q) { arm.style.left = `${q[0]}px`; arm.style.top = `${q[1]}px`; } };
+
+/** Replay: the hand, the two pens, and the clock follow the state. A pause holds them where they are and the
+ *  first state after it resumes them; a resumed robot_draw keeps its trace instead of starting it again. */
+function replayState(msg, wasPaused) {
+  if (msg.state === 'paused') { app.hand.pause(); app.ghost.pause(); app.clock.pause(); return; }
+  if (wasPaused) { app.hand.resume(); app.ghost.resume(); app.clock.resume(); return; }
+  if (msg.state !== 'human_turn') app.hand.cancel();                                    // the visitor's part is over
+  if (['human_turn', 'finished', 'idle'].includes(msg.state)) app.ghost.stop();
+  if (['look', 'finish', 'finished', 'idle'].includes(msg.state)) app.clock.stop();
+  if (msg.state === 'robot_draw' && app.plan && app.replay) app.ghost.play(app.plan.polylines, { durationMs: app.replay.drawMs(app.plan.polylines.length), onMove: placeArm });   // the ghost pen is the arm
+}
+
 function handle(msg) {
   switch (msg.type) {
     case 'calib': app.calib = msg; app.viewer.setCalib(msg); break;
-    case 'state':
+    case 'state': {
+      const wasPaused = !!(app.state && app.state.state === 'paused');
       if (msg.session && app.session && msg.session !== app.session) { startSession(); msg.fresh = true; }   // a new piece: forget the last one's strokes, and tell the listeners
       if (msg.session) app.session = msg.session;
       app.state = msg;
-      if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop();
-      if (REPLAY_URL && msg.state === 'robot_draw' && app.plan && app.replay) app.ghost.play(app.plan.polylines, { durationMs: app.replay.drawMs(app.plan.polylines.length) });   // the ghost pen is the arm
+      if (REPLAY_URL) replayState(msg, wasPaused); else if (['human_turn', 'finished', 'paused', 'idle'].includes(msg.state)) app.ghost.stop();
       if (msg.state === 'finished') archivePlan();                                        // the signature joins the finished vector
       if (msg.session && msg.turn > 0) backfillPlans(msg.session, msg.turn);
       break;
+    }
     case 'human': app.human = msg; app.viewer.setInk(msg.polylines); app.book.note(turnOf(msg), { new: msg.new }); break;
     case 'interpretation': app.interpretation = msg; app.book.note(turnOf(msg), { thought: msg.thought, quip: msg.quip, sees: msg.sees, adds: msg.adds, source: msg.source, latency_s: msg.latency_s, ...(msg.artist ? { artist: msg.artist } : {}) }); break;
     case 'plan': archivePlan(); app.plan = msg;
@@ -128,10 +156,9 @@ async function startReplay(url) {
   document.body.classList.add('replay');
   for (const id of ['site-home', 'welcome-home']) { const el = $(id); if (el) el.classList.remove('hidden'); }
   try {
-    const [{ Player }, replay] = await Promise.all([import('./replay.js?v=ds7'), fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} for ${url}`); return r.json(); })]);
-    const speed = Number(new URLSearchParams(location.search).get('speed')) || 1;
+    const [{ Player }, replay] = await Promise.all([import('./replay.js?v=ds9'), fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} for ${url}`); return r.json(); })]);
     const feed = (msg) => { const text = JSON.stringify(msg); const m = parseMessage(text); record((t, seq) => frameEntry(text, m, t, seq)); app.diagView.blink(); if (m) handle(m); };
-    app.replay = new Player(replay, feed, { speed });
+    app.replay = new Player(replay, feed, { speed: SPEED, cue: (c) => { if (c.hand) app.hand.run(c); if (c.clock) app.clock.start({ who: c.clock, ms: c.ms }); } });
     app.connected = true; app.diagView.setConnected(true); notify({ type: 'socket', connected: true });
     app.replay.boot();
   } catch (err) {
@@ -143,9 +170,18 @@ export function boot() {
   app.viewer = new Viewer({ stage: $('stage'), pic: $('pic'), base: $('base'), photo: $('photo'), ov: $('ov'), fit: $('fit'),
                             mask: $('mask'), maskpath: $('maskpath'), ink: $('l-ink'), robot: $('l-robot'), done: $('l-done') });
   app.ghost = new GhostPen($('l-ghost'), $('ghostpath'), $('ghostpen'));
+  const handTarget = (name, cue) => (name === 'picker' ? $('artist-btn') : name === 'go' ? $('go')
+    : name.startsWith('row:') ? document.querySelectorAll('#artist-menu button')[+name.slice(4)]
+    : document.querySelector(`#artist-menu button[data-v="${CSS.escape(cue.artist || '')}"]`));
+  if (REPLAY_URL) {
+    app.pen = new GhostPen($('l-hand'), $('handpath'), $('handpen'));
+    app.hand = new Hand($('hand'), { stage: $('stage'), targets: handTarget, tracer: app.pen, toStage: (p) => app.viewer.boardToStage(p), speed: SPEED });
+    app.clock = new Clock($('clock'), { who: $('clock-who'), time: $('clock-time') });
+    $('clock').onclick = () => sendCommand(app.state && app.state.state === 'paused' ? 'resume' : 'pause');
+  }
   if (!REPLAY_URL) app.viewer.setStream('/stream.mjpg?overlay=0');
   app.diagView = initDiagView({ light: $('light'), summary: $('diag-summary'), svg: $('diag-timeline'), tbody: $('diag-rows') });
-  app.ui = initUI(app, { sendSet, sendCommand, on });
+  app.ui = initUI(app, { sendSet, sendCommand, seek, on, replay: !!REPLAY_URL });
   app.sound = new Sound();
   const soundBtn = $('sound');
   const setSound = (onOff) => {
@@ -154,9 +190,11 @@ export function boot() {
     try { localStorage.setItem('duet.sound', JSON.stringify(onOff)); } catch { /* fine */ }
   };
   soundBtn.onclick = () => setSound(!app.sound.on);
-  let remembered = false;
-  try { remembered = JSON.parse(localStorage.getItem('duet.sound') || 'false'); } catch { /* fine */ }
-  if (remembered) soundBtn.textContent = 'Sound: click to enable';       // audio needs a gesture; the label invites it
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem('duet.sound')); } catch { /* fine */ }
+  const wantsSound = stored === null ? defaultsFor(!!REPLAY_URL).sound : stored;
+  if (wantsSound) soundBtn.textContent = 'Sound: click to enable';        // audio needs a gesture; the label invites it
+  if (wantsSound && REPLAY_URL) $('start').addEventListener('click', () => { if (!app.sound.on) setSound(true); }, { once: true });   // the demo: Start is the first gesture, so sound comes on there
   on((msg) => {
     const s = app.sound;
     if (msg.type === 'interpretation') s.speak(msg.thought);

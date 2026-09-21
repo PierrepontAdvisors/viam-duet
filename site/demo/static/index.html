@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duet</title>
-<link rel="stylesheet" href="/static/fredoka.css?v=ds7">
-<link rel="stylesheet" href="/static/tokens.css?v=ds7">
-<link rel="stylesheet" href="/static/duet.css?v=ds7">
+<link rel="stylesheet" href="/static/fredoka.css?v=ds9">
+<link rel="stylesheet" href="/static/tokens.css?v=ds9">
+<link rel="stylesheet" href="/static/duet.css?v=ds9">
 </head>
 <body>
 <!-- Live stream: /stream.mjpg?overlay=0 (set by app.js); state over the WebSocket at /ws. -->
@@ -36,6 +36,7 @@
         <g class="robot" id="l-done" data-el="layer — robot strokes from earlier turns"></g>
         <g class="robot" id="l-robot" data-el="layer — plan strokes"></g>
         <g class="ghost" id="l-ghost" data-el="layer — ghost pen preview"><path id="ghostpath"/><circle id="ghostpen" r="2.2"/></g>
+        <g class="hand-ink" id="l-hand" data-el="layer — the hand's red trace"><path id="handpath"/><circle id="handpen" r="2.2"/></g>
       </g>
     </svg>
   </div>
@@ -43,6 +44,9 @@
   <div class="tl" id="chips" data-el="chips — top left">
     <span class="logo-wrap" id="badge" data-el="logo — Duet"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span>
     <span class="chip white" id="state" data-el="chip — state">Connecting…</span>
+    <button class="chip white clock hidden" id="clock" title="Pause or resume the piece" data-el="chip — turn clock">
+      <i class="fill"></i><b id="clock-who">Visitor</b> <span id="clock-time">0.0 s</span>
+    </button>
   </div>
   <div class="tr" data-el="chips — top right">
     <span class="chip black" id="count" data-el="chip — exchange counter">Exchange <b>0</b> of 5</span>
@@ -58,6 +62,38 @@
     </div>
   </div>
   <button class="go home hidden" id="home" data-el="return to home button">Return to home</button>
+  <div class="hand hidden" id="hand" data-el="demo hand">
+    <svg class="finger" viewBox="0 0 60 72" aria-hidden="true">
+      <rect class="cuff" x="19" y="56" width="37" height="14" rx="4"/>
+      <path class="skin" d="M14 2c-3.4 0-6 2.6-6 6v32c-2-2-5.4-2.4-7.4-.5-1.5 1.5-1 3.6.5 5.1l10 12.4c4 4.6 9 6.8 15 6.8h12c8 0 14-6.2 14-14.2v-14c0-3-2.5-5.5-5.5-5.5-1.5 0-3 .6-4 1.6-.6-2.6-3-4.6-5.8-4.6-1.7 0-3.3.7-4.4 1.9-.9-2.3-3.1-3.9-5.6-3.9-1.3 0-2.5.4-3.5 1.1V8c0-3.4-2.7-6-6-6z"/>
+      <path class="line" d="M30.5 30.5v9M40.5 31.5v9M50 33.5v8"/>
+    </svg>
+    <svg class="marker" viewBox="0 0 60 72" aria-hidden="true">
+      <g transform="rotate(-35 14 2)">
+        <path d="M14 2l-5 9h10z" fill="#111"/>
+        <rect x="9" y="11" width="10" height="46" rx="3" fill="#e5322d" stroke="#111" stroke-width="2.5"/>
+        <rect x="8.5" y="11" width="11" height="7" rx="2" fill="#111"/>
+        <rect x="10.5" y="30" width="7" height="10" rx="1.5" fill="#fff4d6"/>
+      </g>
+    </svg>
+    <span class="tag">Human</span>
+  </div>
+  <div class="arm hidden" id="arm" data-el="demo robot arm">
+    <svg viewBox="0 0 80 80" aria-hidden="true">
+      <g transform="rotate(35 10 76)">
+        <rect class="link" x="6" y="-26" width="8" height="48" rx="4"/>
+        <circle class="joint" cx="10" cy="-24" r="6"/>
+        <rect class="jaw" x="-1" y="20" width="22" height="7" rx="3"/>
+        <rect class="jaw" x="-1" y="25" width="5" height="16" rx="2"/>
+        <rect class="jaw" x="16" y="25" width="5" height="16" rx="2"/>
+        <rect class="barrel" x="5" y="21" width="10" height="46" rx="3"/>
+        <rect class="band" x="4.5" y="60" width="11" height="7" rx="2"/>
+        <rect class="grip" x="6.5" y="44" width="7" height="10" rx="1.5"/>
+        <path class="tip" d="M10 76l-5-9h10z"/>
+      </g>
+    </svg>
+    <span class="tag">Robot</span>
+  </div>
 
   <div class="sub" id="caption" data-el="bubble">
     <div class="bubble speech" id="bubble"><p id="words" data-el="bubble — words"></p></div>
@@ -155,6 +191,6 @@
   <div class="dev-label" id="devLabel"></div>
   <div class="dev-toast" id="devToast"></div>
 </div>
-<script type="module" src="/static/js/app.js?v=ds7"></script>
+<script type="module" src="/static/js/app.js?v=ds9"></script>
 </body>
 </html>

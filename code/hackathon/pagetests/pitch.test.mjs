@@ -157,7 +157,7 @@ test('the deck has seven cards in order carrying the agreed copy, with plain apo
     'You make a mark. It answers back.',
     'A crowded world of creatures, flowers and dancing figures.',
     'A small green dancing figure in the open lower-right space to balance the crowd.',
-    '8 s to look and decide', 'Your mark', 'Duet answers',
+    'about 8 seconds to look and decide', 'Claude says', 'Your mark', 'Duet answers',
     'Everyone leaves with a piece made with a <span class="key">partner</span>.',
     'Ten exchanges. Two artists. One of them was a robot.',
     'You learn their language by <span class="key">answering back</span>.',
@@ -167,23 +167,45 @@ test('the deck has seven cards in order carrying the agreed copy, with plain apo
     'The camera takes a photo of the board.', 'Claude decides what to add.',
     "The artist's style becomes strokes.", 'The Viam motion service draws them.',
     '<span class="key">One person.</span> Two days. Claude and Viam.',
-    'Nicholas Fjellberg Swerdlowe', 'Draw one mark. Duet answers.',
+    'Nicholas Fjellberg Swerdlowe', 'Next: artists you <span class="key">train yourself</span>.',
   ];
   for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
+  assert.match(h, /<div class="paper bubble body"[^>]*>\s*<span class="caption says"/, 'card 3 names the speaker at the top of its bubble');
   assert.ok(!/[‘’]/.test(h), 'use plain apostrophes so quotes are searchable');
+});
+
+test('card 7 is the vision card: the rig line is gone, the next step and a way into the demo are on it', () => {
+  const h = read('index.html');
+  const card7 = h.split(/<section class="card /)[7].split('</section>')[0];
+  assert.ok(!card7.includes('Draw one mark. Duet answers.'), 'the in-room rig instruction is gone');
+  assert.ok(!card7.includes('class="cta'), 'no cta element');
+  assert.match(card7, /<p class="vision body" data-el="card 7 next">Next: artists you <span class="key">train yourself<\/span>\.<\/p>/);
+  assert.match(card7, /<a class="pill demo" href="\.\.\/demo\/" data-el="card 7 demo link — play the demo">/);
+  const css = read('deck.css');
+  assert.ok(!css.includes('.cta {'), 'the cta rule went with its element');
+  assert.match(css, /\.vision \{ color: #fff; margin-top: var\(--s1\); \}/);
+  assert.ok(!/(^|\n)\.next \{/.test(css), 'no bare .next rule: it would restyle card 5\'s pill next badge');
+  assert.match(css, /\.pill\.demo \{[^}]*background: var\(--green\)/);
+  const js = read('deck.js');
+  assert.match(js, /location\.protocol === 'file:'/);
 });
 
 test('every local file the deck references exists, and the four support files are linked', () => {
   const h = read('index.html');
-  const refs = [...h.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
+  const matches = [...h.matchAll(/(src|href)="([^"#:]+)"/g)];
+  const refs = matches.map((m) => m[2]);
   assert.ok(refs.length >= 8, 'expected local references');
-  for (const r of refs) assert.ok(existsSync(DIR + r), `referenced but missing: ${r}`);
+  for (const [, attr, r] of matches) {
+    if (attr === 'href' && r.startsWith('../')) continue; // links that leave the folder are the showcase site's (../ home, ../demo/), resolved only when the deck is served from site/presentation/
+    assert.ok(existsSync(DIR + r), `referenced but missing: ${r}`);
+  }
   for (const f of ['fredoka.css', 'deck.css', 'deck.js', 'dev.js']) assert.ok(refs.includes(f), `${f} not linked`);
   assert.ok(refs.includes('img/turn-07-human.jpg') && refs.includes('img/turn-07-robot.jpg'), 'card 3 photos are the Haring turn of the latest run');
   assert.ok(refs.includes('img/turn-10-final.jpg'), 'card 7 shows the finished piece');
   for (let n = 1; n <= 7; n++) assert.ok(refs.includes(`img/plate-${n}.jpg`), `plate ${n} not referenced`);
   for (const hero of ['hero-thesis', 'hero-duet']) assert.ok(refs.includes(`img/${hero}.jpg`), `${hero} not referenced`);
   assert.ok(!/type="module"/.test(h), 'module scripts do not load over file:// in Chrome');
+  assert.deepEqual([...h.matchAll(/href="(\.\.\/[^"]*)"/g)].map((m) => m[1]).sort(), ['../', '../demo/'], 'exactly two links leave the deck folder');
 });
 
 test('developer mode is wired: badge, label, toast, and unique data-el names on the cards', () => {
@@ -254,7 +276,7 @@ test('card 6 steps carry icons, card 5 has four modules, motion is defined', () 
   }
   const sections = h.split(/<section class="card /).slice(1);
   assert.equal((sections[4].match(/class="paper mod/g) || []).length, 4, 'card 5 has four modules');
-  assert.ok(sections[4].includes('Your own artist') && sections[4].includes('>Next<'), 'fourth module is marked Next');
+  assert.ok(sections[4].includes('Your own artist') && sections[4].includes('>Coming next<'), 'fourth module is marked Coming next');
   assert.equal((sections[5].match(/class="viam caption"/g) || []).length, 0, 'card 6 Viam lines folded into the boxes for the big room');
   assert.ok(sections[5].includes('<span class="key">Viam</span> under every step.'), 'card 6 still credits Viam');
   assert.ok(!sections[4].includes('class="pill prompt"'), 'card 5 prompt pill dropped for the big room');
@@ -262,4 +284,71 @@ test('card 6 steps carry icons, card 5 has four modules, motion is defined', () 
   const css = read('deck.css');
   assert.match(css, /@keyframes pop/);
   assert.match(css, /prefers-reduced-motion: reduce\)[^}]*\{[^}]*\.card\.active \* \{ animation: none !important; \}/);
+});
+
+test('notes: parseNotes reads ?notes=0 as hidden and everything else as shown', () => {
+  const D = loadDeck();
+  assert.equal(D.parseNotes(''), true);
+  assert.equal(D.parseNotes('?speed=2'), true);
+  assert.equal(D.parseNotes('?notes=0'), false);
+  assert.equal(D.parseNotes('?notes=1'), true);
+  assert.equal(D.parseNotes('?a=1&notes=0'), false);
+});
+
+test('notes: N and the Notes pill toggle them; the stage learns the setting from the URL at load', () => {
+  const js = read('deck.js');
+  assert.match(js, /case 'n':[\s\S]{0,40}setNotes\(!notes\);\s*return;/);
+  assert.match(js, /notesBtn\.addEventListener\('click'/);
+  assert.match(js, /stage\.classList\.toggle\('shownotes', on\)/);
+  assert.match(js, /setNotes\(parseNotes\(location\.search\)\)/);
+  assert.match(js, /notesBtn\.textContent = on \? 'Notes on' : 'Notes off'/);
+  const h = read('index.html');
+  assert.match(h, /<button id="notes" class="pill" type="button" aria-pressed="true" data-el="playbar — notes button">Notes<\/button>/);
+});
+
+test('notes: a speech bubble row under the content, shown only with the stage shownotes class, and the photos make room', () => {
+  const css = read('deck.css');
+  assert.match(css, /\.card \{[^}]*grid-template-rows: auto minmax\(0, 1fr\) auto;/);   // three explicit rows: a hidden aside must not leave an empty gapped track
+  assert.match(css, /\.notes \{ display: none;/);
+  assert.match(css, /\.stage\.shownotes \.notes \{ display: flex; \}/);
+  assert.match(css, /\.notes p \{[^}]*--caption: 1\.6cqw; font-size: var\(--caption\);/);
+  assert.match(css, /\.notes p::before/);
+  assert.match(css, /\.notes p::after/);
+  assert.match(css, /\.notes \.frame \{ display: block;/);
+  assert.match(css, /\.plate-black \.notes p::before \{ border-top-color: #fff; \}/);
+  assert.match(css, /\.stage\.shownotes \.photo img \{ height: 22cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.flip img \{ height: 21cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.build \.photo img \{ height: 20cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.what \.hero img \{ width: 24cqw; height: 24cqw; \}/);
+  assert.match(css, /\.triptych \.m2 \.bubble \{ --body: 2\.8cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.card \{ --display: 6\.4cqw; --headline: 4\.1cqw; --body: 2\.5cqw; --caption: 1\.7cqw; padding-top: 3\.5cqw; row-gap: 1\.2cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.triptych \.m2 \.bubble \{ --body: 2\.6cqw; \}/);
+  assert.match(css, /\.stage\.shownotes \.modules \.mod \.body \{ --body: 2\.3cqw; \}/);
+});
+
+test('notes: every card carries the spoken part in its own aside, in the present tense of the day', () => {
+  const h = read('index.html');
+  const sections = h.split(/<section class="card /).slice(1);
+  assert.equal(sections.length, 7);
+  const frameLine = 'The two-minute pitch, as given at Viam\'s Fine Motor Skills hackathon, New York, September 19, 2026. Click the right two thirds to advance, the left third to go back.';
+  assert.match(sections[0], /<p><span class="frame">The two-minute pitch/, 'card 1 sets its frame line apart');
+  const LINES = {
+    1: [frameLine, 'an AI creative partner with a body'],
+    2: ['anyone who can hold a marker'],
+    3: ['traced into millimetre lines'],
+    4: ['The core feature is co-creation'],
+    5: ['Each artist is a style module'],
+    6: ['How it works, in four steps'],
+    7: ['sketch with my grandchildren in his hand'],
+  };
+  sections.forEach((s, i) => {
+    const n = i + 1;
+    assert.equal((s.match(/<aside class="notes"/g) || []).length, 1, `card ${n} has one notes aside`);
+    assert.ok(s.includes(`data-el="card ${n} notes — the spoken part"`), `card ${n} notes are named`);
+    assert.match(s, /<\/div>\s*\n\s*<aside class="notes"/, `card ${n} notes sit directly after the content, before the footer`);
+    const head = s.slice(0, s.indexOf('<aside class="notes"'));
+    assert.equal((head.match(/<div\b/g) || []).length, (head.match(/<\/div>/g) || []).length, `card ${n} notes are a direct child of the card`);
+    assert.ok(s.indexOf('<aside class="notes"') < s.indexOf('<footer class="band foot"'), `card ${n} notes sit above the footer`);
+    for (const line of LINES[n]) assert.ok(s.includes(line), `card ${n} note missing: ${line}`);
+  });
 });
