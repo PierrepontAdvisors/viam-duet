@@ -42,3 +42,9 @@ code/hackathon/sessions/
 .claude/worktrees/
 .gstack/
 .playwright-mcp/
+
+# class deck: source drop folder, other teams' clips, and photos with identifiable people (public repo)
+hackathon-videos/
+docs/duet/class/video/
+docs/duet/class/img/crowd.jpg
+docs/duet/class/img/medal.jpg
