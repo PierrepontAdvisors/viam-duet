@@ -8,12 +8,12 @@ import { CLEAN_LEVELS } from '../duet/static/js/picture.js';
 const DIR = fileURLToPath(new URL('../duet/static/', import.meta.url));
 const read = (name) => readFileSync(DIR + name, 'utf8');
 
-test('the live page keeps its defaults; the demo opens as the 2026-09-20 screenshot: cropped, no ink layer, two greens, wider lines, its levels, sound on', () => {
+test('the live page keeps its defaults; the demo opens as the second 2026-09-20 screenshot: full view, board outline on, clean off, no ink layer, two greens, wide lines, its levels, sound on', () => {
   assert.deepEqual(LIVE_DEFAULTS, { layers: { robot: true, ink: true, caption: true, chips: true, board: false, clean: true, vector: false },
                                     ink: '#111111', inkWidth: 12, stroke: null, strokeWidth: 14, picture: CLEAN_LEVELS, crop: false, sound: false });
-  assert.deepEqual(DEMO_DEFAULTS, { layers: { robot: true, ink: false, caption: true, chips: true, board: false, clean: true, vector: false },
-                                    ink: '#37e65b', inkWidth: 38, stroke: '#1fcf4f', strokeWidth: 24,
-                                    picture: { brightness: 0, contrast: 0.84, exposure: 1.4 }, crop: true, sound: true });
+  assert.deepEqual(DEMO_DEFAULTS, { layers: { robot: true, ink: false, caption: true, chips: true, board: true, clean: false, vector: false },
+                                    ink: '#37e65b', inkWidth: 38, stroke: '#1fcf4f', strokeWidth: 38,
+                                    picture: { brightness: -0.03, contrast: 0.9, exposure: 1.1 }, crop: false, sound: true });
   assert.equal(defaultsFor(true), DEMO_DEFAULTS); assert.equal(defaultsFor(false), LIVE_DEFAULTS);
 });
 
