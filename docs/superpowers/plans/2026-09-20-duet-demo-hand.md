@@ -846,7 +846,7 @@ git commit -m "feat(page): the demo hand runs on the Player's cues and stops off
 From the repository root (the worktree has no `sessions/` folder; the recordings live in the main checkout):
 
 ```bash
-/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python site/build.py --session 20260919-151119 --sessions /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/sessions
+code/hackathon/.venv/bin/python site/build.py --session 20260919-151119 --sessions <main checkout>/code/hackathon/sessions
 git status --short site | head -20
 git diff --stat site/demo/replay.json
 ```

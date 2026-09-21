@@ -1018,7 +1018,7 @@ git commit -m "feat(page): the demo's hand draws with a red pen and wears Visito
 From the repository root:
 
 ```bash
-/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python site/build.py --session 20260919-151119 --sessions /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/sessions
+code/hackathon/.venv/bin/python site/build.py --session 20260919-151119 --sessions <main checkout>/code/hackathon/sessions
 git diff --stat site/demo/replay.json
 ```
 

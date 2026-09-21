@@ -14,6 +14,7 @@ on the page starts a fresh piece without a restart.
 from __future__ import annotations
 
 import argparse
+import os
 import asyncio
 import contextlib
 import json
@@ -38,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="run Duet")
     p.add_argument("--fake", action="store_true", help="no machine: replay real boards through a fake camera and arm")
     p.add_argument("--claude", action="store_true", help="with --fake: call the real Claude anyway")
-    p.add_argument("--replay", default="20260918-190258", help="with --fake: the session folder whose boards are replayed")
+    p.add_argument("--replay", default="20260918-190258", help="with --fake: a session name under sessions/, or a path to a folder of turn photos (the showcase session ships in site/demo/sessions)")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--host", default="127.0.0.1", help="the page accepts arm commands from any client, so stay on loopback unless a second screen needs it")
     p.add_argument("--artist", choices=ARTISTS, default=cfg.ARTIST)
@@ -58,10 +59,17 @@ def replay_paths(folder: Path) -> tuple[Path, list[Path], list[Path]]:
         return int(re.match(r"turn-(\d+)-", p.name).group(1))
     start = folder / "turn-00-start.jpg"
     if not start.exists():
-        raise SystemExit(f"no recorded session at {folder}")
+        raise SystemExit(f"no recorded session at {folder}: record one against the machine, or pass --replay a folder of turn photos, "
+                         "for example the showcase session at site/demo/sessions/20260919-151119 (from code/hackathon: "
+                         "--replay ../../../site/demo/sessions/20260919-151119)")
     humans = sorted(folder.glob("turn-*-human.jpg"), key=turn)
     robots = sorted(folder.glob("turn-*-robot.jpg"), key=turn)
     return start, humans, robots
+
+
+def replay_folder(value: str) -> Path:
+    """`--replay` is a session name under sessions/ (gitignored recordings) or a path to any folder of turn photos."""
+    return Path(value) if ("/" in value or os.sep in value) else cfg.SESSIONS_DIR / value
 
 
 VISITOR_WAITS = (2.0, 0.6, 1.0)   # the fake visitor: settle, hand over the board, look at the mark, then Go
@@ -155,7 +163,7 @@ async def main(args: argparse.Namespace) -> None:
     tasks: list[asyncio.Task] = []
     if args.fake:
         from duet.fakes import FakeBrain, FakeController, FakeFrames
-        start, humans, robots = replay_paths(cfg.SESSIONS_DIR / args.replay)
+        start, humans, robots = replay_paths(replay_folder(args.replay))
         frames = FakeFrames(cv2.imread(str(cfg.FIXTURES_DIR / "look_frame.jpg")), cal)
         frames.show_board(cv2.imread(str(start)))
         frames.robot_boards = [cv2.imread(str(p)) for p in robots]

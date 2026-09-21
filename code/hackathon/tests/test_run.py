@@ -6,6 +6,9 @@ from pathlib import Path
 from duet import recorder, run
 from duet.session import ARTISTS
 
+# The showcase site ships one recorded session, so the fake run has boards to replay in any checkout.
+SHIPPED_SESSION = str(Path(__file__).resolve().parents[3] / "site" / "demo" / "sessions" / "20260919-151119")
+
 
 def test_parser_defaults_and_fake_flags():
     a = run.build_parser().parse_args([])
@@ -13,6 +16,20 @@ def test_parser_defaults_and_fake_flags():
     b = run.build_parser().parse_args(["--fake", "--claude", "--port", "8765", "--artist", "vangogh", "--length", "long",
                                        "--exchanges", "3", "--handoff", "dock", "--replay", "20260918-185927"])
     assert (b.fake, b.claude, b.port, b.artist, b.length, b.exchanges, b.handoff, b.replay) == (True, True, 8765, "vangogh", "long", 3, "dock", "20260918-185927")
+
+
+def test_replay_folder_is_a_session_name_or_a_path(tmp_path, monkeypatch):
+    monkeypatch.setattr(run.cfg, "SESSIONS_DIR", tmp_path / "sessions")
+    assert run.replay_folder("20260918-190258") == tmp_path / "sessions" / "20260918-190258"
+    assert run.replay_folder("../../../site/demo/sessions/20260919-151119") == Path("../../../site/demo/sessions/20260919-151119")
+    assert run.replay_folder(str(tmp_path / "elsewhere")) == tmp_path / "elsewhere"
+
+
+def test_missing_session_names_the_folder_and_the_shipped_one(tmp_path):
+    import pytest
+    with pytest.raises(SystemExit) as e:
+        run.replay_paths(tmp_path / "nope")
+    assert "nope" in str(e.value) and "site/demo/sessions" in str(e.value)
 
 
 def test_replay_boards_come_in_turn_order(tmp_path):
@@ -35,7 +52,7 @@ def test_main_fake_wires_the_loop_and_shuts_down(tmp_path, monkeypatch):
             return super().emit(type, **data)
 
     monkeypatch.setattr(run, "EventBus", SpyBus)
-    args = run.build_parser().parse_args(["--fake", "--port", "0", "--exchanges", "1"])
+    args = run.build_parser().parse_args(["--fake", "--port", "0", "--exchanges", "1", "--replay", SHIPPED_SESSION])
 
     async def scenario():
         task = asyncio.create_task(run.main(args))
@@ -109,7 +126,7 @@ def test_no_guard_runs_the_loop_with_the_hand_guard_off(tmp_path, monkeypatch):
 
     monkeypatch.setattr(run, "EventBus", SpyBus)
     assert run.build_parser().parse_args([]).no_guard is False
-    args = run.build_parser().parse_args(["--fake", "--port", "0", "--exchanges", "1", "--no-guard"])
+    args = run.build_parser().parse_args(["--fake", "--port", "0", "--exchanges", "1", "--no-guard", "--replay", SHIPPED_SESSION])
 
     async def scenario():
         task = asyncio.create_task(run.main(args))
