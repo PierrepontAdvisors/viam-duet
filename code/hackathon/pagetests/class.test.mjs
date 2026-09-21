@@ -155,3 +155,59 @@ test('the wiring: cut prunes and renumbers cards, reveals follow data-step, medi
   assert.match(js, /replaceState\(null, '', '#' \+ state\.card\)/);
   assert.ok(!/innerHTML/.test(js));
 });
+/* ---- the page ---- */
+const sectionsOf = (h) => h.split(/<section class="card /).slice(1);
+const specsFromHtml = (h) => [...h.matchAll(/<section class="card [^"]*" data-card="(\d+)"([^>]*)>/g)].map((m) => ({
+  cut: (/data-cut="(\d+)"/.exec(m[2]) || [, ''])[1],
+  builds: parseInt((/data-builds="(\d+)"/.exec(m[2]) || [, '0'])[1], 10),
+}));
+
+test('the page links the pitch\'s font, stylesheet and developer mode, then its own, as classic scripts', () => {
+  const h = read('index.html');
+  assert.match(h, /<title>A robot that draws back<\/title>/);
+  for (const f of ['../pitch/fredoka.css', '../pitch/deck.css', 'class.css']) assert.ok(h.includes(`<link rel="stylesheet" href="${f}">`), `${f} linked`);
+  assert.ok(h.includes('<script src="class.js"></script>') && h.includes('<script src="../pitch/dev.js"></script>'), 'scripts');
+  assert.ok(!/type="module"/.test(h), 'module scripts do not load over file:// in Chrome');
+  assert.ok(!h.includes('deck.js"'), 'the pitch\'s navigation is not loaded');
+  for (const id of ['id="squiggle"', 'id="squiggle-bright"', 'id="logo"']) assert.ok(h.includes(id), `svg def ${id}`);
+  assert.ok(!/[‘’]/.test(h), 'use plain apostrophes so quotes are searchable');
+});
+
+test('Act 1: the title, the hackathon, the other teams, the diner', () => {
+  const h = read('index.html');
+  const s = sectionsOf(h);
+  assert.ok(s.length >= 4);
+  const copy = [
+    'A robot that draws <span class="key">back</span>.', 'Two days at a robot hackathon.',
+    'Friday 9 am to Saturday 6 pm. Doors lock at night.', 'Teams of 2 or 3. A real robot arm each.', 'Demo at 3:30. Awards at 5.',
+    'My dad was an architect. He always had a pen.',
+    'At the diner, while we waited for the food, we\'d draw together.',
+    'He\'d draw. I\'d draw on top. He\'d draw again. Until the food came.',
+    'I didn\'t figure out that\'s where this came from until halfway through building it.',
+  ];
+  for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
+  assert.ok(s[0].includes('src="img/setup.jpg"'), 'card 1 hero is the arm photo');
+  assert.ok(s[1].includes('src="img/door.jpg"') && s[1].includes('src="img/crowd.jpg"'), 'card 2 shows the door and the room');
+  const videos = [...s[2].matchAll(/<video ([^>]*)>/g)].map((m) => m[1]);
+  assert.equal(videos.length, 4, 'card 3 has four clips');
+  videos.forEach((attrs, i) => {
+    for (const a of ['muted', 'loop', 'playsinline', 'preload="auto"']) assert.ok(attrs.includes(a), `clip ${i + 1} ${a}`);
+    assert.ok(!/\bautoplay\b/.test(attrs), `clip ${i + 1} has no autoplay: class.js plays it on its card`);
+    assert.ok(attrs.includes(`src="video/team-${i + 1}.mp4"`), `clip ${i + 1} source`);
+  });
+  assert.ok(/class="card split lines plate-black"/.test('class="card ' + s[3].slice(0, 60)), 'card 4 is the black text card');
+  assert.equal((s[3].match(/class="line reveal headline" data-step="(\d)"/g) || []).length, 4, 'card 4 reveals four lines');
+  assert.ok(s[3].includes('data-builds="4"'), 'card 4 declares four reveals');
+});
+
+test('class.css: reveals, the half template, no stray font sizes, no redefinition of the pitch\'s tokens', () => {
+  const css = read('class.css');
+  assert.match(css, /\.reveal \{ opacity: 0;/);
+  assert.match(css, /\.reveal\.shown \{ opacity: 1; transform: none; \}/);
+  assert.match(css, /\.stage \.card\.active \.triptych \.module\.reveal \{ animation: none; \}/);
+  assert.match(css, /\.split\.half \.words \{ grid-column: 1 \/ 7; \}/);
+  assert.match(css, /\.split\.half\.photo-left \.figure \{ grid-column: 1 \/ 6; grid-row: 1; \}/);
+  const sizes = [...css.matchAll(/font-size:\s*([^;}]+)/g)].map((m) => m[1].trim());
+  for (const v of sizes) assert.match(v, /^var\(--(display|headline|body|caption)\)$/, `font-size "${v}" is not a token`);
+  assert.ok(!/^:root \{[^}]*--(display|headline|body|caption):/m.test(css), 'the type scale stays in deck.css');
+});

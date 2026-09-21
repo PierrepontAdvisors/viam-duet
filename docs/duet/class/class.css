@@ -1,0 +1,98 @@
+/* Duet class deck: only what deck.css lacks. The type scale, plates, master page, split/triptych/modules templates, paper,
+   pills, bubble, flipbook, pop entrance and developer mode all come from ../pitch/deck.css. Every font-size here is a
+   token; a size steps by redefining the token on the element, the pitch's rule. */
+:root { --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+/* reveals: elements with data-step appear one advance at a time; class.js sets .shown */
+.reveal { opacity: 0; transform: translateY(1cqw); transition: opacity .4s ease, transform .4s ease; }
+.reveal.shown { opacity: 1; transform: none; }
+.stage .card.active .triptych .module.reveal { animation: none; }   /* the pop's fill mode would override the reveal */
+
+/* template: half (words in cols 1-7, figure in cols 7-13); photo-left puts the figure first */
+.split.half .words { grid-column: 1 / 7; }
+.split.half .figure { grid-column: 7 / 13; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--s1); }
+.split.half.photo-left .figure { grid-column: 1 / 6; grid-row: 1; }
+.split.half.photo-left .words { grid-column: 6 / 13; grid-row: 1; }
+.half .photo img { height: 33cqw; width: auto; max-width: 100%; }
+
+/* the modules template's own children pop in deck.css; these are the class deck's */
+.card.active .modules .content > :is(.duo, .facts, .clips, .codes, .flipwrap, .display, .takeaway) {
+  animation: pop calc(.45s / var(--speed, 1)) cubic-bezier(.2, .7, .3, 1) both;
+  animation-delay: calc(var(--i, 3) * var(--stagger, 80ms) / var(--speed, 1)); }
+
+/* takeaways: the lesson of a card, a yellow paper line set apart */
+.takeaway { background: var(--yellow); align-self: flex-start; }
+
+/* card 1: title */
+.title .display { --display: 7cqw; }
+
+/* card 2: two photos and three facts */
+.duo { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--gutter); }
+.duo .photo img { height: 22cqw; width: 100%; object-fit: cover; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--gutter); }
+.facts .paper { --body: 2.4cqw; text-align: center; }
+
+/* card 3: four portrait clips in a row */
+.clips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--gutter); }
+.clip { display: flex; flex-direction: column; align-items: center; gap: .6cqw; min-width: 0; }
+.clip video { display: block; height: 30cqw; width: 100%; object-fit: cover; border-radius: calc(var(--paper-radius) - .4cqw); background: #000; }
+.clip .cap { --body: 2.2cqw; min-height: 1.3em; }
+
+/* card 4: four lines on the black plate */
+.lines .words { grid-column: 1 / 13; gap: var(--s2); }
+.lines .line { --headline: 4.1cqw; }
+
+/* card 5: the setup with numbered callouts on the photo */
+.callouts .words { gap: var(--s1); }
+.callouts .headline { --headline: 4.4cqw; }
+.callouts .list { display: flex; flex-direction: column; gap: var(--s1); }
+.callouts .list .paper { --body: 2.5cqw; padding: .8cqw var(--paper-pad); }
+.shot { position: relative; width: fit-content; }
+.dot { position: absolute; left: var(--x); top: var(--y); width: 4cqw; height: 4cqw; border-radius: 50%; background: var(--yellow); color: var(--ink);
+       border: var(--paper-border) solid var(--ink); display: flex; align-items: center; justify-content: center;
+       font-size: var(--body); font-weight: 700; box-shadow: .3cqw .3cqw 0 var(--ink); }
+.dot.reveal { transform: translate(-50%, -50%) scale(.6); }
+.dot.reveal.shown { transform: translate(-50%, -50%) scale(1); }
+
+/* card 6: a verb over each module of the triptych */
+.oneturn .verb { --display: 6cqw; letter-spacing: .08em; color: #fff; -webkit-text-stroke: .04em var(--ink); paint-order: stroke fill; }
+.oneturn .photo img { height: 22cqw; }
+.oneturn .m2 .bubble { --body: 2.4cqw; }
+.oneturn .cap { --body: 2.2cqw; }
+
+/* card 7: two code panels */
+.code .headline { --headline: 3.8cqw; }
+.codes { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s2); }
+.codepanel { display: flex; flex-direction: column; gap: .6cqw; }
+.codepanel pre { margin: 0; font-family: var(--mono); --body: 1.7cqw; font-size: var(--body); font-weight: 500; line-height: 1.35; white-space: pre; overflow: hidden; }
+
+/* card 8: the flipbook, a line under it */
+.watch .flip img { height: 25cqw; }
+.watch .closing { text-align: center; color: #fff; }
+
+/* card 9: the big number */
+.big .content { align-items: center; text-align: center; }
+.big .display { --display: 12cqw; line-height: 1; }
+.big .closing { --body: 2.6cqw; }
+.big .takeaway { align-self: center; }
+
+/* card 10: the Go button */
+.gobtn { display: inline-block; padding: var(--s2) var(--s4); background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
+         border-radius: 999px; font-size: var(--headline); font-weight: 700; line-height: 1; box-shadow: .7cqw .7cqw 0 var(--ink); }
+.trigger .words { gap: var(--s1); }
+.trigger .headline { --headline: 4.6cqw; }
+.trigger .words .body { --body: 2.4cqw; }
+
+/* card 11: the excerpt and the error line */
+.error .figure { align-items: stretch; }
+.errline { color: var(--human); font-family: var(--mono); }
+
+/* card 12: the four log fields */
+.logfields .paper { display: flex; flex-direction: column; gap: .4cqw; align-items: flex-start; }
+.logfields .num { --display: 6cqw; line-height: 1; color: var(--blue); }
+
+/* card 13: three lines beside the medal */
+.felt .words { gap: var(--s1); }
+
+/* card 14: the advice, two lines on the black plate */
+.advice .words { grid-column: 1 / 13; gap: var(--s3); }

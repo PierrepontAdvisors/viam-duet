@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A robot that draws back</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23ffd400%27/%3E%3Cpath d=%27M6 20q5-9 10 0t10 0%27 fill=%27none%27 stroke=%27%23111%27 stroke-width=%274%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../pitch/fredoka.css">
+<link rel="stylesheet" href="../pitch/deck.css">
+<link rel="stylesheet" href="class.css">
+</head>
+<body>
+
+<svg class="defs" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- squiggle motifs on a 160 x 160 tile, from the pitch deck -->
+    <path id="m-wave" d="M0 24 q10 -14 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0"/>
+    <path id="m-zig" d="M0 140 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14 l10 -14 l10 14"/>
+    <path id="m-ticks" d="M96 56 l-10 -10 M110 50 l0 -14 M124 56 l10 -10 M90 70 l-14 0 M130 70 l14 0"/>
+    <path id="m-dots" d="M30 70 l.01 0 M50 100 l.01 0" stroke-width="10"/>
+    <path id="m-arcs" d="M14 56 a18 18 0 0 1 36 0 M60 116 a14 14 0 0 0 28 0"/>
+    <pattern id="squiggle" width="160" height="160" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#m-wave"/><use href="#m-zig"/><use href="#m-ticks"/><use href="#m-dots"/><use href="#m-arcs"/>
+      </g>
+    </pattern>
+    <pattern id="squiggle-bright" width="160" height="160" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <use href="#m-wave" stroke="#ffd400"/><use href="#m-zig" stroke="#e5322d"/><use href="#m-ticks" stroke="#1f4fd6"/>
+        <use href="#m-dots" stroke="#17a34a"/><use href="#m-arcs" stroke="#ff7a00"/>
+      </g>
+    </pattern>
+    <!-- the Duet logo: four toy alphabet blocks and a marker squiggle; ink parts in currentColor -->
+    <symbol id="logo" viewBox="0 0 320 130">
+      <g transform="rotate(-6 52 64)"><rect x="20" y="32" width="64" height="64" rx="12" fill="#ffd400" stroke="currentColor" stroke-width="5"/><text x="52" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">D</text></g>
+      <g transform="rotate(4 124 64)"><rect x="92" y="32" width="64" height="64" rx="12" fill="#e5322d" stroke="currentColor" stroke-width="5"/><text x="124" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">U</text></g>
+      <g transform="rotate(-3 196 64)"><rect x="164" y="32" width="64" height="64" rx="12" fill="#1f4fd6" stroke="currentColor" stroke-width="5"/><text x="196" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">E</text></g>
+      <g transform="rotate(5 268 64)"><rect x="236" y="32" width="64" height="64" rx="12" fill="#17a34a" stroke="currentColor" stroke-width="5"/><text x="268" y="66" font-family="Fredoka, 'Chalkboard SE', sans-serif" font-weight="700" font-size="46" text-anchor="middle" dominant-baseline="central" fill="currentColor">T</text></g>
+      <path d="M40 118 q10 -10 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="stage" data-el="stage">
+
+  <section class="card split half title plate-yellow" data-card="1" data-el="card 1 — title">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-1.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 1 kicker">01 · Duet</span><span class="wordmark" data-el="card 1 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="words">
+        <h1 class="display" data-el="card 1 headline">A robot that draws <span class="key">back</span>.</h1>
+        <p class="body" data-el="card 1 subtitle">Two days at a robot hackathon.</p>
+      </div>
+      <figure class="paper photo figure" data-el="card 1 photo — the arm over the board"><img src="img/setup.jpg" alt="A robot arm holding a green marker over a whiteboard, a laptop beside it"></figure>
+    </div>
+    <aside class="notes" data-el="card 1 notes — the spoken part"><p>Hi, I'm Nicholas. Last weekend I spent two days at a robot hackathon in New York and built this: a robot arm that draws with you. I'll show you what it is, how it works, and everything that went wrong on the way. Ask in the chat whenever you want; I can see it.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 1 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">1 / 14</span></footer>
+  </section>
+
+  <section class="card modules hackathon plate-red" data-card="2" data-el="card 2 — what a hackathon is">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-2.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 2 kicker">02 · What a hackathon is</span><span class="wordmark" data-el="card 2 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="duo">
+        <figure class="paper photo" data-el="card 2 photo — the door sign"><img src="img/door.jpg" alt="A green sign on a glass door: Please, check in before hacking"></figure>
+        <figure class="paper photo" data-el="card 2 photo — demo day"><img src="img/crowd.jpg" alt="A crowd around a robot arm on demo day"></figure>
+      </div>
+      <ul class="facts">
+        <li class="paper body" data-el="card 2 fact — hours">Friday 9 am to Saturday 6 pm. Doors lock at night.</li>
+        <li class="paper body" data-el="card 2 fact — teams">Teams of 2 or 3. A real robot arm each.</li>
+        <li class="paper body" data-el="card 2 fact — demo">Demo at 3:30. Awards at 5.</li>
+      </ul>
+    </div>
+    <aside class="notes" data-el="card 2 notes — the spoken part"><p>A hackathon is a weekend where people show up to a room with a problem and try to build something real before the time runs out. Viam, a company that makes software for robots, lent every team a real arm. The theme was fine motor skills: plug in a charger, pour water, stack Jenga, sort recycling, move an egg. Or bring your own idea. I brought my own.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 2 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">2 / 14</span></footer>
+  </section>
+
+  <section class="card modules teams plate-blue" data-card="3" data-cut="20" data-el="card 3 — what other teams built">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-3.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 3 kicker">03 · What other teams built</span><span class="wordmark" data-el="card 3 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="clips">
+        <div class="clip paper" data-el="card 3 clip — team 1"><video src="video/team-1.mp4" muted loop playsinline preload="auto"></video><p class="cap body" data-el="card 3 caption — team 1"></p></div>
+        <div class="clip paper" data-el="card 3 clip — team 2"><video src="video/team-2.mp4" muted loop playsinline preload="auto"></video><p class="cap body" data-el="card 3 caption — team 2"></p></div>
+        <div class="clip paper" data-el="card 3 clip — team 3"><video src="video/team-3.mp4" muted loop playsinline preload="auto"></video><p class="cap body" data-el="card 3 caption — team 3"></p></div>
+        <div class="clip paper" data-el="card 3 clip — team 4"><video src="video/team-4.mp4" muted loop playsinline preload="auto"></video><p class="cap body" data-el="card 3 caption — team 4"></p></div>
+      </div>
+    </div>
+    <aside class="notes" data-el="card 3 notes — the spoken part"><p>Four other teams, same arm, same two days. One line about each. Every one of these started with someone saying: what if it could.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 3 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">3 / 14</span></footer>
+  </section>
+
+  <section class="card split lines plate-black" data-card="4" data-builds="4" data-el="card 4 — why I built this">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle-bright)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-7.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 4 kicker">04 · Why I built this</span><span class="wordmark" data-el="card 4 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="words">
+        <p class="line reveal headline" data-step="1" data-el="card 4 line 1">My dad was an architect. He always had a pen.</p>
+        <p class="line reveal headline" data-step="2" data-el="card 4 line 2">At the diner, while we waited for the food, we'd draw together.</p>
+        <p class="line reveal headline" data-step="3" data-el="card 4 line 3">He'd draw. I'd draw on top. He'd draw again. Until the food came.</p>
+        <p class="line reveal headline" data-step="4" data-el="card 4 line 4">I didn't figure out that's where this came from until halfway through building it.</p>
+      </div>
+    </div>
+    <aside class="notes" data-el="card 4 notes — the spoken part"><p>Why a robot that draws with you. My dad was an architect; he always had a pen. At the diner we'd draw together on the placemat until the food came. That's how I got into art. I walked into the hackathon thinking it would be fun to sketch with a robot, and only halfway through building it did I realize I'd built the other side of that table.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 4 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">4 / 14</span></footer>
+  </section>
+
+</div>
+
+<div class="dev-badge">DEV MODE &middot; click an element to copy its name &middot; press D to exit</div>
+<div class="dev-label" id="devLabel"></div>
+<div class="dev-toast" id="devToast"></div>
+
+<script src="class.js"></script>
+<script src="../pitch/dev.js"></script>
+</body>
+</html>
