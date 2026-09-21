@@ -40,7 +40,7 @@ The theme was "fine motor skills": making a robot arm do delicate things. The su
 
 ### 3 · What other teams built (1:30) (cut in 10)
 
-**Four clips.**
+Four clips, no words on the card.
 
 Here's what some other teams built. Same arm, same two days.
 
@@ -154,7 +154,7 @@ The error message was telling me exactly that. The error message is the clue, no
 
 ### 12 · The log (0:45) (cut in 10)
 
-**I wrote down every problem.** Symptom · What I tried · Fix · Why it worked. **Nine entries in two days.** … **This is what debugging actually is.**
+**I wrote down every problem.** A picture of the log, then **1 Symptom · 2 What I tried · 3 Fix · 4 Why it worked**. **Nine entries in two days.** … **This is what debugging actually is.**
 
 One thing I did that I'd tell anyone to do. I wrote down every problem. What I saw. What I tried. What fixed it. Why it worked. Nine entries in two days.
 
