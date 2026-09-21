@@ -77,8 +77,6 @@ Read at a natural pace this runs about 2:20. Card 7 is about 35 seconds. If you 
 
 Do not cut card 7.
 
-Optional family line, after "That's how I got into art": "I grew up in a house where everyone made things. My father designed buildings, my mother designed clothes, my brother makes films." Recommended cut in the pitch, because the close is about your father and the table, and two more people in the last twenty seconds split the focus. It stays in the written version below.
-
 ## One paragraph (submission form, Discord, gallery)
 
 Duet is a robot arm that draws with you. You make a mark on a whiteboard, Claude looks at a photo of the board and says what it sees and what it will add, and a Viam-controlled xArm6 draws the answer in the hand of an artist you choose: Van Gogh, Mondrian or Keith Haring. You take turns until the drawing is done, and everyone leaves with a piece they made with a partner. I came to the Fine Motor Skills hackathon thinking it would be fun to sketch with a robot. Somewhere in the middle of building it, I realized where the idea came from. As a kid I used to draw with my father, an architect, at the diner, trading lines back and forth until the food came, and that is how I got into art. Duet is the other side of that table.
@@ -96,8 +94,3 @@ Pick one.
 ## One line
 
 I learned to draw by drawing with my father at the diner. Duet is a robot that draws back.
-
-## Details only you can fill in
-
-- Which diner, and what you two tended to draw.
-- Whether to name your father.
