@@ -66,11 +66,11 @@
 .code .headline { --headline: 3.8cqw; }
 .codes { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s2); }
 .codepanel { display: flex; flex-direction: column; gap: .6cqw; }
-.codepanel pre { margin: 0; font-family: var(--mono); --body: 1.7cqw; font-size: var(--body); font-weight: 500; line-height: 1.35; white-space: pre; overflow: hidden; }
+.codepanel pre { margin: 0; font-family: var(--mono); --body: 1.6cqw; font-size: var(--body); font-weight: 500; line-height: 1.35; white-space: pre; overflow: hidden; }
 
 /* card 8: the flipbook, a line under it */
 .watch .flip img { height: 25cqw; }
-.watch .closing { text-align: center; color: #fff; }
+.watch .closing { --body: 2.5cqw; text-align: center; color: #fff; }
 
 /* card 9: the big number */
 .big .content { align-items: center; text-align: center; }
@@ -103,3 +103,11 @@
 .stage.shownotes .duo .photo img { height: 14cqw; }
 .stage.shownotes .clip video { height: 24cqw; }
 .stage.shownotes .lines .line { --headline: 3.3cqw; }
+.stage.shownotes .half .photo img { height: 24cqw; }
+.stage.shownotes .callouts .headline { --headline: 3.6cqw; }
+.stage.shownotes .callouts .list .paper { --body: 2cqw; }
+.stage.shownotes .oneturn .photo img { height: 16cqw; }
+.stage.shownotes .oneturn .cap { --body: 1.8cqw; }
+.stage.shownotes .oneturn .verb { --display: 4.5cqw; }
+.stage.shownotes .oneturn .m2 .bubble { --body: 2.2cqw; }
+.stage.shownotes .codepanel pre { --body: 1.4cqw; }

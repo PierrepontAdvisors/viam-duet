@@ -212,3 +212,47 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   for (const v of sizes) assert.match(v, /^var\(--(display|headline|body|caption)\)$/, `font-size "${v}" is not a token`);
   assert.ok(!/^:root \{[^}]*--(display|headline|body|caption):/m.test(css), 'the type scale stays in deck.css');
 });
+
+test('Act 2: the setup with callouts, one turn with three verbs, the two code panels, the flipbook', () => {
+  const h = read('index.html');
+  const s = sectionsOf(h);
+  assert.ok(s.length >= 8);
+  const copy = [
+    'You draw. It looks. It thinks. It draws back.',
+    '1 · a camera on the wrist', '2 · a gripper holding a green marker', '3 · the board: red is a person, green is the robot', '4 · the laptop running the code',
+    '>LOOK<', '>THINK<', '>DRAW<', 'the camera takes a photo', 'the arm follows the points',
+    'A crowded world of creatures, flowers and dancing figures.',
+    'A small green dancing figure in the open lower-right space to balance the crowd.',
+    '8 seconds to look and decide', 'Claude says',
+    'Your turtle and my robot follow the same thing: a list of points.', 'Your turtle', 'My robot (simplified)',
+    'Play with it after: viam-duet.vercel.app',
+  ];
+  for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
+  // card 5: a photo-left half card, four dots on the photo and four list items, all reveals 1..4
+  assert.ok(/^split half photo-left callouts /.test(s[4]), 'card 5 template');
+  assert.ok(s[4].includes('data-builds="4"'));
+  assert.deepEqual([...s[4].matchAll(/class="dot reveal" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2', '3', '4']);
+  assert.deepEqual([...s[4].matchAll(/class="paper body line reveal" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2', '3', '4']);
+  assert.ok(s[4].includes('src="img/setup.jpg"'));
+  // card 6: the pitch's triptych, each module a reveal with its verb
+  assert.ok(/^triptych oneturn /.test(s[5]), 'card 6 template');
+  assert.ok(s[5].includes('data-builds="3"'));
+  assert.deepEqual([...s[5].matchAll(/class="module m\d reveal" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2', '3']);
+  assert.ok(s[5].includes('src="../pitch/img/turn-07-human.jpg"') && s[5].includes('src="../pitch/img/turn-07-robot.jpg"'), 'card 6 uses the crowded-world turn');
+  assert.match(s[5], /<div class="paper bubble body"[^>]*>\s*<span class="caption says"/, 'card 6 names the speaker at the top of its bubble');
+  // card 7: two <pre> panels, verbatim
+  const turtle = [
+    'import turtle', 't = turtle.Turtle()', 'points = [(40, 0), (40, 40),', '          (0, 40), (0, 0)]',
+    't.penup()', 't.goto(0, 0)', 't.pendown()', 'for x, y in points:', '    t.goto(x, y)', 't.penup()',
+  ].join('\n');
+  const robot = [
+    'stroke = points_from_claude()', '# e.g. [(0, 0), (40, 0), (40, 40)]', 'x, y = stroke[0]',
+    'pen_up()', 'move_to(x, y)', 'pen_down()', 'for x, y in stroke[1:]:', '    move_to(x, y)', 'pen_up()',
+  ].join('\n');
+  assert.ok(s[6].includes(`<pre>${turtle}</pre>`), 'turtle panel verbatim');
+  assert.ok(s[6].includes(`<pre>${robot}</pre>`), 'robot panel verbatim');
+  assert.equal((s[6].match(/<pre>/g) || []).length, 2);
+  // card 8: the flipbook elements the wiring looks for
+  assert.ok(s[7].includes('id="flip"') && s[7].includes('id="flipLabel"'), 'card 8 flipbook');
+  assert.ok(s[7].includes('src="../pitch/img/turn-00-start.jpg"'), 'the flipbook starts on the blank board');
+});
