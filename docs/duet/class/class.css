@@ -43,7 +43,7 @@
 .clip .cap { --body: 2.2cqw; min-height: 1.3em; color: var(--ink); }
 
 /* template: story (cards 4, 9, 10, 11, 12, 14): a strip of cartoon panels across the top, the words under them */
-.story { --pad-y: 3cqw; }
+.story { --pad-y: 2.6cqw; }
 .story .content { gap: var(--s1); }
 .strip { display: grid; column-gap: var(--gutter); align-items: start; justify-content: center; width: 100%; }
 .strip.one { grid-template-columns: minmax(0, 32cqw); }
@@ -92,14 +92,19 @@
 .watch .closing { --body: 2.5cqw; text-align: center; color: var(--ink); }
 
 /* card 9: one panel, the words under it; nothing beyond the template */
+.pen .strip.one { grid-template-columns: minmax(0, 36cqw); }
+.pen .under { gap: .4cqw; }
 
 /* card 10: the Go button rides inline after the three lines */
 .gobtn { display: inline-block; padding: .5cqw 1.6cqw; background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
          border-radius: 999px; font-size: var(--body); font-weight: 700; line-height: 1; box-shadow: .35cqw .35cqw 0 var(--ink); }
-.trigger .strip.two { grid-template-columns: repeat(2, minmax(0, 18.5cqw)); }
-.trigger .under { gap: .4cqw; }
-.trigger .under .headline { --headline: 3.4cqw; }
-.trigger .under .body { --body: 1.9cqw; }
+.trigger .gobtn { --body: 2.1cqw; }
+.trigger .strip.two { grid-template-columns: repeat(2, minmax(0, 22cqw)); }
+.trigger .under { gap: 0; }
+.trigger .content { gap: 0; }
+.trigger .under .takeaway { padding-top: 1cqw; padding-bottom: 1cqw; }
+.trigger .under .headline { --headline: 3.8cqw; }
+.trigger .under .body { --body: 2.1cqw; }
 .trigger .under .lines { gap: .2cqw .8cqw; }
 
 /* card 11: the code panel is the strip's second panel, the error line inside it */
@@ -130,11 +135,12 @@
 .stage.shownotes .oneturn .verb { --display: 4.5cqw; }
 .stage.shownotes .oneturn .m2 .bubble { --body: 2.2cqw; }
 .stage.shownotes .codepanel pre { --body: 1.2cqw; }
-.stage.shownotes .error .codepanel pre { --body: .65cqw; }
-.stage.shownotes .error .strip.two { grid-template-columns: repeat(2, minmax(0, 18cqw)); }
-.stage.shownotes .error .under { gap: .2cqw; }
-.stage.shownotes .error .under .headline { --headline: 2.6cqw; }
+.stage.shownotes .error .codepanel pre { --body: .95cqw; }
+.stage.shownotes .error .strip.two { grid-template-columns: repeat(2, minmax(0, 24cqw)); }
+.stage.shownotes .error .under { gap: 0; }
+.stage.shownotes .error .under .headline { --headline: 2.4cqw; }
 .stage.shownotes .error .under .body { --body: 1.7cqw; }
+.stage.shownotes .error .codepanel { gap: .2cqw; }
 .stage.shownotes .watch .flip img { height: 18cqw; }
 .stage.shownotes .watch .closing { --body: 2.2cqw; }
 .stage.shownotes .strip.one { grid-template-columns: minmax(0, 22cqw); }
@@ -146,7 +152,7 @@
 .stage.shownotes .under .body { --body: 2.1cqw; }
 .stage.shownotes .log .under { gap: .2cqw; }
 .stage.shownotes .log .under .headline { --headline: 2.8cqw; }
-.stage.shownotes .trigger .strip.two { grid-template-columns: repeat(2, minmax(0, 11cqw)); }
+.stage.shownotes .trigger .strip.two { grid-template-columns: repeat(2, minmax(0, 16cqw)); }
 .stage.shownotes .trigger .under { gap: .2cqw; }
 .stage.shownotes .trigger .under .headline { --headline: 2.6cqw; }
 .stage.shownotes .trigger .under .body { --body: 1.7cqw; }
