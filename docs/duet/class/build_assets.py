@@ -70,7 +70,7 @@ def convert_clip(src: Path, dst: Path) -> None:
         subprocess.run(
             ["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-t", str(CLIP_SECONDS),
              "-vf", f"scale=-2:{CLIP_HEIGHT}", "-c:v", "libx264", "-crf", "23", "-preset", "medium",
-             "-pix_fmt", "yuv420p", "-an", "-movflags", "+faststart", str(tmp)],
+             "-pix_fmt", "yuv420p", "-an", "-movflags", "+faststart", "-f", "mp4", str(tmp)],
             check=True,
         )
         tmp.replace(dst)

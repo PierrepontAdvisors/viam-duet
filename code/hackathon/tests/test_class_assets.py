@@ -61,6 +61,7 @@ def test_failed_clip_leaves_no_output(tmp_path, monkeypatch):
     m = load()
 
     def fake_run(cmd, check):
+        assert cmd[cmd.index("-f") + 1] == "mp4"
         pathlib.Path(cmd[-1]).write_bytes(b"partial")
         raise subprocess.CalledProcessError(1, cmd)
 
