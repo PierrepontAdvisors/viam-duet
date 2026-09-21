@@ -6,13 +6,13 @@ Built over two days at Viam's Fine Motor Skills hackathon, New York, September 1
 
 ## See it
 
-The showcase site has three pages: a homepage, the pitch deck, and a demo that replays the longest piece of the day, with a cartoon hand doing the visitor's part.
+The showcase site is live at **https://viam-duet.vercel.app**: a homepage, the pitch deck at [/presentation/](https://viam-duet.vercel.app/presentation/), and a demo at [/demo/](https://viam-duet.vercel.app/demo/) that replays the longest piece of the day, with a cartoon hand doing the visitor's part. To serve it locally:
 
 ```
 python3 -m http.server 8090 -d site
 ```
 
-Then open http://localhost:8090/ (the homepage), `/presentation/` (the deck), and `/demo/`. On the demo: Start begins the piece; the arrow keys move it by half an exchange; a click on the turn clock pauses and resumes; C opens the controls, G the diagnostics, D the developer mode. `?speed=2` runs it twice as fast.
+Then open http://localhost:8090/, `/presentation/`, and `/demo/`. On the demo: Start begins the piece; the arrow keys move it by half an exchange; a click on the turn clock pauses and resumes; C opens the controls, G the diagnostics, D the developer mode. `?speed=2` runs it twice as fast.
 
 The deck on its own: `open docs/duet/pitch/index.html`. Right or space advances, 1 to 7 jump, F is fullscreen, P plays it on a loop, N shows the speaker's notes.
 
@@ -57,7 +57,7 @@ Tests: `.venv/bin/python -m pytest -q` for the Python side and `node --test 'pag
 | `code/hackathon/tests/`, `pagetests/` | pytest for the Python side, Node's test runner for the page's modules |
 | `docs/duet/` | The product brief, the design system, mockups, and the pitch deck (`pitch/`) |
 | `docs/superpowers/` | The working record: a design spec and an implementation plan for each piece of the build, in the order they were made |
-| `site/` | The showcase site: homepage, the deck as the presentation, the demo in replay mode with one recorded session; deploys as a static folder |
+| `site/` | The showcase site: homepage, the deck as the presentation, the demo in replay mode with one recorded session; Vercel serves it as a static folder (Root Directory `site`, no build) and redeploys production on every push to `main` |
 | `notes/` | Where the repo began: notes from Viam's 101 workshop (a palletizing robot in simulation) and the hackathon prep |
 | `docs/viam/` | A Markdown mirror of Viam's documentation, kept for offline search; Viam's, under CC BY-SA 4.0 |
 | `resources.md` | Links |
