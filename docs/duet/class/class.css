@@ -50,17 +50,18 @@
 .callouts .list { display: flex; flex-direction: column; gap: var(--s1); }
 .callouts .list .paper { --body: 2.5cqw; padding: .8cqw var(--paper-pad); }
 .shot { position: relative; width: fit-content; }
-.dot { position: absolute; left: var(--x); top: var(--y); width: 4cqw; height: 4cqw; border-radius: 50%; background: var(--yellow); color: var(--ink);
+.dot { position: absolute; left: var(--x); top: var(--y); width: 3.4cqw; height: 3.4cqw; border-radius: 50%; background: var(--yellow); color: var(--ink);
        border: var(--paper-border) solid var(--ink); display: flex; align-items: center; justify-content: center;
-       font-size: var(--body); font-weight: 700; box-shadow: .3cqw .3cqw 0 var(--ink); }
+       --body: 2.2cqw; font-size: var(--body); font-weight: 700; box-shadow: .3cqw .3cqw 0 var(--ink); }
 .dot.reveal { transform: translate(-50%, -50%) scale(.6); }
 .dot.reveal.shown { transform: translate(-50%, -50%) scale(1); }
 
 /* card 6: a verb over each module of the triptych */
+.oneturn .content { align-items: start; }
 .oneturn .verb { --display: 6cqw; letter-spacing: .08em; color: #fff; -webkit-text-stroke: .04em var(--ink); paint-order: stroke fill; }
 .oneturn .photo img { height: 22cqw; }
 .oneturn .m2 .bubble { --body: 2.4cqw; }
-.oneturn .cap { --body: 2.2cqw; }
+.oneturn .cap { --body: 2.2cqw; color: var(--ink); }
 
 /* card 7: two code panels */
 .code .headline { --headline: 3.8cqw; }
@@ -70,7 +71,7 @@
 
 /* card 8: the flipbook, a line under it */
 .watch .flip img { height: 25cqw; }
-.watch .closing { --body: 2.5cqw; text-align: center; color: #fff; }
+.watch .closing { --body: 2.5cqw; text-align: center; color: var(--ink); }
 
 /* card 9: the big number */
 .big .content { align-items: center; text-align: center; }
