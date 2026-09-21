@@ -46,6 +46,8 @@ test('renumber rewrites the two-digit prefix of a kicker', () => {
   assert.equal(D.renumber('04 · Why I built this', 3), '03 · Why I built this');
   assert.equal(D.renumber('14 · One piece of advice', 10), '10 · One piece of advice');
   assert.equal(D.renumber('01 · Duet', 1), '01 · Duet');
+  assert.equal(D.renumber('\n  04 · X', 3), '03 · X');
+  assert.equal(D.renumber('4 · X', 12), '12 · X');
 });
 
 test('advance reveals card 4 one line at a time, then moves on', () => {
@@ -83,6 +85,9 @@ test('back hides the latest reveal, and from the next card lands on the previous
   assert.deepEqual(D.back({ card: 9, build: 0 }, deck), { card: 8, build: 0 });
   const start = { card: 1, build: 0 };
   assert.equal(D.back(start, deck), start);
+  const frozen = Object.freeze({ card: 4, build: 2 });
+  D.back(frozen, deck);
+  assert.deepEqual(frozen, { card: 4, build: 2 });
 });
 
 test('jump clamps to the deck and starts that card unrevealed; parseHash reads #n', () => {
@@ -142,4 +147,11 @@ test('the wiring: cut prunes and renumbers cards, reveals follow data-step, medi
   assert.match(js, /stage\.classList\.toggle\('shownotes', parseNotes\(location\.search\)\)/);
   assert.ok(!/case 'p':/.test(js) && !/case 'n':/.test(js), 'no autoplay or notes keys: the class deck is only ever talked through');
   assert.ok(!/id="play"|getElementById\('play'\)/.test(js), 'no play button');
+  assert.ok(!/data-build(?!s)/.test(js), 'no data-build attribute: .shown is the single source of truth for reveals');
+  assert.ok(js.indexOf('setup(parseCut') < js.indexOf("querySelectorAll('.card video')"), 'the cut runs before media is collected');
+  assert.match(js, /!!flipCard && flipCard\.classList/);
+  assert.match(js, /if \(p && p\.catch\)/);
+  assert.match(js, /e\.metaKey \|\| e\.ctrlKey \|\| e\.altKey/);
+  assert.match(js, /replaceState\(null, '', '#' \+ state\.card\)/);
+  assert.ok(!/innerHTML/.test(js));
 });

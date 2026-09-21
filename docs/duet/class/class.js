@@ -28,12 +28,12 @@
     return specs.filter(function (c) { return !(cut === 10 && c.cut === '20'); });
   }
   function deckOf(specs) {
-    var builds = {};
-    specs.forEach(function (c, i) { if (c.builds) builds[i + 1] = c.builds; });
-    return { cards: specs.length, builds: builds };
+    var steps = {};
+    specs.forEach(function (c, i) { if (c.builds) steps[i + 1] = c.builds; });
+    return { cards: specs.length, builds: steps };
   }
   function renumber(kicker, card) {    // "04 · Why I built this" becomes "03 · ..." in the cut
-    return (card < 10 ? '0' : '') + card + kicker.slice(2);
+    return kicker.replace(/^\s*\d+/, (card < 10 ? '0' : '') + card);
   }
 
   function clamp(card, deck) { return Math.min(deck.cards, Math.max(1, card)); }
@@ -82,7 +82,7 @@
     var all = Array.prototype.slice.call(document.querySelectorAll('.card'));
     cards = [];
     all.forEach(function (el) {
-      if (keep([specOf(el)], cut).length) cards.push(el); else el.parentNode.removeChild(el);
+      if (keep([specOf(el)], cut).length) cards.push(el); else el.parentNode.removeChild(el);   // one-element keep: same rule as the deck
     });
     cards.forEach(function (el, i) {
       el.setAttribute('data-card', String(i + 1));
@@ -96,7 +96,6 @@
     cards.forEach(function (el, i) {
       var active = i + 1 === state.card;
       el.classList.toggle('active', active);
-      if (active) el.setAttribute('data-build', String(state.build));
       Array.prototype.forEach.call(el.querySelectorAll('[data-step]'), function (r) {
         r.classList.toggle('shown', active && parseInt(r.getAttribute('data-step'), 10) <= state.build);
       });
@@ -118,7 +117,7 @@
     if (!flipping && flipTimer !== null) { clearTimeout(flipTimer); flipTimer = null; }
     videos.forEach(function (v) {
       var up = v.closest('.card').classList.contains('active');
-      if (up) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } else v.pause();
+      if (up) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } else v.pause();   // play() rejects when pause() interrupts it, or when a local-only clip is missing on a fresh clone; the console already shows the failed load
     });
   }
   function runFlipbook() {
@@ -169,7 +168,7 @@
     flipImg = document.getElementById('flip');
     flipLabelEl = document.getElementById('flipLabel');
     flipCard = flipImg ? flipImg.closest('.card') : null;
-    videos = Array.prototype.slice.call(document.querySelectorAll('video'));
+    videos = Array.prototype.slice.call(document.querySelectorAll('.card video'));
     stage.classList.toggle('shownotes', parseNotes(location.search));
     state = { card: parseHash(location.hash, deck), build: 0 };
     document.addEventListener('keydown', onKey);
