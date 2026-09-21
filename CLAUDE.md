@@ -7,3 +7,10 @@ Duet is a robot arm that draws with you, built at Viam's Fine Motor Skills hacka
 - The showcase site is generated and committed: after changing the page or the deck, run `code/hackathon/.venv/bin/python site/build.py --sessions site/demo/sessions --session 20260919-151119` from the repository root (the venv, for OpenCV) and commit the result. Bump the `?v=` tag on the page's assets when its scripts or styles change.
 - `docs/viam` is a mirror of Viam's documentation (CC BY-SA 4.0); search it, do not edit it by hand.
 - `notes/` is personal course material. Keep edits there light-touch; do not reformat or "improve" existing notes unless asked.
+
+<!-- git-safety-guardrail -->
+## Git safety
+
+- Never commit or push directly to `main`. Work on a feature branch and open a PR.
+- Commit early and often; never force-push; never discard uncommitted work with reset --hard / clean -f.
+- Enforced globally by ~/.claude/hooks/git-safety-guard.js and by GitHub branch protection.
