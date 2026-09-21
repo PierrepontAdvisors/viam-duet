@@ -21,6 +21,7 @@ node_modules/
 # Secrets — never commit Viam API keys or machine credentials
 .env
 .env.*
+!code/hackathon/.env.example
 *.key
 *api-key*
 viam-credentials*
@@ -36,3 +37,8 @@ code/hackathon/sessions/
 # brainstorming visual companion sessions and linked worktrees
 .superpowers/
 .worktrees/
+
+# local tool state: nested worktrees, security reports, browser captures
+.claude/worktrees/
+.gstack/
+.playwright-mcp/

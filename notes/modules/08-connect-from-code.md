@@ -13,7 +13,7 @@ Get Python talking to the machine: a virtual environment with the SDK, an API ke
 4. Run `python helpers.py`. Success prints "connected to" plus the address; failure names which of the three things to fix.
 
 ## Working locally instead of the course IDE
-`helpers.py` and `api-key.json` are provided by the course IDE. To work in this repo instead, copy `helpers.py` into `code/palletizer/` and create `api-key.json` there. Both `api-key.json` and `.venv/` are gitignored. My address: `palletizer-101-main.b18ipyo3lz.viam.cloud`.
+`helpers.py` and `api-key.json` are provided by the course IDE. To work in this repo instead, copy `helpers.py` into `code/palletizer/` and create `api-key.json` there. Both `api-key.json` and `.venv/` are gitignored. My address: `palletizer-101-main.xxxxxxxxxx.viam.cloud`.
 
 ## Checkpoint
 `python helpers.py` prints connected to my machine's address.

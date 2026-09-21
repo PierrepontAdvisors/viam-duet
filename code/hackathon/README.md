@@ -4,6 +4,7 @@ Python 3.12 virtual environment with the Viam SDK, plus three small scripts.
 
 ```bash
 cd code/hackathon
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt   # once
 source .venv/bin/activate
 cp .env.example .env      # then paste address, key id, key from the machine's CONNECT tab
 python explore.py         # read-only: resources, arm pose, gripper state, camera frames

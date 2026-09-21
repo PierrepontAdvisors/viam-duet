@@ -84,7 +84,7 @@ Checked and stated in chat before the save; the user confirms:
 
 ## 4. Procedure
 
-1. Open `https://app.viam.com/machine/7d49b15e-a2a7-47b8-beec-f66ff062a979/configure/json?org=6d6c7293-bc67-43e4-9c8b-31c76aac27d3` in Chrome.
+1. Open `https://app.viam.com/machine/<machine-id>/configure/json?org=<org-id>` in Chrome.
 2. Apply the edit from section 2a to the `$set` block and append the `board` component from section 2b (as printed by the script) to `components`. Read the editor text back and check it matches sections 2a and 2b exactly (the three new keys, the fragment id, the one new component, no other diff). Show the diff in chat.
 3. On the user's confirmation, click Save.
 4. Wait until `arm`, `cam` and `board` read READY in the builder. Open the arm card: attributes show `speed_degs_per_sec: 30` and `collision_sensitivity: 3`. Open the cam card: attributes include `align_color_depth: true`. Both now carry the MODIFIED badge. Open the 3D SCENE tab: a 240 by 176 slab sits on the table in front of and to the right of the arm base (world +x, -y), under the parked arm's wrist.

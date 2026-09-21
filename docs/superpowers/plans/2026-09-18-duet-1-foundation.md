@@ -9,7 +9,7 @@
 **Tech Stack:** Python 3.12 venv at `code/hackathon/.venv` (viam-sdk 0.80.0), numpy, pytest. Credentials from `code/hackathon/.env`. Machine `armfarm22` with resources `arm`, `gripper`, `cam`, motion service `builtin`.
 
 **Working conventions for every task:**
-- Run all commands from `code/hackathon` with the venv active: `cd "/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon" && source .venv/bin/activate`.
+- Run all commands from `code/hackathon` with the venv active: `cd "<repo>/code/hackathon" && source .venv/bin/activate`.
 - Scripts run as modules: `python -m duet.teach ...`. This puts `code/hackathon` on `sys.path`, so `import viam_conn` (the existing connection helper) works from inside the package.
 - Git: the repo refuses commits on `main`. Stay on the branch `feat/duet-design`, which is already checked out. Commit messages use `<type>: <description>`.
 - Hardware steps say **HARDWARE**. Before any of them: the E-stop is within reach, nobody's hands are near the arm, and `python explore.py` has printed the machine's resources in the last hour.

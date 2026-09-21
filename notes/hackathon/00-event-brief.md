@@ -39,7 +39,7 @@ app.viam.com → organization **Hackathons** → location **Fine Motor Skills** 
 
 ## People and help
 - Viam staff on the floor: Michael Lee, Jiwon Shin, Nick Hehr, Brandon Shrewsbury, Nicolas Palpacuer, Grant Mulitz, Joseph Boradach
-- Hackathon Discord: https://discord.gg/ppFZ9xRKG
+- Hackathon Discord: invite on the Luma event page
 - Docs: https://docs.viam.com (local mirror in `docs/viam/`)
 - The deck says the pick-and-place tutorial uses the same hardware setup as the hackathon machines
 - Viam's MCP server for AI agents: https://app.viam.com/mcp

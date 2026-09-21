@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent                                   # code/hackathon in this worktree
-MAIN = Path(os.environ.get("DUET_MAIN", "/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon"))
+MAIN = Path(os.environ.get("DUET_MAIN", str(ROOT)))   # the checkout whose sessions/ and captures/ are replayed
 STATIC = ROOT / "duet" / "static"
 SESSIONS = Path(os.environ.get("DUET_SESSIONS", str(MAIN / "sessions")))
 SESSION_ID = os.environ.get("DUET_SESSION", "20260918-190258")
