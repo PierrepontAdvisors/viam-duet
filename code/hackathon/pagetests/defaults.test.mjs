@@ -33,13 +33,34 @@ test('ui.js applies the table it is given: layers, colours, widths, levels, and 
 
 test('app.js wires the hand in replay mode: built at boot, fed cues, cancelled off the human turn and on restart; sound turns on at Start in the demo when nothing is stored or it is remembered on', () => {
   const app = read('js/app.js');
-  assert.match(app, /import \{ Hand \} from '\.\/hand\.js\?v=ds8';/);
+  assert.match(app, /import \{ Hand \} from '\.\/hand\.js\?v=ds9';/);
   assert.match(app, /const SPEED = Number\(new URLSearchParams\(location\.search\)\.get\('speed'\)\) \|\| 1;/);
-  assert.match(app, /if \(REPLAY_URL\) app\.hand = new Hand\(\$\('hand'\), \{ stage: \$\('stage'\), targets: handTarget, speed: SPEED \}\);/);
-  assert.match(app, /new Player\(replay, feed, \{ speed: SPEED, cue: \(c\) => app\.hand && app\.hand\.run\(c\) \}\)/);
-  assert.match(app, /if \(app\.hand && msg\.state !== 'human_turn'\) app\.hand\.cancel\(\);/);
+  assert.match(app, /if \(REPLAY_URL\) \{\n\s*app\.pen = new GhostPen/);
+  assert.match(app, /new Player\(replay, feed, \{ speed: SPEED, cue: \(c\) => \{/);
+  assert.match(app, /function replayState\(msg, wasPaused\)/);
   assert.match(app, /if \(msg\.type === 'restart' && app\.hand\) app\.hand\.cancel\(\);/);
   assert.match(app, /const wantsSound = stored === null \? defaultsFor\(!!REPLAY_URL\)\.sound : stored;/);
   assert.match(app, /if \(wantsSound && REPLAY_URL\) \$\('start'\)\.addEventListener\('click', \(\) => \{ if \(!app\.sound\.on\) setSound\(true\); \}, \{ once: true \}\)/);
-  assert.ok(!/\?v=ds7/.test(app), 'assets at v=ds8');
+  assert.ok(!/\?v=ds8/.test(app), 'assets at v=ds9');
+});
+
+test('app.js in replay mode: a red pen for the hand, the Robot tag on the robot pen, cues routed by key, pause and resume routed by state, the clock click', () => {
+  const app = read('js/app.js');
+  assert.match(app, /import \{ Clock \} from '\.\/clock\.js\?v=ds9';/);
+  assert.match(app, /app\.pen = new GhostPen\(\$\('l-hand'\), \$\('handpath'\), \$\('handpen'\)\);/);
+  assert.match(app, /new Hand\(\$\('hand'\), \{ stage: \$\('stage'\), targets: handTarget, tracer: app\.pen, toStage: \(p\) => app\.viewer\.boardToStage\(p\), speed: SPEED \}\)/);
+  assert.match(app, /app\.clock = new Clock\(\$\('clock'\), \{ who: \$\('clock-who'\), time: \$\('clock-time'\) \}\);/);
+  assert.match(app, /\$\('clock'\)\.onclick = \(\) => sendCommand\(app\.state && app\.state\.state === 'paused' \? 'resume' : 'pause'\);/);
+  assert.match(app, /name\.startsWith\('row:'\) \? document\.querySelectorAll\('#artist-menu button'\)\[\+name\.slice\(4\)\]/);
+  assert.match(app, /cue: \(c\) => \{ if \(c\.hand\) app\.hand\.run\(c\); if \(c\.clock\) app\.clock\.start\(\{ who: c\.clock, ms: c\.ms \}\); \}/);
+  assert.match(app, /const wasPaused = !!\(app\.state && app\.state\.state === 'paused'\);/);
+  assert.match(app, /if \(REPLAY_URL\) replayState\(msg, wasPaused\); else if \(\['human_turn', 'finished', 'paused', 'idle'\]\.includes\(msg\.state\)\) app\.ghost\.stop\(\);/);
+  const fn = app.slice(app.indexOf('function replayState'), app.indexOf('\n}', app.indexOf('function replayState')));
+  assert.match(fn, /if \(msg\.state === 'paused'\) \{ app\.hand\.pause\(\); app\.ghost\.pause\(\); app\.clock\.pause\(\); return; \}/);
+  assert.match(fn, /if \(wasPaused\) \{ app\.hand\.resume\(\); app\.ghost\.resume\(\); app\.clock\.resume\(\); return; \}/);
+  assert.match(fn, /if \(msg\.state !== 'human_turn'\) app\.hand\.cancel\(\);/);
+  assert.match(fn, /if \(\['look', 'finish', 'finished', 'idle'\]\.includes\(msg\.state\)\) app\.clock\.stop\(\);/);
+  assert.match(fn, /app\.ghost\.play\(app\.plan\.polylines, \{ durationMs: app\.replay\.drawMs\(app\.plan\.polylines\.length\), onMove: placeTag \}\)/);
+  assert.match(app, /const placeTag = \(p\) => \{[^\n]*boardToStage\(p\)[^\n]*classList\.toggle\('hidden', !q\)/);
+  assert.ok(!/\?v=ds8/.test(app), 'assets at v=ds9');
 });

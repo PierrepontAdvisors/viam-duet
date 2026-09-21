@@ -51,10 +51,10 @@ test('styles: the corner row hides under both drawers, the drawer shares the pan
   assert.match(css, /\.diag-timeline \{[^}]*aspect-ratio: 1000 \/ 92/);
 });
 
-test('assets are versioned ds8 so open pages fetch the new scripts', () => {
+test('assets are versioned ds9 so open pages fetch the new scripts', () => {
   const h = read('index.html');
   assert.ok(!h.includes('?v=ds5') && !h.includes('?v=ds6'), 'no older version left');
-  assert.match(h, /src="\/static\/js\/app\.js\?v=ds8"/);
+  assert.match(h, /src="\/static\/js\/app\.js\?v=ds9"/);
 });
 
 test('diagview redraws the table only on entries, ticks once a second only while open, and escapes every cell', () => {
@@ -71,9 +71,9 @@ test('diagview redraws the table only on entries, ticks once a second only while
 
 test('app.js records every frame before dispatch, both socket events, and every sent command', () => {
   const js = read('js/app.js');
-  assert.match(js, /import \{ append, frameEntry, sentEntry, socketEntry \} from '\.\/diag\.js\?v=ds8';/);
-  assert.match(js, /import \{ initDiagView \} from '\.\/diagview\.js\?v=ds8';/);
-  assert.match(js, /import \{ initUI, defaultsFor \} from '\.\/ui\.js\?v=ds8';/);
+  assert.match(js, /import \{ append, frameEntry, sentEntry, socketEntry \} from '\.\/diag\.js\?v=ds9';/);
+  assert.match(js, /import \{ initDiagView \} from '\.\/diagview\.js\?v=ds9';/);
+  assert.match(js, /import \{ initUI, defaultsFor \} from '\.\/ui\.js\?v=ds9';/);
   const onmessage = js.slice(js.indexOf('ws.onmessage'), js.indexOf('\n}', js.indexOf('ws.onmessage')));
   assert.ok(onmessage.indexOf('frameEntry(e.data, m, t, seq)') < onmessage.indexOf('if (m) handle(m)'), 'recorded before dispatch');
   assert.match(onmessage, /app\.diagView\.blink\(\)/);
