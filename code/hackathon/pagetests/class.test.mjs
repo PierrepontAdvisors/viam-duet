@@ -195,8 +195,10 @@ test('Act 1: the title, the hackathon, the other teams, the diner', () => {
     assert.ok(!/\bautoplay\b/.test(attrs), `clip ${i + 1} has no autoplay: class.js plays it on its card`);
     assert.ok(attrs.includes(`src="video/team-${i + 1}.mp4"`), `clip ${i + 1} source`);
   });
-  assert.ok(/class="card split lines plate-black"/.test('class="card ' + s[3].slice(0, 60)), 'card 4 is the black text card');
-  assert.equal((s[3].match(/class="line reveal headline" data-step="(\d)"/g) || []).length, 4, 'card 4 reveals four lines');
+  assert.ok(s[3].startsWith('modules story diner plate-black"'), 'card 4 is a black story card');
+  assert.deepEqual([...s[3].matchAll(/class="panel paper reveal" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2', '3', '4'], 'card 4 reveals four panels');
+  for (let n = 1; n <= 4; n++) assert.ok(s[3].includes(`src="img/story-4-${n}.jpg"`), `card 4 panel ${n} picture`);
+  assert.equal((s[3].match(/<figcaption class="cap body"/g) || []).length, 4, 'each panel carries its line as a caption');
   assert.ok(s[3].includes('data-builds="4"'), 'card 4 declares four reveals');
 });
 
@@ -207,6 +209,9 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   assert.match(css, /\.stage \.card\.active\.triptych \.module\.reveal \{ animation: none; \}/);
   assert.match(css, /\.split\.half \.words \{ grid-column: 1 \/ 7; \}/);
   assert.match(css, /\.split\.half\.photo-left \.figure \{ grid-column: 1 \/ 6; grid-row: 1; \}/);
+  assert.match(css, /\.strip\.four \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\); \}/);
+  assert.match(css, /\.panel \.cap \{[^}]*color: var\(--ink\)/);
+  assert.ok(!/\.lines \.line|\.big \.display|\.advice \.words|\.logfields/.test(css), 'the text-only layouts are gone with their cards');
   assert.ok(!/\.card\.active \.(modules|triptych|split)\b/.test(css), 'a card\'s template class compounds with .card.active; it is never a descendant');
   const sizes = [...css.matchAll(/font-size:\s*([^;}]+)/g)].map((m) => m[1].trim());
   for (const v of sizes) assert.match(v, /^var\(--(display|headline|body|caption)\)$/, `font-size "${v}" is not a token`);
@@ -267,7 +272,7 @@ test('Act 3: three failures, the log, what it felt like, the advice', () => {
   const s = sectionsOf(h);
   assert.equal(s.length, 14);
   const copy = [
-    '27 mm', 'The robot crushed the pen.', 'I measured the board with the marker in my hand. The robot holds it 27 mm differently.', 'Measure with the robot\'s hand, not yours.',
+    'The robot crushed the pen.', 'I measured the board with the marker in my hand. The robot holds it 27 mm differently.', 'Measure with the robot\'s hand, not yours.',
     'The smart trigger that wasn\'t.', 'I wrote clever code so the robot would notice when you\'d stepped back.', 'It fired every few seconds on an empty board.',
     'Saturday morning I deleted it and added a button.', 'Go, robot!', 'The simple thing is allowed to win.',
     'The error you\'ll get too.', 'SyntaxError: \'return\' outside function', 'Four spaces instead of eight. The day before the hackathon.', 'The error message is the clue, not the insult.',
@@ -280,7 +285,11 @@ test('Act 3: three failures, the log, what it felt like, the advice', () => {
   assert.ok(s[10].includes(`<pre>${excerpt}</pre>`), 'card 11 excerpt verbatim');
   assert.ok(s[12].includes('src="img/medal.jpg"'), 'card 13 shows the medal');
   assert.ok(s[13].includes('data-builds="2"'), 'card 14 reveals two lines');
-  assert.deepEqual([...s[13].matchAll(/class="line reveal headline" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2']);
+  assert.deepEqual([...s[13].matchAll(/class="panel paper reveal" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2']);
+  for (const [card, pics] of [[8, ['story-9']], [9, ['story-10-1', 'story-10-2']], [10, ['story-11']], [11, ['story-12']], [13, ['story-14-1', 'story-14-2']]]) {
+    for (const p of pics) assert.ok(s[card].includes(`src="img/${p}.jpg"`), `card ${card + 1} shows ${p}`);
+  }
+  assert.ok(s[10].includes('</pre><p class="errline body"'), 'card 11 keeps the error line inside the code panel');
 });
 
 test('the page declares the cut and the reveals exactly as the tests model them, in order', () => {
@@ -312,7 +321,7 @@ test('every card carries the master page: frame, wash, kicker, wordmark, footer 
   // plates cycle 1..7 with card 4 on black
   const plates = s.map((c) => /plate-(\d)\.jpg/.exec(c)[1]);
   assert.deepEqual(plates, ['1', '2', '3', '7', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7']);
-  assert.ok(/^split lines plate-black/.test(s[3]) && /^modules code plate-black/.test(s[6]) && /^split advice plate-black/.test(s[13]), 'cards 4, 7 and 14 are black');
+  assert.ok(/^modules story diner plate-black/.test(s[3]) && /^modules code plate-black/.test(s[6]) && /^modules story advice plate-black/.test(s[13]), 'cards 4, 7 and 14 are black');
 });
 
 test('developer mode is wired: badge, label, toast, and unique data-el names on every card', () => {
@@ -348,4 +357,19 @@ test('the pitch deck is untouched by this work', () => {
   const js = readFileSync(pitch + 'deck.js', 'utf8');
   assert.match(js, /var CARDS = 7;/);
   assert.ok(!/ClassDeck/.test(js));
+});
+
+test('the story pictures: eleven panels in img/, each on its card, generated in the pitch grammar without naming an artist', () => {
+  const pics = ['story-4-1', 'story-4-2', 'story-4-3', 'story-4-4', 'story-9', 'story-10-1', 'story-10-2', 'story-11', 'story-12', 'story-14-1', 'story-14-2'];
+  const h = read('index.html');
+  for (const p of pics) {
+    assert.ok(existsSync(DIR + `img/${p}.jpg`), `missing img/${p}.jpg`);
+    assert.equal((h.match(new RegExp(`src="img/${p}\\.jpg"`, 'g')) || []).length, 1, `${p} is on exactly one card`);
+  }
+  const py = read('gen_images.py');
+  for (const p of pics) assert.ok(py.includes(`"${p}"`), `job ${p} in gen_images.py`);
+  assert.ok(!/AQ\.[A-Za-z0-9_-]{20,}|AIza[A-Za-z0-9_-]{20,}/.test(py), 'no key literal');
+  assert.ok(!/Haring|Mondrian|Van Gogh/.test(py), 'prompts describe the grammar, they do not name an artist');
+  assert.match(py, /GEMINI_API_KEY/);
+  assert.match(py, /pitch\.GRAMMAR|GRAMMAR = pitch\.GRAMMAR/);
 });
