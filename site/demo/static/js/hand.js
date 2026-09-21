@@ -2,7 +2,7 @@
  *  their mark with a red marker, then presses the page's own buttons the way a finger would, lifting and
  *  squashing them. `traceMs`, `plan`, and `planMs` are pure; `Hand` moves the element and drives the DOM.
  *  Replay mode only. */
-import { polylineLength } from './geometry.js?v=ds9';
+import { polylineLength } from './geometry.js?v=ds10';
 
 /** A quarter slower than first built, so every lift, squash, and stroke reads at a glance. */
 export const HAND = { glide: 625, hover: 438, press: 250, hold: 625, rollGlide: 150, rollHover: 125, mmPerSec: 56, traceMin: 1500, traceMax: 5000 };
@@ -48,7 +48,7 @@ export class Hand {
   constructor(el, { stage, targets, tracer = null, toStage = () => null, speed = 1, now = () => Date.now(), timers = realTimers }) {
     this.el = el; this.stage = stage; this.targets = targets; this.tracer = tracer; this.toStage = toStage; this.speed = speed;
     this.now = now; this.timers = timers;
-    this.timer = null; this.pending = null; this.paused = false; this.token = 0; this.hovered = null; this.pressed = null;
+    this.timer = null; this.pending = null; this.paused = false; this.token = 0; this.hovered = null; this.pressed = null; this.drawing = false;
   }
   target(name, cue) { const el = this.targets(name, cue); return onScreen(el) ? el : null; }
   run(cue) {
@@ -83,8 +83,9 @@ export class Hand {
   /** The marker out, the tracer drawing, the fingertip on the pen's point. True when there is something to draw. */
   draw(strokes, ms) {
     if (!this.tracer || !ms) return false;
-    this.el.classList.add('draw');
-    this.tracer.play(strokes, { durationMs: ms, onMove: (p) => { const q = p && this.toStage(p); if (q) this.moveToPoint(q[0], q[1]); } });
+    this.el.classList.add('draw'); this.drawing = true;
+    // the trace's last frame can land after this step's timer: once the step is over, the pen's points no longer move the hand
+    this.tracer.play(strokes, { durationMs: ms, onMove: (p) => { if (!this.drawing) return; const q = p && this.toStage(p); if (q) this.moveToPoint(q[0], q[1]); } });
     return true;
   }
   hover(name, cue) {
@@ -107,7 +108,7 @@ export class Hand {
   /** The end of a press or a draw: the squash and the marker go. */
   release() {
     if (this.pressed) { this.pressed.classList.remove('active'); this.pressed = null; }
-    this.el.classList.remove('press'); this.el.classList.remove('draw');
+    this.el.classList.remove('press'); this.el.classList.remove('draw'); this.drawing = false;
   }
   pause() {
     if (this.paused || !this.pending) return;

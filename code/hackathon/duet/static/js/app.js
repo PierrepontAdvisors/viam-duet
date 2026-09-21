@@ -1,17 +1,17 @@
 /** Boot: the WebSocket with snapshot and reconnect, message dispatch, and the modules. */
-import { parseMessage, setCommand, command } from './protocol.js?v=ds9';
-import { TurnBook } from './story.js?v=ds9';
-import { Viewer } from './viewer.js?v=ds9';
-import { initUI, defaultsFor } from './ui.js?v=ds9';
-import { GhostPen } from './preview.js?v=ds9';
-import { Hand } from './hand.js?v=ds9';
-import { Clock } from './clock.js?v=ds9';
-import { Sound } from './audio.js?v=ds9';
-import { polylinesFromSvg } from './picture.js?v=ds9';
-import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds9';
+import { parseMessage, setCommand, command } from './protocol.js?v=ds10';
+import { TurnBook } from './story.js?v=ds10';
+import { Viewer } from './viewer.js?v=ds10';
+import { initUI, defaultsFor } from './ui.js?v=ds10';
+import { GhostPen } from './preview.js?v=ds10';
+import { Hand } from './hand.js?v=ds10';
+import { Clock } from './clock.js?v=ds10';
+import { Sound } from './audio.js?v=ds10';
+import { polylinesFromSvg } from './picture.js?v=ds10';
+import { homography, applyH, boardOrder, containRect, BOARD_MM } from './geometry.js?v=ds10';
 
-import { append, frameEntry, sentEntry, socketEntry } from './diag.js?v=ds9';
-import { initDiagView } from './diagview.js?v=ds9';
+import { append, frameEntry, sentEntry, socketEntry } from './diag.js?v=ds10';
+import { initDiagView } from './diagview.js?v=ds10';
 
 const $ = (id) => document.getElementById(id);
 /** The showcase site sets <meta name="duet-replay" content="replay.json">: no socket, a recording drives the page. */
@@ -156,7 +156,7 @@ async function startReplay(url) {
   document.body.classList.add('replay');
   for (const id of ['site-home', 'welcome-home']) { const el = $(id); if (el) el.classList.remove('hidden'); }
   try {
-    const [{ Player }, replay] = await Promise.all([import('./replay.js?v=ds9'), fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} for ${url}`); return r.json(); })]);
+    const [{ Player }, replay] = await Promise.all([import('./replay.js?v=ds10'), fetch(url).then(r => { if (!r.ok) throw new Error(`${r.status} for ${url}`); return r.json(); })]);
     const feed = (msg) => { const text = JSON.stringify(msg); const m = parseMessage(text); record((t, seq) => frameEntry(text, m, t, seq)); app.diagView.blink(); if (m) handle(m); };
     app.replay = new Player(replay, feed, { speed: SPEED, cue: (c) => { if (c.hand) app.hand.run(c); if (c.clock) app.clock.start({ who: c.clock, ms: c.ms }); } });
     app.connected = true; app.diagView.setConnected(true); notify({ type: 'socket', connected: true });

@@ -78,6 +78,8 @@ test('Hand: the draw step plays the tracer and the hand follows its tip with the
   s.next();                                                                                            // draw done → glide picker
   assert.ok(!el.classList.contains('draw'));
   assert.equal(el.style.left, '50px'); assert.equal(el.style.top, '60px');
+  tracer.onMove([120, 200]);                                                                           // the trace's last frame lands after the timer
+  assert.equal(el.style.left, '50px'); assert.equal(el.style.top, '60px', 'a late pen point no longer drags the hand back to the board');
   s.next();                                                                                            // arrived → hover picker
   assert.ok(picker.classList.contains('hover')); assert.equal(picker.clicks, 0);
   s.next();                                                                                            // hover held → press picker

@@ -2,7 +2,7 @@
  *  is the arm: `play(plan, { durationMs })` paces the trace to the scripted drawing time. A second instance
  *  is the visitor's marker in the demo. `onMove(p)` reports the pen's board point each frame and null when
  *  the trace ends or stops; `pause()` and `resume()` hold the trace and finish it over the time that was left. */
-import { polylineLength, pointAlong, tracePath } from './geometry.js?v=ds9';
+import { polylineLength, pointAlong, tracePath } from './geometry.js?v=ds10';
 
 const browserFrames = {
   raf: (cb) => requestAnimationFrame(cb), caf: (id) => cancelAnimationFrame(id), now: () => performance.now(),
