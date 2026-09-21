@@ -1,7 +1,7 @@
 # Resources
 
 ## Course
-- Viam 101 workshop: https://viam-101-w28-9jnk.learn.viam.com/workshop/content/print.html
+- Viam 101 workshop: https://viam-101-w28-9jnk.learn.viam.com/workshop/content/print.html (requires login)
 
 ## Official
 - Viam docs: https://docs.viam.com

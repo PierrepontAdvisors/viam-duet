@@ -1,9 +1,9 @@
-# Viam 101 notes repo
+# Duet repository
 
-This repo holds Nicholas's personal notes and exercise code for the Viam 101 workshop. It is not a software project.
+Duet is a robot arm that draws with you, built at Viam's Fine Motor Skills hackathon (September 2026). The repo holds the app (`code/hackathon`), its design record (`docs/duet`, `docs/superpowers`), the showcase site (`site`), and the notes the repo began as (`notes`, from Viam's 101 workshop). The README explains how the pieces fit and how to run them.
 
-- Course content lives at https://viam-101-w28-9jnk.learn.viam.com/workshop/content/print.html and requires login, so it cannot be fetched without the user's browser session.
-- Notes are Markdown under `notes/`; exercise code under `code/<module>/`.
-- When helping with a stuck point: reproduce the error from the user's description, check `notes/stuck-log.md` for prior hits, then explain the fix and ask the user to log it there.
-- Keep edits to notes light-touch. Do not reformat or "improve" existing notes unless asked.
-- Never write API keys or machine credentials into any tracked file.
+- Never write API keys, machine addresses, or credentials into any tracked file. They belong only in `code/hackathon/.env`, which is gitignored; `.env.example` lists the keys.
+- Each piece of the build has a design spec in `docs/superpowers/specs` and a plan in `docs/superpowers/plans`. Add to those when changing behaviour, and keep the tests beside the code: `pytest` under `code/hackathon/tests`, Node's test runner under `code/hackathon/pagetests`.
+- The showcase site is generated and committed: after changing the page or the deck, run `code/hackathon/.venv/bin/python site/build.py --sessions site/demo/sessions --session 20260919-151119` from the repository root (the venv, for OpenCV) and commit the result. Bump the `?v=` tag on the page's assets when its scripts or styles change.
+- `docs/viam` is a mirror of Viam's documentation (CC BY-SA 4.0); search it, do not edit it by hand.
+- `notes/` is personal course material. Keep edits there light-touch; do not reformat or "improve" existing notes unless asked.

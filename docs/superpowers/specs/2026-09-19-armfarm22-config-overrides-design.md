@@ -12,7 +12,7 @@ The app config was reviewed against the Duet code on the morning of 2026-09-19. 
 | arm `speed_degs_per_sec` | 60 | 30 | Design spec section 2. The code sets 30/15/10 at run time through `set_speed`, so this fixes the startup default and the app's own jog and move panels. |
 | arm `collision_sensitivity` | 0 (off) | 3 | Collision detection on. The design spec asked for 5; 3 (the module default) was chosen on 2026-09-19 because day 1 ran with detection off and pen contact at 5 is untested. If 3 trips while drawing, the page's Clear arm error and Resume recover. |
 
-All three live in the fragment `xarm-realsense-gripper2` (`859f2598-60f1-43a2-8df2-13ffbee949cc`), so on this machine they become fragment overrides, like the cam frame `z: 25` override that is already there.
+All three live in the fragment `xarm-realsense-gripper2` (`<fragment id>`), so on this machine they become fragment overrides, like the cam frame `z: 25` override that is already there.
 
 A fourth item was added on 2026-09-19: the 3D scene shows only the four obstacle boxes (a 3 m table slab with its top 23 mm below the arm base, a front wall at x 740, a side wall at y 500, a ceiling at 1050). Nicholas asked for the drawing board in the scene, generated from data rather than measured, so section 2b adds a `board` obstacle computed from the taught corners. The dock tub is left out because its footprint and height are unknown.
 
@@ -23,7 +23,7 @@ One edit to the machine JSON (Configure tab, JSON view). The existing `$set` for
 ```json
 "fragment_mods": [
   {
-    "fragment_id": "859f2598-60f1-43a2-8df2-13ffbee949cc",
+    "fragment_id": "<fragment id>",
     "mods": [
       {
         "$set": {
@@ -38,7 +38,7 @@ One edit to the machine JSON (Configure tab, JSON view). The existing `$set` for
 ]
 ```
 
-Nothing else in the fragment overrides changes. The gripper, the obstacles fragment (`01ca42e4-78b9-425c-ae75-1101b9a7f3e8`), the `motion` service, the four `arm-position-saver` switches, and the modules list stay as they are. The motion service's `input_range_override` (joint 5, from the cheatsheet) is deliberately left out: it is not in the spec and could make taught poses unreachable before the demo.
+Nothing else in the fragment overrides changes. The gripper, the obstacles fragment (`<obstacles fragment id>`), the `motion` service, the four `arm-position-saver` switches, and the modules list stay as they are. The motion service's `input_range_override` (joint 5, from the cheatsheet) is deliberately left out: it is not in the spec and could make taught poses unreachable before the demo.
 
 ## 2b. The board obstacle
 
@@ -84,7 +84,7 @@ Checked and stated in chat before the save; the user confirms:
 
 ## 4. Procedure
 
-1. Open `https://app.viam.com/machine/7d49b15e-a2a7-47b8-beec-f66ff062a979/configure/json?org=6d6c7293-bc67-43e4-9c8b-31c76aac27d3` in Chrome.
+1. Open `https://app.viam.com/machine/<machine-id>/configure/json?org=<org-id>` in Chrome.
 2. Apply the edit from section 2a to the `$set` block and append the `board` component from section 2b (as printed by the script) to `components`. Read the editor text back and check it matches sections 2a and 2b exactly (the three new keys, the fragment id, the one new component, no other diff). Show the diff in chat.
 3. On the user's confirmation, click Save.
 4. Wait until `arm`, `cam` and `board` read READY in the builder. Open the arm card: attributes show `speed_degs_per_sec: 30` and `collision_sensitivity: 3`. Open the cam card: attributes include `align_color_depth: true`. Both now carry the MODIFIED badge. Open the 3D SCENE tab: a 240 by 176 slab sits on the table in front of and to the right of the arm base (world +x, -y), under the parked arm's wrist.

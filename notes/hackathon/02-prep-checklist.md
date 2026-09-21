@@ -5,15 +5,15 @@
 - [x] Viam CLI installed via Homebrew: `viam version` → 1.8.0
 - [x] Python 3.12 venv at `code/hackathon/.venv` with `viam-sdk`
 - [x] Local docs mirror in `docs/viam/` (`grep -ril <term> docs/viam`), including the xArm6 pick-and-place tutorial under `docs/viam/tutorials/pick-and-place/`
-- [x] Companion repo cloned to `code/hackathon/reference/pick-and-place/` (starter script, reference solution, config fragment, obstacle template, frame worksheet)
+- [x] Companion repo cloned to `code/hackathon/reference/pick-and-place/` (gitignored) (starter script, reference solution, config fragment, obstacle template, frame worksheet)
 - [x] Starter scripts: `code/hackathon/explore.py` (read-only) and `moves.py` (planned test moves)
 - [x] viam-server installed locally (only needed for the 101 machine; the hackathon machine runs its own)
 
 ## Do before hacking starts
 - [ ] `viam login` in a terminal (opens a browser; sign in with the same account as app.viam.com)
-- [ ] Join the hackathon Discord: https://discord.gg/ppFZ9xRKG
+- [ ] Join the hackathon Discord (invite on the Luma event page)
 - [ ] Optionally add Viam's MCP server (https://app.viam.com/mcp) as a connector in Claude so it can read the machine directly
-- [ ] Decide the challenge with the team. Note the pick in `03-plan.md`
+- [ ] Decide the challenge with the team. Note the pick in `04-plan.md`
 
 ## First 20 minutes with the hardware
 1. Find the machine: Hackathons org → Fine Motor Skills location. Confirm it's ONLINE.

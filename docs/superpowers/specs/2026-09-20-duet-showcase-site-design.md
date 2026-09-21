@@ -69,4 +69,4 @@ A 16:9 mat like the page and the deck, the yellow squiggle behind a paper card: 
 
 ## 7. Deploy
 
-`cd site && vercel --prod` (the CLI is logged in as nswerdlowe-1729), or import the repository in the Vercel dashboard with Root Directory `site` and no build command.
+`cd site && vercel --prod`, or import the repository in the Vercel dashboard with Root Directory `site` and no build command.

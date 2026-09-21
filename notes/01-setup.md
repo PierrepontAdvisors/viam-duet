@@ -11,7 +11,7 @@ Record what was installed, the exact commands, and anything that went wrong.
 - Location: First Location
 - Machine: `palletizer-101`, part `palletizer-101-main`
 - Status on 2026-09-17: viam-server installed and started from the Terminal panel
-- Machine page: https://app.viam.com/machine/fec8cd45-42df-4375-9420-968823a16ec6/configure?org=68a18648-61b1-4677-ba9f-9b5e83d549e7
+- Machine page: https://app.viam.com/machine/<machine-id>/configure?org=<org-id>
 - Tabs on the machine page: configure, control, logs, connect, 3D scene, motion
 - Credentials file: `~/Downloads/viam-palletizer-101-main.json`, downloaded from the app. It authenticates this Mac to the cloud. Never copy it into this repo.
 
@@ -33,7 +33,7 @@ brew services start viam-server
 - Stop the service: `brew services stop viam-server`
 - The machine should show as online in the app within about 30 seconds of starting.
 - First successful start: 2026-09-17. Startup log showed: config fetched from cloud, builtin motion service constructed, WebRTC connection to app.viam.com established.
-- Cloud hostname for this part: `palletizer-101-main.b18ipyo3lz.viam.cloud`
+- Cloud hostname for this part: `palletizer-101-main.xxxxxxxxxx.viam.cloud`
 - Local endpoint while running: `https://0.0.0.0:8080` (gRPC/WebRTC, self-signed cert)
 - Local state directory: `~/.viam` (packages, cache). Warning at first start: disk 94.6% used, 26.85 GB free. Modules and ML models download here, so keep an eye on space.
 - Log lines to look for on a healthy start: `startup ... complete`, `Config watcher started`, `serving`.

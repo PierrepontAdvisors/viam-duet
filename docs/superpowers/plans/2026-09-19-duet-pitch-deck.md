@@ -26,7 +26,7 @@ docs/duet/pitch/
 code/hackathon/pagetests/pitch.test.mjs   all checks for the deck, run with the existing page tests
 ```
 
-Paths below are relative to the repository root `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam` unless a step says otherwise. Tests run from `code/hackathon`. Commits go on `feat/duet-design`, the branch already checked out; never stage anything under `code/hackathon/duet/`, `.env`, or `.gitignore`.
+Paths below are relative to the repository root `<repo>` unless a step says otherwise. Tests run from `code/hackathon`. Commits go on `feat/duet-design`, the branch already checked out; never stage anything under `code/hackathon/duet/`, `.env`, or `.gitignore`.
 
 ---
 
@@ -73,7 +73,7 @@ test('fredoka.css embeds the variable font as a data URI, so file:// in Chrome c
 Run from `code/hackathon`:
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs
 ```
 
 Expected: 2 failing tests. The first fails with `missing img/turn-00-start.jpg`; the second throws `ENOENT` for `fredoka.css`.
@@ -81,7 +81,7 @@ Expected: 2 failing tests. The first fails with `missing img/turn-00-start.jpg`;
 - [ ] **Step 3: Copy the 13 photos**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && mkdir -p docs/duet/pitch/img && cp code/hackathon/sessions/20260918-190258/turn-0[0-6]-*.jpg docs/duet/pitch/img/ && ls docs/duet/pitch/img | wc -l && du -sh docs/duet/pitch/img
+cd <repo> && mkdir -p docs/duet/pitch/img && cp code/hackathon/sessions/20260918-190258/turn-0[0-6]-*.jpg docs/duet/pitch/img/ && ls docs/duet/pitch/img | wc -l && du -sh docs/duet/pitch/img
 ```
 
 Expected: `13` and about `1.4M`. The originals are 704 × 960, small enough already; nothing is resized.
@@ -91,7 +91,7 @@ Expected: `13` and about `1.4M`. The originals are 704 × 960, small enough alre
 The URL is the latin subset of the variable font that Google Fonts serves for `family=Fredoka:wght@400..700` (read on 2026-09-19; 29,704 bytes). If the fetch fails, the fallback stack in `deck.css` renders Chalkboard SE, and the test stays red until the network is back.
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/docs/duet/pitch && S=/private/tmp/claude-501/-Users-nicholasfjellbergswerdlowe-Dropbox-2026-PA-Viam/1a15536e-1a6b-47e9-bf17-8bdaf2465114/scratchpad && mkdir -p "$S" && curl -sSf -o "$S/Fredoka.woff2" "https://fonts.gstatic.com/s/fredoka/v17/X7n64b87HvSqjb_WIi2yDCRwoQ_k7367_DWu89XgHPyh.woff2" && file "$S/Fredoka.woff2" && { printf '/* Fredoka variable 400-700, latin subset, from Google Fonts (OFL). Embedded because Chrome blocks web fonts loaded over file://. */\n@font-face { font-family: "Fredoka"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(data:font/woff2;base64,'; base64 -i "$S/Fredoka.woff2" | tr -d '\n'; printf ') format("woff2"); }\n'; } > fredoka.css && wc -c fredoka.css
+cd <repo>/docs/duet/pitch && S=/private/tmp/claude-501/<repo-slug>/<session>/scratchpad && mkdir -p "$S" && curl -sSf -o "$S/Fredoka.woff2" "https://fonts.gstatic.com/s/fredoka/v17/X7n64b87HvSqjb_WIi2yDCRwoQ_k7367_DWu89XgHPyh.woff2" && file "$S/Fredoka.woff2" && { printf '/* Fredoka variable 400-700, latin subset, from Google Fonts (OFL). Embedded because Chrome blocks web fonts loaded over file://. */\n@font-face { font-family: "Fredoka"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(data:font/woff2;base64,'; base64 -i "$S/Fredoka.woff2" | tr -d '\n'; printf ') format("woff2"); }\n'; } > fredoka.css && wc -c fredoka.css
 ```
 
 Expected: `file` reports `Web Open Font Format (Version 2)` and `fredoka.css` is about 40,000 bytes.
@@ -99,7 +99,7 @@ Expected: `file` reports `Web Open Font Format (Version 2)` and `fredoka.css` is
 - [ ] **Step 5: Run the tests to verify they pass**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs
 ```
 
 Expected: `pass 2`, `fail 0`.
@@ -107,7 +107,7 @@ Expected: `pass 2`, `fail 0`.
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add code/hackathon/pagetests/pitch.test.mjs docs/duet/pitch/img docs/duet/pitch/fredoka.css && git commit -m "feat(pitch): deck assets, the 13 session photos and Fredoka embedded for file://"
+cd <repo> && git add code/hackathon/pagetests/pitch.test.mjs docs/duet/pitch/img docs/duet/pitch/fredoka.css && git commit -m "feat(pitch): deck assets, the 13 session photos and Fredoka embedded for file://"
 ```
 
 ---
@@ -194,7 +194,7 @@ test('the flipbook lists the 13 photos in turn order, labels them, and holds on 
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs
 ```
 
 Expected: the 2 asset tests pass; the 6 new tests fail with `ENOENT ... deck.js`.
@@ -332,7 +332,7 @@ Create `docs/duet/pitch/deck.js`:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs
 ```
 
 Expected: `pass 8`, `fail 0`.
@@ -340,7 +340,7 @@ Expected: `pass 8`, `fail 0`.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/deck.js code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): deck state machine, keys, clicks, hash, and flipbook"
+cd <repo> && git add docs/duet/pitch/deck.js code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): deck state machine, keys, clicks, hash, and flipbook"
 ```
 
 ---
@@ -372,7 +372,7 @@ test('deck.css defines the seven plates, the drifting pattern, and respects redu
 - [ ] **Step 2: Run the test to verify it fails**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs
 ```
 
 Expected: 8 pass, 1 fails with `ENOENT ... deck.css`.
@@ -514,7 +514,7 @@ body.dev .dev-badge{display:block;}
 - [ ] **Step 4: Run the tests to verify they pass**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs
 ```
 
 Expected: `pass 9`, `fail 0`.
@@ -522,7 +522,7 @@ Expected: `pass 9`, `fail 0`.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/deck.css code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): Haring plates, drifting squiggle pattern, type and paper styles"
+cd <repo> && git add docs/duet/pitch/deck.css code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): Haring plates, drifting squiggle pattern, type and paper styles"
 ```
 
 ---
@@ -595,7 +595,7 @@ test('developer mode is wired: badge, label, toast, and unique data-el names on 
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs
 ```
 
 Expected: 9 pass, 3 fail with `ENOENT ... index.html`.
@@ -815,7 +815,7 @@ Create `docs/duet/pitch/index.html`. Apostrophes are plain ASCII on purpose (the
 - [ ] **Step 5: Run the whole page suite to verify everything passes**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test 'pagetests/*.test.mjs' 2>&1 | tail -8
+cd <repo>/code/hackathon && node --test 'pagetests/*.test.mjs' 2>&1 | tail -8
 ```
 
 Expected: the deck's 12 tests pass and the existing page tests still pass (`fail 0`).
@@ -823,7 +823,7 @@ Expected: the deck's 12 tests pass and the existing page tests still pass (`fail
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/index.html docs/duet/pitch/dev.js code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): the seven cards, artist chips, speech bubble, flipbook, developer mode"
+cd <repo> && git add docs/duet/pitch/index.html docs/duet/pitch/dev.js code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): the seven cards, artist chips, speech bubble, flipbook, developer mode"
 ```
 
 ---
@@ -837,13 +837,13 @@ No new files. This task looks at the deck, fixes what reads wrong, and leaves on
 Navigate the built-in browser (`mcp__Claude_Browser__navigate`) to:
 
 ```
-file:///Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/docs/duet/pitch/index.html#1
+file://<repo>/docs/duet/pitch/index.html#1
 ```
 
 If the built-in browser refuses `file://`, serve the folder instead and open `http://localhost:8010/#1`:
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/docs/duet/pitch && python3 -m http.server 8010
+cd <repo>/docs/duet/pitch && python3 -m http.server 8010
 ```
 
 Expected: the yellow plate with the squiggle pattern, no text yet, counter `1 / 7`, no console errors (`mcp__Claude_Browser__read_console_messages` with `onlyErrors: true` returns nothing).
@@ -882,7 +882,7 @@ With the deck open over `file://`, list the network requests (`mcp__Claude_Brows
 - [ ] **Step 5: Commit any fixes and the screenshots**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch code/hackathon/captures/pitch-*.png && git commit -m "feat(pitch): browser pass, sizes tuned, one screenshot per card"
+cd <repo> && git add docs/duet/pitch code/hackathon/captures/pitch-*.png && git commit -m "feat(pitch): browser pass, sizes tuned, one screenshot per card"
 ```
 
 If nothing changed in the deck, commit only the screenshots with the same message.
@@ -900,7 +900,7 @@ If nothing changed in the deck, commit only the screenshots with the same messag
 - [ ] **Step 1: Confirm the test count on card 6**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && .venv/bin/python -m pytest -q 2>&1 | tail -1
+cd <repo>/code/hackathon && .venv/bin/python -m pytest -q 2>&1 | tail -1
 ```
 
 Expected: a line like `120 passed, N warnings in 18s`. If the number of passed tests is not 120, change the `<b>120</b>` in the `card 6 number — tests` element of `docs/duet/pitch/index.html` to that number. The Node test does not pin the number, so no test changes.
@@ -957,7 +957,7 @@ Amended 2026-09-19 while planning: Chrome, the default browser on the presenting
 - [ ] **Step 5: Run the checks one last time**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test 'pagetests/*.test.mjs' 2>&1 | tail -4
+cd <repo>/code/hackathon && node --test 'pagetests/*.test.mjs' 2>&1 | tail -4
 ```
 
 Expected: `fail 0`.
@@ -965,7 +965,7 @@ Expected: `fail 0`.
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/README.md docs/duet/pitch/index.html notes/hackathon/05-morning-checklist.md docs/superpowers/specs/2026-09-19-duet-pitch-deck-design.md && git commit -m "docs(pitch): README, checklist line, spec section 5 amended for file:// in Chrome"
+cd <repo> && git add docs/duet/pitch/README.md docs/duet/pitch/index.html notes/hackathon/05-morning-checklist.md docs/superpowers/specs/2026-09-19-duet-pitch-deck-design.md && git commit -m "docs(pitch): README, checklist line, spec section 5 amended for file:// in Chrome"
 ```
 
 ---
@@ -1015,7 +1015,7 @@ test('the seven plates and three heroes were generated', () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^# (pass|fail)"
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^# (pass|fail)"
 ```
 
 Expected: the two new tests fail (`ENOENT ... gen_images.py`, then missing images).
@@ -1158,7 +1158,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: Generate everything (a few minutes; each call is about 10 to 20 seconds)**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && python3 docs/duet/pitch/gen_images.py
+cd <repo> && python3 docs/duet/pitch/gen_images.py
 ```
 
 Expected: ten `wrote ...` lines. If a call fails with HTTP 400 mentioning `imageSize`, remove `"imageSize": "2K"` from `generate()` and run again. Look at each image (the Read tool shows them): a plate must be evenly covered with no big blank area, no figures and no letters; a hero must be one clear subject on white with no text. Re-roll a poor one with `--force <name>`; two re-rolls is the budget, after that the SVG fallback or no hero is the answer.
@@ -1166,7 +1166,7 @@ Expected: ten `wrote ...` lines. If a call fails with HTTP 400 mentioning `image
 - [ ] **Step 5: Run the tests to verify they pass**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^# (pass|fail)"
+cd <repo>/code/hackathon && node --test pagetests/pitch.test.mjs 2>&1 | grep -E "^# (pass|fail)"
 ```
 
 Expected: `fail 0` for the two generator tests (the rest depend on the tasks already done).
@@ -1174,7 +1174,7 @@ Expected: `fail 0` for the two generator tests (the rest depend on the tasks alr
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam && git add docs/duet/pitch/gen_images.py docs/duet/pitch/img/plate-*.jpg docs/duet/pitch/img/hero-*.jpg code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): Nano Banana 2 plate textures and hero illustrations, generator kept in the repo"
+cd <repo> && git add docs/duet/pitch/gen_images.py docs/duet/pitch/img/plate-*.jpg docs/duet/pitch/img/hero-*.jpg code/hackathon/pagetests/pitch.test.mjs && git commit -m "feat(pitch): Nano Banana 2 plate textures and hero illustrations, generator kept in the repo"
 ```
 
 ### Changes to Task 3 (deck.css)

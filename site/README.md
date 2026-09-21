@@ -17,9 +17,12 @@ build.py                 assembles assets/, presentation/, demo/ from the source
 After changing the page, the deck, or the recording:
 
 ```
-python3 site/build.py                             # the session with the most turns under code/hackathon/sessions
+python3 site/build.py                             # the session with the most turns under code/hackathon/sessions (gitignored recordings)
 python3 site/build.py --session 20260919-151119   # a specific one
+python3 site/build.py --sessions site/demo/sessions --session 20260919-151119   # a fresh clone: from the session that ships in demo/
 ```
+
+Run it with the hackathon venv's Python (`code/hackathon/.venv/bin/python`) so the visitor's marks are traced from the photos with OpenCV as the live page does; plain `python3` falls back to the plan files' traced ink and the demo's hand draws less.
 
 Standard library only. Commit the result: Vercel serves the folder as it is, with no build step.
 

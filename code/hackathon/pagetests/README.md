@@ -4,10 +4,11 @@ Pure modules under `duet/static/js/` are tested with Node's runner, no install:
 
     node --test 'pagetests/*.test.mjs'
 
-The replay harness serves the page with tonight's session over the real protocol:
+The replay harness serves the page with a recorded session over the real protocol. A fresh clone has only the showcase session, so point it there:
 
-    PY=/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python
-    $PY pagetests/replay_server.py            # http://localhost:8765/?view=console (or ?view=diag for the diagnostics drawer)
+    DUET_SESSIONS=../../site/demo/sessions DUET_SESSION=20260919-151119 DUET_FRAME=tests/fixtures/look_frame.jpg \
+      .venv/bin/python pagetests/replay_server.py     # http://localhost:8765/?view=console (or ?view=diag for the diagnostics drawer)
+    DUET_SPEED=3 ...                                   # faster turns; without the variables it looks for a recording under sessions/ and a capture under captures/
 
 Keys on the page: arrows step photos, space plays the loop, L live, C controls, G diagnostics, Z crop, D developer mode.
 

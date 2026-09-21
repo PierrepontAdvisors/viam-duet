@@ -15,7 +15,7 @@
 **Where:** the worktree `.claude/worktrees/duet-feed` (branch `feat/duet-feed`). All paths below are relative to `code/hackathon/` inside it. Run Python through the main checkout's virtualenv, from `code/hackathon`:
 
 ```bash
-/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider
+<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider
 ```
 
 and the page tests with `node --test 'pagetests/*.test.mjs'`. The worktree guard refuses shell variables and heredocs: write plain commands with absolute paths, and use the Write/Edit tools for file contents.
@@ -97,7 +97,7 @@ def test_end_during_the_robot_turn_finishes_after_the_look_photo(tmp_path, look_
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_session.py -k "bus_forgets or first_move or end_during"`
+Run: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_session.py -k "bus_forgets or first_move or end_during"`
 Expected: 4 failed (`AttributeError: 'EventBus' object has no attribute 'clear'`, `'Session' object has no attribute 'held_frame'`, `'end'`).
 
 - [ ] **Step 3: Implement**
@@ -180,7 +180,7 @@ and add after `emit`:
 
 - [ ] **Step 4: Run the tests**
 
-Run: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_session.py`
+Run: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_session.py`
 Expected: all pass (the existing 11 plus 4 new).
 
 - [ ] **Step 5: Commit**
@@ -335,7 +335,7 @@ def test_watch_reports_a_task_that_died(capsys):
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_runner.py`
+Run: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_runner.py`
 Expected: collection error, `ModuleNotFoundError: No module named 'duet.runner'`.
 
 - [ ] **Step 3: Implement**
@@ -406,7 +406,7 @@ class SessionRunner:
 
 - [ ] **Step 4: Run the tests**
 
-Run: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_runner.py`
+Run: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_runner.py`
 Expected: 5 passed.
 
 - [ ] **Step 5: Commit**
@@ -615,7 +615,7 @@ def test_health_follows_the_runner_current_session(tmp_path):
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_web.py`
+Run: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_web.py`
 Expected: the new tests fail (`AttributeError: module 'duet.web' has no attribute 'feed_pick'`, `'mjpeg'`, `'stream_size'`, `'watch_feed'`) and the command tests fail because `end` is an unknown command.
 
 - [ ] **Step 3: Rewrite `duet/web.py`**
@@ -867,7 +867,7 @@ def make_app(runner, frames, bus, sessions_dir: Path = cfg.SESSIONS_DIR, calibra
 
 - [ ] **Step 4: Run the tests**
 
-Run: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_web.py`
+Run: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_web.py`
 Expected: all pass (8 existing, updated, plus 6 new).
 
 - [ ] **Step 5: Commit**
@@ -937,7 +937,7 @@ def test_fake_visitor_reloads_the_recorded_piece_on_a_new_session(monkeypatch):
 
 - [ ] **Step 2: Run it to see it fail**
 
-Run: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_run.py -k reloads`
+Run: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_run.py -k reloads`
 Expected: FAIL, `AttributeError: module 'duet.run' has no attribute 'VISITOR_WAITS'`.
 
 - [ ] **Step 3: Implement**
@@ -1040,10 +1040,10 @@ In the `--fake` branch of `main`, the line `frames.show_board(cv2.imread(str(sta
 
 - [ ] **Step 4: Run the tests**
 
-Run: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_run.py`
+Run: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider tests/test_run.py`
 Expected: 4 passed (the fake main test still shuts down cleanly on SIGINT).
 
-Then the whole suite: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider`
+Then the whole suite: `<repo>/code/hackathon/.venv/bin/python -m pytest -q -p no:cacheprovider`
 Expected: all pass.
 
 - [ ] **Step 5: Commit**
@@ -1222,7 +1222,7 @@ and inside `if (st) {`, after the Pause line, add:
 
 - [ ] **Step 4: Serve the page once and check the console**
 
-Run from `code/hackathon`: `/Users/nicholasfjellbergswerdlowe/Dropbox/2026/PA/Viam/code/hackathon/.venv/bin/python -m duet.run --fake --port 8010` in the background, open http://localhost:8010/?view=console, confirm no console errors and that the Run row shows Pause, Pass turn, End session, New session, Clear arm error. Stop the server.
+Run from `code/hackathon`: `<repo>/code/hackathon/.venv/bin/python -m duet.run --fake --port 8010` in the background, open http://localhost:8010/?view=console, confirm no console errors and that the Run row shows Pause, Pass turn, End session, New session, Clear arm error. Stop the server.
 
 - [ ] **Step 5: Commit**
 
