@@ -97,9 +97,10 @@
 .gobtn { display: inline-block; padding: .5cqw 1.6cqw; background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
          border-radius: 999px; font-size: var(--body); font-weight: 700; line-height: 1; box-shadow: .35cqw .35cqw 0 var(--ink); }
 .trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 21cqw)); }
-.trigger .under .headline { --headline: 3.8cqw; }
-.trigger .under .lines { --body: 2.1cqw; gap: .2cqw .8cqw; }
-.trigger .under .takeaway { --body: 2.1cqw; }
+.trigger .under { gap: .4cqw; }
+.trigger .under .headline { --headline: 3.5cqw; }
+.trigger .under .lines { --body: 2cqw; gap: .2cqw .8cqw; }
+.trigger .under .takeaway { --body: 2cqw; }
 
 /* card 11: the code panel is the row's second panel, the error line inside it */
 .error .panels.two { grid-template-columns: minmax(0, 30cqw) minmax(0, 44cqw); }
@@ -144,7 +145,7 @@
 
 .stage.shownotes .trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 16cqw)); }
 .stage.shownotes .trigger .under { gap: .2cqw; }
-.stage.shownotes .trigger .under .headline { --headline: 2.6cqw; }
+.stage.shownotes .trigger .under .headline { --headline: 2.4cqw; }
 .stage.shownotes .trigger .under .lines { --body: 1.7cqw; }
 .stage.shownotes .trigger .under .takeaway { --body: 1.7cqw; }
 
