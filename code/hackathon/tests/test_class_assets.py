@@ -60,8 +60,9 @@ def test_missing_source_is_reported_and_not_fatal(tmp_path, monkeypatch, capsys)
 def test_failed_clip_leaves_no_output(tmp_path, monkeypatch):
     m = load()
 
-    def fake_run(*args, **kwargs):
-        raise subprocess.CalledProcessError(1, "ffmpeg")
+    def fake_run(cmd, check):
+        pathlib.Path(cmd[-1]).write_bytes(b"partial")
+        raise subprocess.CalledProcessError(1, cmd)
 
     monkeypatch.setattr(m.subprocess, "run", fake_run)
     dst = tmp_path / "video" / "team-1.mp4"
