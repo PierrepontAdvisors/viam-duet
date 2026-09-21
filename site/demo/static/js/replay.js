@@ -1,8 +1,9 @@
 /** Replay mode: a recorded session as the same protocol messages the socket would carry, on a clock.
  *  `schedule()` is pure (replay.json in, steps out); `Player` runs the steps and takes the page's
  *  commands. The showcase site loads this module; the live page never does. */
+import { planMs } from './hand.js?v=ds9';
 
-export const PACE = { look: 1000, human: 6000, capture: 1000, thinkInk: 1200, thinkClaude: 3500, plan: 1500,
+export const PACE = { look: 1000, human: 14000, capture: 1000, thinkInk: 1200, thinkClaude: 3500, plan: 1500,
                       strokeMs: 350, drawMin: 3000, drawMax: 12000, settle: 1200, finish: 2000 };
 export const ARTISTS = ['abstract', 'mimic', 'haring', 'mondrian', 'vangogh', 'architect', 'designer', 'shader'];
 /** The picker's setting before the first exchange: the live page's default. */
@@ -15,6 +16,7 @@ export const WORDS = {
             quips: ['Let me shade that in.', 'Darker here, lighter there.', 'Dots, dots, dots!'] },
 };
 const BUDGET_MM = { short: 400, medium: 1200, long: 4000 };
+const MIN_FRAGMENT_MM = 6;       // the camera trace leaves specks around a mark; the hand draws only what a person would
 
 /** How long the scripted arm draws a plan of n strokes, in ms at the given speed: 350 ms a stroke within 3 to 12 s. */
 export function drawMs(strokeCount, speed = 1) {
@@ -48,8 +50,10 @@ export function stateMsg(replay, state, turn, artist, session, coverage = 0) {
 }
 
 /** The piece as steps: `{ emit: msg }` sends a message, `{ wait: ms }` holds, `{ wait, on: 'pass' }`
- *  holds until Go or the time is up, `{ cue }` tells the page's hand what the recorded visitor did
- *  (`{ hand: 'pick', artist }` when they switched artist, `{ hand: 'go' }` otherwise). The picker's
+ *  holds until Go or the time is up, `{ cue }` tells the page what the recorded visitor did and how long each
+ *  half takes: `{ hand: 'pick', artist, row, draw }` when they switched artist, `{ hand: 'go', draw }` otherwise,
+ *  with `draw` their strokes (specks under 6 mm dropped) and `row` the artist's roster index; `{ clock: 'visitor' | 'robot', ms }`
+ *  at each human turn and each capture with that half's scripted time. The picker's
  *  setting is Abstract before the first exchange and each exchange's artist after it; the states before
  *  a capture carry the setting, the rest the exchange's artist. `speed` divides every wait. */
 export function schedule(replay, speed = 1, session = replay.session) {
@@ -61,21 +65,25 @@ export function schedule(replay, speed = 1, session = replay.session) {
                                                  frame_url: frame ? `${base}/turn-${pad(turn)}-${who}-frame.jpg` : null, ...(artist ? { artist } : {}) });
   const turns = [...(replay.turns || [])].sort((a, b) => a.turn - b.turn);
   const frames = replay.frames || {};
+  const roster = replay.artists || ARTISTS;
   let setting = DEFAULT_ARTIST;
   const steps = [e(stateMsg(replay, 'look', 0, setting, session)), shot(0, 'start', null, !!frames.start), e({ type: 'feed', source: 'live' }), w(PACE.look)];
   let ink = [], coverage = 0;
   for (const t of turns) {
     const n = t.turn, artist = t.artist;
     const st = (state, turn, who = artist) => e(stateMsg(replay, state, turn, who, session, coverage));
-    steps.push(st('human_turn', n - 1, setting), { cue: artist === setting ? { hand: 'go' } : { hand: 'pick', artist } }, w(PACE.human, 'pass'));
+    const draw = (t.new || []).filter(pl => strokeLength(pl) >= MIN_FRAGMENT_MM);
+    const handCue = artist === setting ? { hand: 'go', draw } : { hand: 'pick', artist, row: roster.indexOf(artist), draw };
+    steps.push(st('human_turn', n - 1, setting), { cue: handCue }, { cue: { clock: 'visitor', ms: planMs(handCue, div) } }, w(PACE.human, 'pass'));
     ink = [...ink, ...(t.new || [])];
-    steps.push(st('capture', n - 1), shot(n, 'human', artist, (t.frames || {}).human !== false),
+    const plan = t.plan || [], think = t.source === 'ink' ? PACE.thinkInk : PACE.thinkClaude;
+    steps.push(st('capture', n - 1), { cue: { clock: 'robot', ms: Math.round((PACE.capture + think + PACE.plan + PACE.settle) / div) + drawMs(plan.length, div) } },
+               shot(n, 'human', artist, (t.frames || {}).human !== false),
                e({ type: 'human', polylines: ink, new: t.new || [], found: true, turn: n }), w(PACE.capture));
     const { thought, quip } = words(t);
-    steps.push(st('interpret', n - 1), w(t.source === 'ink' ? PACE.thinkInk : PACE.thinkClaude),
+    steps.push(st('interpret', n - 1), w(think),
                e({ type: 'interpretation', sees: t.sees || '', adds: t.adds || '', thought, quip, source: t.source || 'claude',
                    latency_s: t.latency_s ?? null, error: null, turn: n, artist }));
-    const plan = t.plan || [];
     steps.push(st('plan', n - 1), e({ type: 'plan', polylines: plan, color: t.color || '#1b8f3a', budget_mm: BUDGET_MM[replay.length] || 4000, turn: n, artist }), w(PACE.plan));
     steps.push(st('robot_draw', n - 1), e({ type: 'feed', source: 'held' }));
     const per = plan.length ? drawMs(plan.length) / plan.length : 0;

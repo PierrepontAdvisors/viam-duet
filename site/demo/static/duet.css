@@ -38,6 +38,7 @@ body { display: flex; align-items: center; justify-content: center; background: 
 .ov .ghost path { stroke: var(--vec-stroke, var(--robot)); stroke-width: 1.4; opacity: .35; }
 .ov .ghost circle { fill: #000; stroke: var(--yellow); stroke-width: .8; }
 .ov .ghost.idle { display: none; }
+.ov .hand-ink path { stroke: var(--human); stroke-width: 1.2; opacity: .9; } .ov .hand-ink circle { display: none; }   /* the hand is the pen */
 
 /* storybook chips */
 .chip { display: inline-block; padding: .45cqw 1.4cqw; font-weight: 700; font-size: 1.6cqw; line-height: 1.2; border-radius: 999px;
@@ -73,6 +74,18 @@ button.chip { cursor: pointer; } #sound.on { background: var(--yellow); }
 .hand .line { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
 .hand .cuff { fill: var(--red); stroke: var(--ink); stroke-width: 3.5; }
 .hand.press { transform: translate(-1.17cqw, -.17cqw) scale(.88); }
+.hand .marker { display: none; } .hand.draw .marker { display: block; }
+/* names: a caption pill on the hand, and one that rides the robot's pen dot */
+.tag { position: absolute; font: 700 1.2cqw/1 var(--story); padding: .35cqw .8cqw; border: .25cqw solid var(--ink); border-radius: 999px;
+       background: var(--paper); color: var(--ink); pointer-events: none; white-space: nowrap; }
+.hand .tag { left: 3.4cqw; top: 5.4cqw; }
+#pen-tag { z-index: 4; transform: translate(1cqw, 1cqw); }
+/* the turn clock: who is on and their seconds, over a bar that fills across the chip */
+.clock { position: relative; overflow: hidden; }
+.clock .fill { position: absolute; inset: 0; width: calc(var(--fill, 0) * 100%); background: var(--human); opacity: .25; transition: width .1s linear; }
+.clock[data-who="robot"] .fill { background: var(--robot); }
+.clock[data-who="paused"] .fill { animation: blink 1s ease-in-out infinite; }
+.clock > b, .clock > span { position: relative; }
 @media (prefers-reduced-motion: reduce) { .hand { transition: none; } .hand.press { transform: translate(-1.17cqw, -.17cqw); } }
 
 /* bubbles: positioned by script, tail or dots toward the anchor */
@@ -201,14 +214,14 @@ button.chip, .gear, .go, .welcome-start, .panel button, .panel a { transition: t
 .panel button.on { transform: translate(.12cqw, .12cqw); box-shadow: 0 0 0 var(--ink); }   /* a switch that is pressed in */
 .panel button.on:not(:disabled):hover { transform: translate(.04cqw, .04cqw); box-shadow: .1cqw .1cqw 0 var(--ink); }
 button.chip { box-shadow: .25cqw .25cqw 0 var(--ink); cursor: pointer; }
-button.chip:hover { transform: translate(-.15cqw, -.15cqw) rotate(-1deg); box-shadow: .45cqw .45cqw 0 var(--ink); }
-button.chip:active { transform: translate(.15cqw, .15cqw); box-shadow: 0 0 0 var(--ink); }
+button.chip:hover, button.chip.hover { transform: translate(-.15cqw, -.15cqw) rotate(-1deg); box-shadow: .45cqw .45cqw 0 var(--ink); }
+button.chip:active, button.chip.active { transform: translate(.15cqw, .15cqw); box-shadow: 0 0 0 var(--ink); }
 .gear { box-shadow: .2cqw .2cqw 0 var(--ink); }
 .gear:hover { transform: translate(-.12cqw, -.12cqw) rotate(-1deg); box-shadow: .35cqw .35cqw 0 var(--ink); }
 .gear:active { transform: translate(.1cqw, .1cqw); box-shadow: 0 0 0 var(--ink); }
 .go.home { background: var(--yellow); color: var(--ink); }
-.go:hover, .welcome-start:not(:disabled):hover { transform: translate(-.2cqw, -.2cqw) rotate(-1.5deg); box-shadow: .7cqw .7cqw 0 var(--ink); }
-.go:active, .welcome-start:not(:disabled):active { transform: translate(.3cqw, .3cqw); box-shadow: .1cqw .1cqw 0 var(--ink); }
+.go:hover, .go.hover, .welcome-start:not(:disabled):hover { transform: translate(-.2cqw, -.2cqw) rotate(-1.5deg); box-shadow: .7cqw .7cqw 0 var(--ink); }
+.go:active, .go.active, .welcome-start:not(:disabled):active { transform: translate(.3cqw, .3cqw); box-shadow: .1cqw .1cqw 0 var(--ink); }
 /* the two big ones wiggle once after they pop in */
 @keyframes wiggle { 0% { rotate: 0deg; } 25% { rotate: -3deg; } 50% { rotate: 3deg; } 75% { rotate: -1.5deg; } 100% { rotate: 0deg; } }
 .go.pop, .welcome-start.pop { animation: pop .45s cubic-bezier(.2, .7, .3, 1) backwards, wiggle .6s ease-out .45s; }

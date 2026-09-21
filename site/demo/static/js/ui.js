@@ -1,7 +1,7 @@
 /** Everything drawn over the picture: chips, the bubble and its placement, the panel, layers, keys. */
-import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns, welcomePrompt, ARTIST_INFO, artistName, pickerText } from './story.js?v=ds8';
-import { bubblePosition } from './geometry.js?v=ds8';
-import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds8';
+import { chipFor, bubbleForState, bubbleForShot, anchorFor, PLACEHOLDER_MS, feedLabel, welcomeButton, welcomeReturns, welcomePrompt, ARTIST_INFO, artistName, pickerText } from './story.js?v=ds9';
+import { bubblePosition } from './geometry.js?v=ds9';
+import { levelsFor, NEUTRAL_LEVELS, CLEAN_LEVELS, svgDocument } from './picture.js?v=ds9';
 
 const $ = (id) => document.getElementById(id);
 const store = {
