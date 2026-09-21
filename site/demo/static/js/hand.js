@@ -4,9 +4,10 @@
  *  Replay mode only. */
 import { polylineLength } from './geometry.js?v=ds9';
 
-export const HAND = { glide: 500, hover: 350, press: 200, hold: 500, rollGlide: 120, rollHover: 100, mmPerSec: 70, traceMin: 1200, traceMax: 4000 };
+/** A quarter slower than first built, so every lift, squash, and stroke reads at a glance. */
+export const HAND = { glide: 625, hover: 438, press: 250, hold: 625, rollGlide: 150, rollHover: 125, mmPerSec: 56, traceMin: 1500, traceMax: 5000 };
 
-/** How long the hand takes to draw `strokes` (board mm): 70 mm a second, within 1.2 to 4 s, divided by `speed`. */
+/** How long the hand takes to draw `strokes` (board mm): 56 mm a second, within 1.5 to 5 s, divided by `speed`. */
 export function traceMs(strokes, speed = 1) {
   const len = polylineLength(strokes || []);
   if (!len) return 0;

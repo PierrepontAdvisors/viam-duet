@@ -9,18 +9,18 @@ const store = {
   set(k, v) { try { localStorage.setItem(`duet.${k}`, JSON.stringify(v)); } catch { /* private window: fine */ } },
 };
 /** The page's defaults where the visitor's browser has nothing stored. The live page shows every layer over the
- *  camera; the showcase demo opens as Nicholas's screenshot of 2026-09-20 shows: cropped to the board, no ink
- *  layer (the photos already show the ink), two greens and wider lines, its own levels, sound on. A stroke
- *  colour in the table is locked: a plan's colour does not replace it. */
+ *  camera; the showcase demo opens as Nicholas's second screenshot of 2026-09-20 shows: the full view with the
+ *  board outline, the clean mask off, no ink layer (the photos already show the ink), two greens and wide lines,
+ *  its own levels, sound on. A stroke colour in the table is locked: a plan's colour does not replace it. */
 export const LIVE_DEFAULTS = { layers: { robot: true, ink: true, caption: true, chips: true, board: false, clean: true, vector: false },
                                ink: '#111111', inkWidth: 12, stroke: null, strokeWidth: 14, picture: CLEAN_LEVELS, crop: false, sound: false };
-export const DEMO_DEFAULTS = { layers: { ...LIVE_DEFAULTS.layers, ink: false }, ink: '#37e65b', inkWidth: 38, stroke: '#1fcf4f', strokeWidth: 24,
-                               picture: { brightness: 0, contrast: 0.84, exposure: 1.4 }, crop: true, sound: true };
+export const DEMO_DEFAULTS = { layers: { ...LIVE_DEFAULTS.layers, ink: false, board: true, clean: false }, ink: '#37e65b', inkWidth: 38, stroke: '#1fcf4f', strokeWidth: 38,
+                               picture: { brightness: -0.03, contrast: 0.9, exposure: 1.1 }, crop: false, sound: true };
 export const defaultsFor = (replay) => (replay ? DEMO_DEFAULTS : LIVE_DEFAULTS);
 const LAYER_NODES = { ink: 'l-ink', board: 'l-board' };
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
-export function initUI(app, { sendSet, sendCommand, on, replay = false }) {
+export function initUI(app, { sendSet, sendCommand, seek, on, replay = false }) {
   const D = defaultsFor(replay);
   const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null, relaunching: false };
   const stage = $('stage'), viewer = app.viewer;
@@ -298,8 +298,8 @@ export function initUI(app, { sendSet, sendCommand, on, replay = false }) {
   document.addEventListener('keydown', (e) => {
     if (e.target instanceof Element && e.target.matches('input, textarea, select')) return;
     if (e.key === 'Escape') openMenu(false);
-    else if (e.key === 'ArrowLeft') { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); }
-    else if (e.key === 'ArrowRight') { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); }
+    else if (e.key === 'ArrowLeft') { if (replay) seek(-1); else { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); } }   // the demo seeks the recording; the live page pages the photos
+    else if (e.key === 'ArrowRight') { if (replay) seek(1); else { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); } }
     else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key === 'l' || e.key === 'L') showLive();
     else if (e.key === 'c' || e.key === 'C') toggleControls();
