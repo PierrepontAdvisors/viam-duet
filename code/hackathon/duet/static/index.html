@@ -36,6 +36,7 @@
         <g class="robot" id="l-done" data-el="layer — robot strokes from earlier turns"></g>
         <g class="robot" id="l-robot" data-el="layer — plan strokes"></g>
         <g class="ghost" id="l-ghost" data-el="layer — ghost pen preview"><path id="ghostpath"/><circle id="ghostpen" r="2.2"/></g>
+        <g class="hand-ink" id="l-hand" data-el="layer — the hand's red trace"><path id="handpath"/><circle id="handpen" r="2.2"/></g>
       </g>
     </svg>
   </div>
@@ -43,6 +44,9 @@
   <div class="tl" id="chips" data-el="chips — top left">
     <span class="logo-wrap" id="badge" data-el="logo — Duet"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span>
     <span class="chip white" id="state" data-el="chip — state">Connecting…</span>
+    <button class="chip white clock hidden" id="clock" title="Pause or resume the piece" data-el="chip — turn clock">
+      <i class="fill"></i><b id="clock-who">Visitor</b> <span id="clock-time">0.0 s</span>
+    </button>
   </div>
   <div class="tr" data-el="chips — top right">
     <span class="chip black" id="count" data-el="chip — exchange counter">Exchange <b>0</b> of 5</span>
@@ -63,8 +67,14 @@
       <rect class="cuff" x="19" y="56" width="37" height="14" rx="4"/>
       <path class="skin" d="M14 2c-3.4 0-6 2.6-6 6v32c-2-2-5.4-2.4-7.4-.5-1.5 1.5-1 3.6.5 5.1l10 12.4c4 4.6 9 6.8 15 6.8h12c8 0 14-6.2 14-14.2v-14c0-3-2.5-5.5-5.5-5.5-1.5 0-3 .6-4 1.6-.6-2.6-3-4.6-5.8-4.6-1.7 0-3.3.7-4.4 1.9-.9-2.3-3.1-3.9-5.6-3.9-1.3 0-2.5.4-3.5 1.1V8c0-3.4-2.7-6-6-6z"/>
       <path class="line" d="M30.5 30.5v9M40.5 31.5v9M50 33.5v8"/>
+      <g class="marker">
+        <rect x="9.5" y="7" width="9" height="40" rx="3" fill="#e5322d" stroke="#111" stroke-width="2.5"/>
+        <path d="M14 1.5l-4.5 6.5h9z" fill="#111"/>
+      </g>
     </svg>
+    <span class="tag">Visitor</span>
   </div>
+  <span class="tag hidden" id="pen-tag" data-el="tag — robot pen">Robot</span>
 
   <div class="sub" id="caption" data-el="bubble">
     <div class="bubble speech" id="bubble"><p id="words" data-el="bubble — words"></p></div>
