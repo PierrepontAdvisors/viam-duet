@@ -75,7 +75,7 @@
 
 /* card 9: the big number */
 .big .content { align-items: center; text-align: center; }
-.big .display { --display: 12cqw; line-height: 1; }
+.big .display { --display: 10cqw; line-height: 1; }
 .big .closing { --body: 2.6cqw; }
 .big .takeaway { align-self: center; }
 
@@ -83,16 +83,22 @@
 .gobtn { display: inline-block; padding: var(--s2) var(--s4); background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
          border-radius: 999px; font-size: var(--headline); font-weight: 700; line-height: 1; box-shadow: .7cqw .7cqw 0 var(--ink); }
 .trigger .words { gap: var(--s1); }
-.trigger .headline { --headline: 4.6cqw; }
-.trigger .words .body { --body: 2.4cqw; }
+.trigger .headline { --headline: 3.8cqw; }
+.trigger .words .body { --body: 2.2cqw; }
 
 /* card 11: the excerpt and the error line */
 .error .figure { align-items: stretch; }
 .errline { color: var(--human); font-family: var(--mono); }
+.error .words { gap: var(--s1); }
+.error .headline { --headline: 4.4cqw; }
+.error .words .body { --body: 2.4cqw; }
 
 /* card 12: the four log fields */
 .logfields .paper { display: flex; flex-direction: column; gap: .4cqw; align-items: flex-start; }
 .logfields .num { --display: 6cqw; line-height: 1; color: var(--blue); }
+.log .headline { --headline: 4.2cqw; }
+.log .closing { --body: 2.3cqw; }
+.log .takeaway { --body: 2.3cqw; }
 
 /* card 13: three lines beside the medal */
 .felt .words { gap: var(--s1); }
@@ -114,3 +120,10 @@
 .stage.shownotes .codepanel pre { --body: 1.2cqw; }
 .stage.shownotes .watch .flip img { height: 18cqw; }
 .stage.shownotes .watch .closing { --body: 2.2cqw; }
+.stage.shownotes .big .display { --display: 7cqw; }
+.stage.shownotes .big .takeaway { --body: 2.2cqw; }
+.stage.shownotes .trigger .words { gap: .6cqw; }
+.stage.shownotes .trigger .headline { --headline: 3cqw; }
+.stage.shownotes .log .takeaway { --body: 2.2cqw; }
+.stage.shownotes .log .content { gap: 1cqw; }
+.stage.shownotes .logfields .num { --display: 4.2cqw; }

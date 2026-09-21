@@ -259,3 +259,91 @@ test('Act 2: the setup with callouts, one turn with three verbs, the two code pa
   assert.ok(s[7].includes('id="flip"') && s[7].includes('id="flipLabel"'), 'card 8 flipbook');
   assert.ok(s[7].includes('src="../pitch/img/turn-00-start.jpg"'), 'the flipbook starts on the blank board');
 });
+
+test('Act 3: three failures, the log, what it felt like, the advice', () => {
+  const h = read('index.html');
+  const s = sectionsOf(h);
+  assert.equal(s.length, 14);
+  const copy = [
+    '27 mm', 'The robot crushed the pen.', 'I measured the board with the marker in my hand. The robot holds it 27 mm differently.', 'Measure with the robot\'s hand, not yours.',
+    'The smart trigger that wasn\'t.', 'I wrote clever code so the robot would notice when you\'d stepped back.', 'It fired every few seconds on an empty board.',
+    'Saturday morning I deleted it and added a button.', 'Go, robot!', 'The simple thing is allowed to win.',
+    'The error you\'ll get too.', 'SyntaxError: \'return\' outside function', 'Four spaces instead of eight. The day before the hackathon.', 'The error message is the clue, not the insult.',
+    'I wrote down every problem.', '>Symptom<', '>What I tried<', '>Fix<', '>Why it worked<', 'Nine entries in two days.', 'This is what debugging actually is.',
+    'One person.', 'Two days.', '<span class="key">Honorable mention.</span>',
+    'You already know <span class="key">enough</span> to start.', 'Start with the smallest thing that works, then make it bigger.',
+  ];
+  for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
+  const excerpt = ['class Palletizer:', '    def obstacles(self):', '        boxes = self.placed_boxes()', '    return WorldState(boxes)'].join('\n');
+  assert.ok(s[10].includes(`<pre>${excerpt}</pre>`), 'card 11 excerpt verbatim');
+  assert.ok(s[12].includes('src="img/medal.jpg"'), 'card 13 shows the medal');
+  assert.ok(s[13].includes('data-builds="2"'), 'card 14 reveals two lines');
+  assert.deepEqual([...s[13].matchAll(/class="line reveal headline" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2']);
+});
+
+test('the page declares the cut and the reveals exactly as the tests model them, in order', () => {
+  const h = read('index.html');
+  assert.deepEqual(specsFromHtml(h), SPECS);
+  const numbers = [...h.matchAll(/<section class="card [^"]*" data-card="(\d+)"/g)].map((m) => Number(m[1]));
+  assert.deepEqual(numbers, Array.from({ length: 14 }, (_, i) => i + 1));
+});
+
+test('every card carries the master page: frame, wash, kicker, wordmark, footer with a counter, one notes aside', () => {
+  const h = read('index.html');
+  const kickers = ['01 · Duet', '02 · What a hackathon is', '03 · What other teams built', '04 · Why I built this', '05 · What Duet is', '06 · One turn',
+    '07 · It\'s just points', '08 · Watch it', '09 · What broke', '10 · What broke', '11 · What broke', '12 · The log', '13 · What it felt like', '14 · One piece of advice'];
+  const s = sectionsOf(h);
+  assert.equal(s.length, 14);
+  s.forEach((c, i) => {
+    const n = i + 1;
+    assert.ok(c.includes('class="kicker"') && c.includes(`>${kickers[i]}<`), `card ${n} kicker "${kickers[i]}"`);
+    assert.equal((c.match(/class="wordmark"/g) || []).length, 1, `card ${n} has one wordmark`);
+    assert.ok(/class="wordmark"[^>]*>\s*<svg class="logo/.test(c), `card ${n} header logo`);
+    assert.ok(/class="band foot"/.test(c) && c.includes(`<span class="counter">${n} / 14</span>`), `card ${n} footer counter`);
+    assert.ok(c.includes('Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026'), `card ${n} footer strip`);
+    assert.ok(/class="frame"/.test(c) && c.includes('class="wash"') && c.includes('class="pattern"') && c.includes('class="plate-img"'), `card ${n} plate layers`);
+    assert.ok(/^(split|triptych|modules) /.test(c), `card ${n} uses a pitch template class`);
+    assert.equal((c.match(/<aside class="notes"/g) || []).length, 1, `card ${n} has one notes aside`);
+    assert.ok(c.includes(`data-el="card ${n} notes — the spoken part"`), `card ${n} notes are named`);
+    assert.ok(c.indexOf('<aside class="notes"') < c.indexOf('<footer class="band foot"'), `card ${n} notes sit above the footer`);
+  });
+  // plates cycle 1..7 with card 4 on black
+  const plates = s.map((c) => /plate-(\d)\.jpg/.exec(c)[1]);
+  assert.deepEqual(plates, ['1', '2', '3', '7', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7']);
+  assert.ok(/^split lines plate-black/.test(s[3]) && /^modules code plate-black/.test(s[6]) && /^split advice plate-black/.test(s[13]), 'cards 4, 7 and 14 are black');
+});
+
+test('developer mode is wired: badge, label, toast, and unique data-el names on every card', () => {
+  const h = read('index.html');
+  for (const x of ['class="dev-badge"', 'id="devLabel"', 'id="devToast"']) assert.ok(h.includes(x), x);
+  const names = [...h.matchAll(/data-el="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(names.length >= 90, `only ${names.length} data-el names`);
+  assert.equal(new Set(names).size, names.length, 'data-el names must be unique');
+  for (let n = 1; n <= 14; n++) assert.ok(names.some((x) => x.startsWith(`card ${n} `)), `card ${n} has no data-el`);
+});
+
+test('every local file the deck references exists, except the local-only assets, which are gitignored instead', () => {
+  const h = read('index.html');
+  const refs = [...h.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
+  const localOnly = ['video/team-1.mp4', 'video/team-2.mp4', 'video/team-3.mp4', 'video/team-4.mp4', 'img/crowd.jpg', 'img/medal.jpg'];
+  const ignore = readFileSync(ROOT + '.gitignore', 'utf8').split('\n');
+  for (const r of new Set(refs)) {
+    if (localOnly.includes(r)) {
+      const rule = r.startsWith('video/') ? 'docs/duet/class/video/' : 'docs/duet/class/' + r;
+      assert.ok(ignore.includes(rule), `${r} is local-only and must be gitignored as ${rule}`);
+      continue;
+    }
+    assert.ok(existsSync(DIR + r), `referenced but missing: ${r}`);
+  }
+  for (const r of localOnly) assert.ok(refs.includes(r), `${r} is referenced`);
+  assert.ok(refs.includes('img/setup.jpg') && refs.includes('img/door.jpg'), 'the two committed photos');
+  assert.equal(refs.filter((r) => r.startsWith('../pitch/img/plate-')).length, 14, 'every card has a plate');
+  assert.ok(ignore.includes('hackathon-videos/'), 'the source drop folder is gitignored');
+});
+
+test('the pitch deck is untouched by this work', () => {
+  const pitch = fileURLToPath(new URL('../../../docs/duet/pitch/', import.meta.url));
+  const js = readFileSync(pitch + 'deck.js', 'utf8');
+  assert.match(js, /var CARDS = 7;/);
+  assert.ok(!/ClassDeck/.test(js));
+});
