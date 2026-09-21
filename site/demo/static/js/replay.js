@@ -1,7 +1,7 @@
 /** Replay mode: a recorded session as the same protocol messages the socket would carry, on a clock.
  *  `schedule()` is pure (replay.json in, steps out); `Player` runs the steps and takes the page's
  *  commands. The showcase site loads this module; the live page never does. */
-import { planMs } from './hand.js?v=ds9';
+import { planMs } from './hand.js?v=ds10';
 
 export const PACE = { look: 1000, human: 16000, capture: 1000, thinkInk: 1200, thinkClaude: 3500, plan: 1500,
                       strokeMs: 350, drawMin: 3000, drawMax: 12000, settle: 1200, finish: 2000 };

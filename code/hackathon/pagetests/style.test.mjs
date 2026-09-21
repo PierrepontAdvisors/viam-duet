@@ -13,7 +13,7 @@ test('the page loads the design system and the embedded font, not Google Fonts',
   assert.match(h, /href="\/static\/duet\.css\?v=\w+"/, 'duet.css carries a cache-busting version');
   assert.ok(!h.includes('fonts.googleapis.com'), 'no network font');
   assert.ok(h.indexOf('tokens.css') < h.indexOf('duet.css'), 'tokens load before the page styles');
-  assert.ok(!/\?v=ds8/.test(h), 'the page moved to v=ds9 with the drawing hand');
+  assert.ok(!/\?v=ds9/.test(h), 'the page moved to v=ds10 with the hand fix');
 });
 
 test('the page carries the mat, the logo symbol and the logo in the badge', () => {

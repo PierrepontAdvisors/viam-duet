@@ -33,7 +33,7 @@ test('ui.js applies the table it is given: layers, colours, widths, levels, and 
 
 test('app.js wires the hand in replay mode: built at boot, fed cues, cancelled off the human turn and on restart; sound turns on at Start in the demo when nothing is stored or it is remembered on', () => {
   const app = read('js/app.js');
-  assert.match(app, /import \{ Hand \} from '\.\/hand\.js\?v=ds9';/);
+  assert.match(app, /import \{ Hand \} from '\.\/hand\.js\?v=ds10';/);
   assert.match(app, /const SPEED = Number\(new URLSearchParams\(location\.search\)\.get\('speed'\)\) \|\| 1;/);
   assert.match(app, /if \(REPLAY_URL\) \{\n\s*app\.pen = new GhostPen/);
   assert.match(app, /new Player\(replay, feed, \{ speed: SPEED, cue: \(c\) => \{/);
@@ -41,12 +41,12 @@ test('app.js wires the hand in replay mode: built at boot, fed cues, cancelled o
   assert.match(app, /if \(msg\.type === 'restart' && app\.hand\) app\.hand\.cancel\(\);/);
   assert.match(app, /const wantsSound = stored === null \? defaultsFor\(!!REPLAY_URL\)\.sound : stored;/);
   assert.match(app, /if \(wantsSound && REPLAY_URL\) \$\('start'\)\.addEventListener\('click', \(\) => \{ if \(!app\.sound\.on\) setSound\(true\); \}, \{ once: true \}\)/);
-  assert.ok(!/\?v=ds8/.test(app), 'assets at v=ds9');
+  assert.ok(!/\?v=ds9/.test(app), 'assets at v=ds10');
 });
 
 test('app.js in replay mode: a red pen for the hand, the Robot tag on the robot pen, cues routed by key, pause and resume routed by state, the clock click', () => {
   const app = read('js/app.js');
-  assert.match(app, /import \{ Clock \} from '\.\/clock\.js\?v=ds9';/);
+  assert.match(app, /import \{ Clock \} from '\.\/clock\.js\?v=ds10';/);
   assert.match(app, /app\.pen = new GhostPen\(\$\('l-hand'\), \$\('handpath'\), \$\('handpen'\)\);/);
   assert.match(app, /new Hand\(\$\('hand'\), \{ stage: \$\('stage'\), targets: handTarget, tracer: app\.pen, toStage: \(p\) => app\.viewer\.boardToStage\(p\), speed: SPEED \}\)/);
   assert.match(app, /app\.clock = new Clock\(\$\('clock'\), \{ who: \$\('clock-who'\), time: \$\('clock-time'\) \}\);/);
@@ -62,7 +62,7 @@ test('app.js in replay mode: a red pen for the hand, the Robot tag on the robot 
   assert.match(fn, /if \(\['look', 'finish', 'finished', 'idle'\]\.includes\(msg\.state\)\) app\.clock\.stop\(\);/);
   assert.match(fn, /app\.ghost\.play\(app\.plan\.polylines, \{ durationMs: app\.replay\.drawMs\(app\.plan\.polylines\.length\), onMove: placeArm \}\)/);
   assert.match(app, /const placeArm = \(p\) => \{[^\n]*boardToStage\(p\)[^\n]*classList\.toggle\('hidden', !q\)/);
-  assert.ok(!/\?v=ds8/.test(app), 'assets at v=ds9');
+  assert.ok(!/\?v=ds9/.test(app), 'assets at v=ds10');
 });
 
 test('arrow keys seek the replay by half-exchanges: ui.js routes them to seek in replay mode, app.js clears the hand, the pens, and the clock first', () => {
