@@ -167,7 +167,7 @@ export function boot() {
   try { stored = JSON.parse(localStorage.getItem('duet.sound')); } catch { /* fine */ }
   const wantsSound = stored === null ? defaultsFor(!!REPLAY_URL).sound : stored;
   if (wantsSound) soundBtn.textContent = 'Sound: click to enable';        // audio needs a gesture; the label invites it
-  if (wantsSound && stored === null) $('start').addEventListener('click', () => { if (!app.sound.on) setSound(true); }, { once: true });   // the demo: Start is the gesture
+  if (wantsSound && REPLAY_URL) $('start').addEventListener('click', () => { if (!app.sound.on) setSound(true); }, { once: true });   // the demo: Start is the first gesture, so sound comes on there
   on((msg) => {
     const s = app.sound;
     if (msg.type === 'interpretation') s.speak(msg.thought);

@@ -30,6 +30,7 @@ export class Hand {
   run(cue) {
     this.cancel();
     const steps = plan(cue, this.speed), token = ++this.token;
+    this.moveTo(this.stage);                              // over the board while hidden, as if drawing the mark; no glide from where it last was
     this.el.classList.remove('hidden');
     const step = (i) => {
       if (token !== this.token) return;

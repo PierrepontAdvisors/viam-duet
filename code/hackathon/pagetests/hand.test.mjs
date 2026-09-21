@@ -41,6 +41,7 @@ test('Hand: a pick glides to and presses the picker, the row, then Go, with the 
   const { hand, el, picker, row, go } = rig();
   hand.run({ hand: 'pick', artist: 'mimic' });
   assert.ok(!el.classList.contains('hidden'), 'the hand shows at once');
+  assert.equal(el.style.left, '400px'); assert.equal(el.style.top, '225px');                                  // over the board first
   await tick(40);
   assert.deepEqual([picker.clicks, row.clicks, go.clicks], [1, 1, 1]);
   assert.equal(el.style.left, '240px'); assert.equal(el.style.top, '65px');                                   // Go's centre against the stage

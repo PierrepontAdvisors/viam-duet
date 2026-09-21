@@ -68,7 +68,7 @@ In replay mode, and only where the visitor's browser has nothing stored for the 
 
 The colours and widths were read from the screenshot: the two swatches sampled as `#37e65b` and `#1fcf4f`, the width sliders sat at 38 and 24 of 4 to 40; the picture row's own labels gave its three values. `initUI` receives `replay: true` from `app.js` (it knows before the Player loads, from the meta tag) and picks the demo's default table. Crop is not stored today and stays that way: the demo simply starts cropped.
 
-Sound needs a gesture before the browser lets audio play. With nothing stored, the demo turns sound on at the welcome's Start press, the first click every visitor makes, and the chip reads "Sound on" from then. The chip still toggles it, and the choice is stored as today. The `Sound: click to enable` label for a remembered on-state is unchanged.
+Sound needs a gesture before the browser lets audio play. With nothing stored, or with sound remembered on from an earlier visit, the demo turns sound on at the welcome's Start press, the first click every visitor makes, and the chip reads "Sound on" from then. The chip still toggles it, and the choice is stored as today. A visitor who turned sound off stays off. The live page keeps its `Sound: click to enable` label for a remembered on-state.
 
 ## 6. Versions and the site
 
