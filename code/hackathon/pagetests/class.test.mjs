@@ -209,7 +209,8 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   assert.match(css, /\.stage \.card\.active\.triptych \.module\.reveal \{ animation: none; \}/);
   assert.match(css, /\.split\.half \.words \{ grid-column: 1 \/ 7; \}/);
   assert.match(css, /\.split\.half\.photo-left \.figure \{ grid-column: 1 \/ 6; grid-row: 1; \}/);
-  assert.match(css, /\.strip\.four \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\); \}/);
+  assert.match(css, /\.panels\.four \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\); \}/);
+  assert.ok(!/(^|\n)\.strip\b/.test(css), 'the footer span is also .strip');
   assert.match(css, /\.panel \.cap \{[^}]*color: var\(--ink\)/);
   assert.ok(!/\.lines \.line|\.big \.display|\.advice \.words|\.logfields/.test(css), 'the text-only layouts are gone with their cards');
   assert.ok(!/\.card\.active \.(modules|triptych|split)\b/.test(css), 'a card\'s template class compounds with .card.active; it is never a descendant');
