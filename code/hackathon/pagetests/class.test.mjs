@@ -388,3 +388,10 @@ test('talk.md: pre-flight, fourteen cards with times adding to about 17 minutes,
     'You already know enough to start', 'Did you write all the code?', 'Could I build this?']) assert.ok(t.includes(line), `talk missing: ${line}`);
   assert.ok(!/motion service|inverse kinematics|WebRTC|polyline|inference/i.test(t), 'no jargon');
 });
+
+test('README: how to open it, the keys, the cut, the notes, the assets, and what stays out of git', () => {
+  const r = read('README.md');
+  for (const line of ['open docs/duet/class/index.html', '?cut=10', '?notes=1', 'build_assets.py', 'hackathon-videos/', 'crowd.jpg', 'medal.jpg', 'video/', 'node --test']) {
+    assert.ok(r.includes(line), `README missing: ${line}`);
+  }
+});
