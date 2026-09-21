@@ -112,4 +112,5 @@
 .stage.shownotes .oneturn .verb { --display: 4.5cqw; }
 .stage.shownotes .oneturn .m2 .bubble { --body: 2.2cqw; }
 .stage.shownotes .codepanel pre { --body: 1.2cqw; }
-.stage.shownotes .watch .closing { --body: 0.8cqw; }
+.stage.shownotes .watch .flip img { height: 18cqw; }
+.stage.shownotes .watch .closing { --body: 2.2cqw; }
