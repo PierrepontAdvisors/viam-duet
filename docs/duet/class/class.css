@@ -88,10 +88,11 @@
 
 /* card 11: the excerpt and the error line */
 .error .figure { align-items: stretch; }
-.errline { color: var(--human); font-family: var(--mono); }
+.errline { color: var(--human); font-family: var(--mono); --body: 2.4cqw; }
 .error .words { gap: var(--s1); }
 .error .headline { --headline: 4.4cqw; }
 .error .words .body { --body: 2.4cqw; }
+.error .codepanel pre { --body: 2cqw; }
 
 /* card 12: the four log fields */
 .logfields .paper { display: flex; flex-direction: column; gap: .4cqw; align-items: flex-start; }
