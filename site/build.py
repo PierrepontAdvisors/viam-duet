@@ -2,8 +2,8 @@
 """Assemble the showcase site from the sources: the pitch deck as the presentation, the live page in
 replay mode as the demo, and the recorded session with the most turns as the recording it replays.
 
-    python3 site/build.py                          # site/, longest session under code/hackathon/sessions
-    python3 site/build.py --session 20260919-151119 --sessions /path/to/sessions --out site
+    python3 site/build.py                          # site/, longest session under code/hackathon/sessions (gitignored recordings)
+    python3 site/build.py --sessions site/demo/sessions --session 20260919-151119    # a fresh clone: from the shipped session
 
 Standard library only for the assembly; run it with the hackathon venv's python to trace the visitor's marks
 from the photos as the live page did (plain python3 falls back to the plan SVGs' traced ink).
@@ -207,8 +207,13 @@ def build(out: Path, session_dir: Path, calibration: dict, static: Path = STATIC
     copy_tree(pitch, out / "presentation", DECK_SKIP)
     demo = out / "demo"
     copy_tree(static, demo / "static", {"__pycache__", ".DS_Store"})
-    shutil.rmtree(demo / "sessions", ignore_errors=True)
-    copy_tree(session_dir, demo / "sessions" / session_dir.name, {".DS_Store"})
+    dst = demo / "sessions" / session_dir.name
+    if session_dir.resolve() == dst.resolve():          # rebuilding from the shipped session: leave it where it is
+        for other in (demo / "sessions").glob("*"):
+            if other.is_dir() and other.resolve() != dst.resolve(): shutil.rmtree(other)
+    else:
+        shutil.rmtree(demo / "sessions", ignore_errors=True)
+        copy_tree(session_dir, dst, {".DS_Store"})
     (demo / "index.html").write_text(rewrite_index((static / "index.html").read_text()))
     data = replay_data(session_dir, calibration, WORDS.get(session_dir.name))
     (demo / "replay.json").write_text(json.dumps(data, separators=(",", ":")) + "\n")

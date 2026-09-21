@@ -4,6 +4,7 @@ from pathlib import Path
 PACKAGE_DIR = Path(__file__).resolve().parent
 DATA_DIR = PACKAGE_DIR / "data"                 # poses.json and calibration.json, committed
 SESSIONS_DIR = PACKAGE_DIR.parent / "sessions"  # per-session photos and video, gitignored
+SHIPPED_SESSION = PACKAGE_DIR.parents[2] / "site" / "demo" / "sessions" / "20260919-151119"   # the one recording in the repo: the showcase demo's
 
 POSES_PATH = DATA_DIR / "poses.json"
 CALIBRATION_PATH = DATA_DIR / "calibration.json"

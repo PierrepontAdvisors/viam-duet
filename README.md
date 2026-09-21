@@ -2,7 +2,7 @@
 
 You draw one mark on a whiteboard. Duet looks at it, works out what the drawing is becoming, and answers in the hand of an artist. You take turns until the piece is done, then it signs, and the photos of every turn become a short film.
 
-Built in a day at Viam's Fine Motor Skills hackathon, New York, September 18 to 19, 2026, on a UFACTORY xArm 6 with a gripper and a wrist camera, running on [Viam](https://www.viam.com). Honorable mention.
+Built over two days at Viam's Fine Motor Skills hackathon, New York, September 18 to 19, 2026, on a UFACTORY xArm 6 with a gripper and a wrist camera, running on [Viam](https://www.viam.com). Honorable mention.
 
 ## See it
 
@@ -39,14 +39,15 @@ cp .env.example .env        # machine address and API key from the Viam app's CO
 ./demo.sh                                      # the same, relaunched if the connection drops
 ```
 
-Without a machine, the fake run replays a recorded session through a fake camera and arm. The showcase session ships with the repo:
+Without a machine, the fake run replays a recorded session through a fake camera and arm. By default it replays the showcase session that ships in `site/demo/sessions`:
 
 ```
-.venv/bin/python -m duet.run --fake --replay ../../../site/demo/sessions/20260919-151119
-.venv/bin/python -m duet.run --fake --claude --replay ../../../site/demo/sessions/20260919-151119   # the real Claude call on the real boards
+.venv/bin/python -m duet.run --fake                      # the shipped session, page at http://localhost:8000
+.venv/bin/python -m duet.run --fake --claude             # the same boards, with the real Claude call
+.venv/bin/python -m duet.run --fake --replay <folder>    # any folder of turn photos
 ```
 
-Tests: `.venv/bin/python -m pytest -q` for the Python side and `node --test 'pagetests/*.test.mjs'` for the page, both from `code/hackathon`. Rebuild the showcase site after changing the page, the deck, or the recording with `python3 site/build.py` (see `site/README.md`).
+Tests: `.venv/bin/python -m pytest -q` for the Python side and `node --test 'pagetests/*.test.mjs'` for the page, both from `code/hackathon`. The showcase site is committed prebuilt. After changing the page or the deck, rebuild it from the shipped session with `code/hackathon/.venv/bin/python site/build.py --sessions site/demo/sessions --session 20260919-151119` from the repository root; the venv's OpenCV traces the visitor's marks from the photos, plain `python3` falls back to the plan files (see `site/README.md`).
 
 ## Map
 
@@ -69,4 +70,4 @@ Made by Nicholas Fjellberg Swerdlowe. The robot, the machine platform, and the h
 
 ## Rights
 
-This repository is published to be read. No open-source license is granted: the code, the deck, the site, and the notes are copyright 2026 Nicholas Fjellberg Swerdlowe, all rights reserved. The exception is `docs/viam`, which is Viam's documentation redistributed unchanged under CC BY-SA 4.0. If you would like to use something here, ask.
+This repository is published to be read. No open-source license is granted: the code, the deck, the site, and the notes are copyright 2026 Nicholas Fjellberg Swerdlowe, all rights reserved. The exceptions are `docs/viam`, which is Viam's documentation redistributed unchanged under CC BY-SA 4.0, and the embedded Fredoka font, which is under the SIL Open Font License. If you would like to use something here, ask.

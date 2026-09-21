@@ -12,7 +12,8 @@ SHIPPED_SESSION = str(Path(__file__).resolve().parents[3] / "site" / "demo" / "s
 
 def test_parser_defaults_and_fake_flags():
     a = run.build_parser().parse_args([])
-    assert (a.fake, a.claude, a.port, a.artist, a.length, a.exchanges, a.handoff, a.replay) == (False, False, 8000, "abstract", "short", 5, "held", "20260918-190258")
+    assert (a.fake, a.claude, a.port, a.artist, a.length, a.exchanges, a.handoff) == (False, False, 8000, "abstract", "short", 5, "held")
+    assert a.replay == str(run.cfg.SHIPPED_SESSION) and a.replay.endswith("site/demo/sessions/20260919-151119")
     b = run.build_parser().parse_args(["--fake", "--claude", "--port", "8765", "--artist", "vangogh", "--length", "long",
                                        "--exchanges", "3", "--handoff", "dock", "--replay", "20260918-185927"])
     assert (b.fake, b.claude, b.port, b.artist, b.length, b.exchanges, b.handoff, b.replay) == (True, True, 8765, "vangogh", "long", 3, "dock", "20260918-185927")
@@ -21,7 +22,7 @@ def test_parser_defaults_and_fake_flags():
 def test_replay_folder_is_a_session_name_or_a_path(tmp_path, monkeypatch):
     monkeypatch.setattr(run.cfg, "SESSIONS_DIR", tmp_path / "sessions")
     assert run.replay_folder("20260918-190258") == tmp_path / "sessions" / "20260918-190258"
-    assert run.replay_folder("../../../site/demo/sessions/20260919-151119") == Path("../../../site/demo/sessions/20260919-151119")
+    assert run.replay_folder("../../site/demo/sessions/20260919-151119") == Path("../../site/demo/sessions/20260919-151119")
     assert run.replay_folder(str(tmp_path / "elsewhere")) == tmp_path / "elsewhere"
 
 
