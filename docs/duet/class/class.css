@@ -87,12 +87,12 @@
 .trigger .words .body { --body: 2.2cqw; }
 
 /* card 11: the excerpt and the error line */
-.error .figure { align-items: stretch; }
+.error .figure { align-items: stretch; justify-self: stretch; }
 .errline { color: var(--human); font-family: var(--mono); --body: 2.4cqw; }
 .error .words { gap: var(--s1); }
 .error .headline { --headline: 4.4cqw; }
 .error .words .body { --body: 2.4cqw; }
-.error .codepanel pre { --body: 2cqw; }
+.error .codepanel pre { --body: 1.8cqw; }
 
 /* card 12: the four log fields */
 .logfields .paper { display: flex; flex-direction: column; gap: .4cqw; align-items: flex-start; }
@@ -119,6 +119,7 @@
 .stage.shownotes .oneturn .verb { --display: 4.5cqw; }
 .stage.shownotes .oneturn .m2 .bubble { --body: 2.2cqw; }
 .stage.shownotes .codepanel pre { --body: 1.2cqw; }
+.stage.shownotes .error .codepanel pre { --body: 1.5cqw; }
 .stage.shownotes .watch .flip img { height: 18cqw; }
 .stage.shownotes .watch .closing { --body: 2.2cqw; }
 .stage.shownotes .big .display { --display: 7cqw; }

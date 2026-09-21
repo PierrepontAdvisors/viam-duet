@@ -214,6 +214,8 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   assert.match(css, /\.oneturn \.cap \{[^}]*color: var\(--ink\)/);
   assert.match(css, /\.watch \.closing \{[^}]*color: var\(--ink\)/);
   assert.match(css, /\.clip \.cap \{[^}]*color: var\(--ink\)/);
+  assert.match(css, /\.errline \{[^}]*color: var\(--human\)/);
+  assert.match(css, /\.takeaway \{[^}]*background: var\(--yellow\)/);
 });
 
 test('Act 2: the setup with callouts, one turn with three verbs, the two code panels, the flipbook', () => {
