@@ -119,7 +119,7 @@ function rig({ menuOpen = false, pickerHidden = false } = {}) {
 test('Hand: the draw step plays the tracer and the hand follows its tip with the marker out; then it lifts, squashes, and clicks on the release', () => {
   const { hand, el, picker, rows, go, tracer, s, cue } = rig();
   hand.run(cue);
-  assert.deepEqual(tracer.calls, [['play', [LINE], 1200]]);
+  assert.deepEqual(tracer.calls.at(-1), ['play', [LINE], 1200]);                                   // after the stop that every run begins with
   assert.ok(el.classList.contains('draw'), 'the marker shows while drawing');
   assert.equal(el.style.left, '176px'); assert.equal(el.style.top, '240px');                           // toStage([88, 120])
   s.next();                                                                                            // draw done → glide picker
