@@ -1755,3 +1755,338 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 - [ ] **Step 7: Report**
 
 Tell Nicholas: what was built, the test counts, the screenshots, and the two things still his: `hackathon-videos/photo-medal.jpg` (then rerun `build_assets.py`) and the four captions for card 3 (the `card 3 caption — team N` paragraphs in `index.html` and the four `_(your line about clip N)_` lines in `talk.md`). Do not open a PR; he decides when.
+
+---
+
+### Task 5b: The story pictures — the text-only cards told in pictures (added 2026-09-21 afternoon)
+
+Nicholas's goal after seeing Act 3: the text-only cards should carry cartoon pictures with the words under them, so the story reads in pictures. The eleven pictures are generated and committed (`img/story-*.jpg`, commit 2d849ca, by `docs/duet/class/gen_images.py`); the spec's cards 4, 9, 10, 11, 12 and 14 are amended. This task rebuilds those six cards on a `story` template and updates the tests.
+
+**Files:**
+- Modify: `docs/duet/class/class.css` (replace the card 4, 9, 10, 11, 12, 14 blocks and the rehearsal block; add the `story` template)
+- Modify: `docs/duet/class/index.html` (replace the six `<section>`s for cards 4, 9, 10, 11, 12, 14)
+- Modify: `code/hackathon/pagetests/class.test.mjs` (edit the assertions that named the old markup; add one test)
+
+- [ ] **Step 1: Update the tests first**
+
+In `code/hackathon/pagetests/class.test.mjs`:
+
+(a) In the `Act 1` test, replace
+```js
+  assert.ok(/class="card split lines plate-black"/.test('class="card ' + s[3].slice(0, 60)), 'card 4 is the black text card');
+  assert.equal((s[3].match(/class="line reveal headline" data-step="(\d)"/g) || []).length, 4, 'card 4 reveals four lines');
+```
+with
+```js
+  assert.ok(s[3].startsWith('modules story diner plate-black"'), 'card 4 is a black story card');
+  assert.deepEqual([...s[3].matchAll(/class="panel paper reveal" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2', '3', '4'], 'card 4 reveals four panels');
+  for (let n = 1; n <= 4; n++) assert.ok(s[3].includes(`src="img/story-4-${n}.jpg"`), `card 4 panel ${n} picture`);
+  assert.equal((s[3].match(/<figcaption class="cap body"/g) || []).length, 4, 'each panel carries its line as a caption');
+```
+
+(b) In the `Act 3` test, replace
+```js
+  assert.deepEqual([...s[13].matchAll(/class="line reveal headline" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2']);
+```
+with
+```js
+  assert.deepEqual([...s[13].matchAll(/class="panel paper reveal" data-step="(\d)"/g)].map((m) => m[1]), ['1', '2']);
+  for (const [card, pics] of [[8, ['story-9']], [9, ['story-10-1', 'story-10-2']], [10, ['story-11']], [11, ['story-12']], [13, ['story-14-1', 'story-14-2']]]) {
+    for (const p of pics) assert.ok(s[card].includes(`src="img/${p}.jpg"`), `card ${card + 1} shows ${p}`);
+  }
+  assert.ok(s[10].includes('</pre><p class="errline body"'), 'card 11 keeps the error line inside the code panel');
+```
+and in the same test's copy list replace `'27 mm', 'The robot crushed the pen.'` with `'The robot crushed the pen.'` (the number now lives only in the line, which is already listed).
+
+(c) In the master-page test, replace
+```js
+  assert.ok(/^split lines plate-black/.test(s[3]) && /^modules code plate-black/.test(s[6]) && /^split advice plate-black/.test(s[13]), 'cards 4, 7 and 14 are black');
+```
+with
+```js
+  assert.ok(/^modules story diner plate-black/.test(s[3]) && /^modules code plate-black/.test(s[6]) && /^modules story advice plate-black/.test(s[13]), 'cards 4, 7 and 14 are black');
+```
+
+(d) In the `class.css:` test, after the `.split.half.photo-left .figure` assertion add
+```js
+  assert.match(css, /\.strip\.four \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\); \}/);
+  assert.match(css, /\.panel \.cap \{[^}]*color: var\(--ink\)/);
+  assert.ok(!/\.lines \.line|\.big \.display|\.advice \.words|\.logfields/.test(css), 'the text-only layouts are gone with their cards');
+```
+
+(e) Append a new test at the end of the file:
+```js
+test('the story pictures: eleven panels in img/, each on its card, generated in the pitch grammar without naming an artist', () => {
+  const pics = ['story-4-1', 'story-4-2', 'story-4-3', 'story-4-4', 'story-9', 'story-10-1', 'story-10-2', 'story-11', 'story-12', 'story-14-1', 'story-14-2'];
+  const h = read('index.html');
+  for (const p of pics) {
+    assert.ok(existsSync(DIR + `img/${p}.jpg`), `missing img/${p}.jpg`);
+    assert.equal((h.match(new RegExp(`src="img/${p}\\.jpg"`, 'g')) || []).length, 1, `${p} is on exactly one card`);
+  }
+  const py = read('gen_images.py');
+  for (const p of pics) assert.ok(py.includes(`"${p}"`), `job ${p} in gen_images.py`);
+  assert.ok(!/AQ\.[A-Za-z0-9_-]{20,}|AIza[A-Za-z0-9_-]{20,}/.test(py), 'no key literal');
+  assert.ok(!/Haring|Mondrian|Van Gogh/.test(py), 'prompts describe the grammar, they do not name an artist');
+  assert.match(py, /GEMINI_API_KEY/);
+  assert.match(py, /pitch\.GRAMMAR|GRAMMAR = pitch\.GRAMMAR/);
+});
+```
+
+- [ ] **Step 2: Run the tests to see the edited ones fail**
+
+Run (from `code/hackathon`): `node --test pagetests/class.test.mjs`
+Expected: the Act 1, Act 3, master-page and class.css tests fail (old markup); the new story-pictures test fails on "is on exactly one card" (0 references); the rest pass.
+
+- [ ] **Step 3: Replace the six card blocks and the rehearsal block in `class.css`**
+
+Replace lines 43–45 (`/* card 4: four lines on the black plate */` … `.lines .line { … }`) with the story template:
+
+```css
+/* template: story (cards 4, 9, 10, 11, 12, 14): a strip of cartoon panels across the top, the words under them */
+.story { --pad-y: 3cqw; }
+.story .content { gap: var(--s1); }
+.strip { display: grid; column-gap: var(--gutter); align-items: start; justify-content: center; width: 100%; }
+.strip.one { grid-template-columns: minmax(0, 32cqw); }
+.strip.two { grid-template-columns: repeat(2, minmax(0, 36cqw)); }
+.strip.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.panel { display: flex; flex-direction: column; gap: .6cqw; min-width: 0; padding: .8cqw; }
+.panel img { display: block; width: 100%; height: auto; border-radius: calc(var(--paper-radius) - .6cqw); }
+.panel .cap { color: var(--ink); text-align: left; }
+.panel .key { color: var(--robot); -webkit-text-stroke: 0; }   /* a keyed word on white paper, not on the plate */
+.under { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s1); width: 100%; }
+.under .headline { --headline: 4.4cqw; }
+.under .body { --body: 2.4cqw; }
+.under .lines { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .4cqw 1cqw; }
+.under .takeaway { align-self: center; }
+
+/* card 4: the diner strip, four panels with their lines as captions */
+.diner .panel .cap { --body: 2cqw; }
+```
+
+Replace lines 76–102 (the `/* card 9 */`, `/* card 10 */`, `/* card 11 */`, `/* card 12 */` blocks) with:
+
+```css
+/* card 9: one panel, the words under it; nothing beyond the template */
+
+/* card 10: the Go button rides inline after the three lines */
+.gobtn { display: inline-block; padding: .5cqw 1.6cqw; background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
+         border-radius: 999px; font-size: var(--body); font-weight: 700; line-height: 1; box-shadow: .35cqw .35cqw 0 var(--ink); }
+
+/* card 11: the code panel is the strip's second panel, the error line inside it */
+.error .codepanel pre { --body: 1.8cqw; }
+.errline { color: var(--human); font-family: var(--mono); --body: 2.2cqw; }
+
+/* card 12: the four fields as a row of pills */
+.fields { display: flex; justify-content: center; gap: var(--gutter); }
+.fields .pill { display: inline-flex; align-items: baseline; gap: .5cqw; }
+.fields .num { color: var(--blue); font-weight: 700; }
+.fields .body { --body: 2.1cqw; }
+```
+
+Replace lines 107–108 (`/* card 14 */` block) with:
+
+```css
+/* card 14: the advice panels carry their line as a headline-sized caption */
+.advice .panel .cap { --headline: 3.2cqw; }
+```
+
+In the pop rule (line 19) add `.strip, .under` to the `:is(...)` list, and after line 22 add:
+```css
+.card.active.modules .content > .strip { --i: 2; }
+.card.active.modules .content > .under { --i: 4; }
+```
+
+Replace the rehearsal block (from `/* with the notes row on (rehearsal) … */` to the end of the file) with:
+
+```css
+/* with the notes row on (rehearsal), the pictures and lines take a step, as deck.css does for the pitch */
+.stage.shownotes .duo .photo img { height: 14cqw; }
+.stage.shownotes .clip video { height: 24cqw; }
+.stage.shownotes .callouts .photo img { height: 24cqw; }
+.stage.shownotes .callouts .headline { --headline: 3.6cqw; }
+.stage.shownotes .callouts .list .paper { --body: 2cqw; }
+.stage.shownotes .oneturn .photo img { height: 16cqw; }
+.stage.shownotes .oneturn .cap { --body: 1.8cqw; }
+.stage.shownotes .oneturn .verb { --display: 4.5cqw; }
+.stage.shownotes .oneturn .m2 .bubble { --body: 2.2cqw; }
+.stage.shownotes .codepanel pre { --body: 1.2cqw; }
+.stage.shownotes .error .codepanel pre { --body: 1.5cqw; }
+.stage.shownotes .watch .flip img { height: 18cqw; }
+.stage.shownotes .watch .closing { --body: 2.2cqw; }
+.stage.shownotes .strip.one { grid-template-columns: minmax(0, 22cqw); }
+.stage.shownotes .strip.two { grid-template-columns: repeat(2, minmax(0, 26cqw)); }
+.stage.shownotes .strip.four { grid-template-columns: repeat(4, minmax(0, 16cqw)); }
+.stage.shownotes .diner .panel .cap { --body: 1.7cqw; }
+.stage.shownotes .advice .panel .cap { --headline: 2.6cqw; }
+.stage.shownotes .under .headline { --headline: 3.4cqw; }
+.stage.shownotes .under .body { --body: 2.1cqw; }
+```
+
+- [ ] **Step 4: Replace the six sections in `index.html`**
+
+Each replacement is the whole `<section>` … `</section>` for that card. Keep the blank line between sections. Every `alt` describes the picture; captions carry the spec's lines verbatim.
+
+Card 4:
+```html
+  <section class="card modules story diner plate-black" data-card="4" data-builds="4" data-el="card 4 — why I built this">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle-bright)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-7.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 4 kicker">04 · Why I built this</span><span class="wordmark" data-el="card 4 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="strip four">
+        <figure class="panel paper reveal" data-step="1" data-el="card 4 panel 1 — dad with a pen"><img src="img/story-4-1.jpg" alt="A cartoon architect in a diner booth, a marker behind his ear and a rolled drawing under his arm"><figcaption class="cap body" data-el="card 4 line 1">My dad was an architect. He always had a pen.</figcaption></figure>
+        <figure class="panel paper reveal" data-step="2" data-el="card 4 panel 2 — at the diner"><img src="img/story-4-2.jpg" alt="The architect and a kid across a diner table, both holding markers over a placemat"><figcaption class="cap body" data-el="card 4 line 2">At the diner, while we waited for the food, we'd draw together.</figcaption></figure>
+        <figure class="panel paper reveal" data-step="3" data-el="card 4 panel 3 — trading lines"><img src="img/story-4-3.jpg" alt="A big hand and a small hand drawing one loopy line on a placemat as the fries arrive"><figcaption class="cap body" data-el="card 4 line 3">He'd draw. I'd draw on top. He'd draw again. Until the food came.</figcaption></figure>
+        <figure class="panel paper reveal" data-step="4" data-el="card 4 panel 4 — the other side of the table"><img src="img/story-4-4.jpg" alt="The kid across the diner table from a green robot arm, both drawing on the placemat"><figcaption class="cap body" data-el="card 4 line 4">I didn't figure out that's where this came from until halfway through building it.</figcaption></figure>
+      </div>
+    </div>
+    <aside class="notes" data-el="card 4 notes — the spoken part"><p>Why a robot that draws with you. My dad was an architect; he always had a pen. At the diner we'd draw together on the placemat until the food came. That's how I got into art. I walked into the hackathon thinking it would be fun to sketch with a robot, and only halfway through building it did I realize I'd built the other side of that table.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 4 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">4 / 14</span></footer>
+  </section>
+```
+
+Card 9:
+```html
+  <section class="card modules story pen plate-red" data-card="9" data-cut="20" data-el="card 9 — the robot crushed the pen">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-2.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 9 kicker">09 · What broke</span><span class="wordmark" data-el="card 9 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="strip one">
+        <figure class="panel paper" data-el="card 9 picture — the crushed pen"><img src="img/story-9.jpg" alt="A green robot arm pressing a red marker into a whiteboard so hard the tip squashes flat"></figure>
+      </div>
+      <div class="under">
+        <h2 class="headline" data-el="card 9 headline">The robot crushed the pen.</h2>
+        <p class="body" data-el="card 9 line">I measured the board with the marker in my hand. The robot holds it 27 mm differently.</p>
+        <p class="paper body takeaway" data-el="card 9 takeaway">Measure with the robot's hand, not yours.</p>
+      </div>
+    </div>
+    <aside class="notes" data-el="card 9 notes — the spoken part"><p>The first line it ever drew, it pushed so hard it flattened the marker tip. I had touched the marker to the corners of the board with the marker in my hand; the robot holds it 27 millimetres differently, more than an inch. Teaching it the corners again with the marker in its own grip fixed it. The mistake said exactly what was wrong.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 9 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">9 / 14</span></footer>
+  </section>
+```
+
+Card 10:
+```html
+  <section class="card modules story trigger plate-blue" data-card="10" data-el="card 10 — the smart trigger that wasn't">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-3.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 10 kicker">10 · What broke</span><span class="wordmark" data-el="card 10 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="strip two">
+        <figure class="panel paper" data-el="card 10 picture 1 — the confused robot"><img src="img/story-10-1.jpg" alt="A green robot arm with a wrist camera hovering over an empty whiteboard, question marks around it"></figure>
+        <figure class="panel paper" data-el="card 10 picture 2 — the button"><img src="img/story-10-2.jpg" alt="A kid pressing a big green button while the robot arm happily draws a loopy line"></figure>
+      </div>
+      <div class="under">
+        <h2 class="headline" data-el="card 10 headline">The smart trigger that wasn't.</h2>
+        <div class="lines">
+          <p class="body" data-el="card 10 line 1">I wrote clever code so the robot would notice when you'd stepped back.</p>
+          <p class="body" data-el="card 10 line 2">It fired every few seconds on an empty board.</p>
+          <p class="body" data-el="card 10 line 3">Saturday morning I deleted it and added a button.</p>
+          <span class="gobtn" data-el="card 10 the Go button">Go, robot!</span>
+        </div>
+        <p class="paper body takeaway" data-el="card 10 takeaway">The simple thing is allowed to win.</p>
+      </div>
+    </div>
+    <aside class="notes" data-el="card 10 notes — the spoken part"><p>I was proud of this one before it broke: the robot would notice by itself, through the camera, when you had finished and stepped back. No button. At the table on Saturday it fired every few seconds on an empty board. I spent an hour on it, deleted it, and added a button that says Go, robot. The button worked all day and nobody missed the magic.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 10 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">10 / 14</span></footer>
+  </section>
+```
+
+Card 11:
+```html
+  <section class="card modules story error plate-green" data-card="11" data-cut="20" data-el="card 11 — the error you'll get too">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-4.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 11 kicker">11 · What broke</span><span class="wordmark" data-el="card 11 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="strip two">
+        <figure class="panel paper" data-el="card 11 picture — squinting at the error"><img src="img/story-11.jpg" alt="A kid squinting at a laptop where one line of code sticks out of line and a red burst pops from the screen"></figure>
+        <div class="paper codepanel" data-el="card 11 code — the excerpt"><pre>class Palletizer:
+    def obstacles(self):
+        boxes = self.placed_boxes()
+    return WorldState(boxes)</pre><p class="errline body" data-el="card 11 the error line">SyntaxError: 'return' outside function</p></div>
+      </div>
+      <div class="under">
+        <h2 class="headline" data-el="card 11 headline">The error you'll get too.</h2>
+        <p class="body" data-el="card 11 line">Four spaces instead of eight. The day before the hackathon.</p>
+        <p class="paper body takeaway" data-el="card 11 takeaway">The error message is the clue, not the insult.</p>
+      </div>
+    </div>
+    <aside class="notes" data-el="card 11 notes — the spoken part"><p>The day before the hackathon, in the practice course: SyntaxError, return outside function. The return was right there under the function. Except it was four spaces in instead of eight, so Python thought the function had ended. Indentation is the structure. The message was telling me exactly that. Read it.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 11 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">11 / 14</span></footer>
+  </section>
+```
+
+Card 12:
+```html
+  <section class="card modules story log plate-orange" data-card="12" data-cut="20" data-el="card 12 — the log">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-5.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 12 kicker">12 · The log</span><span class="wordmark" data-el="card 12 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="strip one">
+        <figure class="panel paper" data-el="card 12 picture — the log"><img src="img/story-12.jpg" alt="A hand filling four boxes in a notebook with a marker, a robot arm drawing in the background"></figure>
+      </div>
+      <div class="under">
+        <h2 class="headline" data-el="card 12 headline">I wrote down every problem.</h2>
+        <ol class="fields">
+          <li class="pill" data-el="card 12 field — symptom"><span class="num">1</span><span class="body">Symptom</span></li>
+          <li class="pill" data-el="card 12 field — what I tried"><span class="num">2</span><span class="body">What I tried</span></li>
+          <li class="pill" data-el="card 12 field — fix"><span class="num">3</span><span class="body">Fix</span></li>
+          <li class="pill" data-el="card 12 field — why it worked"><span class="num">4</span><span class="body">Why it worked</span></li>
+        </ol>
+        <p class="body" data-el="card 12 line">Nine entries in two days.</p>
+        <p class="paper body takeaway" data-el="card 12 takeaway">This is what debugging actually is.</p>
+      </div>
+    </div>
+    <aside class="notes" data-el="card 12 notes — the spoken part"><p>Every problem went in a log: what I saw, what I tried, what fixed it, why it worked. Nine entries in two days. Half of them I fixed by writing them down, because writing what you saw makes you look at it. Debugging is not being smart; it is being organized about being wrong. You could start one tomorrow.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 12 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">12 / 14</span></footer>
+  </section>
+```
+
+Card 14:
+```html
+  <section class="card modules story advice plate-black" data-card="14" data-builds="2" data-el="card 14 — one piece of advice">
+    <svg class="pattern" aria-hidden="true"><rect width="100%" height="100%" fill="url(#squiggle-bright)"/></svg>
+    <img class="plate-img" src="../pitch/img/plate-7.jpg" alt="" aria-hidden="true" onload="this.closest('.card').classList.add('plated')">
+    <div class="wash" aria-hidden="true"></div>
+    <div class="frame" aria-hidden="true"></div>
+    <header class="band head"><span class="kicker" data-el="card 14 kicker">14 · One piece of advice</span><span class="wordmark" data-el="card 14 wordmark"><svg class="logo" viewBox="0 0 320 130" role="img" aria-label="Duet"><use href="#logo"/></svg></span></header>
+    <div class="content">
+      <div class="strip two">
+        <figure class="panel paper reveal" data-step="1" data-el="card 14 panel 1 — you already know enough"><img src="img/story-14-1.jpg" alt="A kid at a laptop where a turtle draws a square, and a tiny robot arm drawing the same square on a board"><figcaption class="cap headline" data-el="card 14 line 1">You already know <span class="key">enough</span> to start.</figcaption></figure>
+        <figure class="panel paper reveal" data-step="2" data-el="card 14 panel 2 — start small, make it bigger"><img src="img/story-14-2.jpg" alt="Four whiteboards growing from one small square to a crowded drawing, a kid climbing them like stairs"><figcaption class="cap headline" data-el="card 14 line 2">Start with the smallest thing that works, then make it bigger.</figcaption></figure>
+      </div>
+    </div>
+    <aside class="notes" data-el="card 14 notes — the spoken part"><p>You already know enough to start. You know turtle; that is a robot with the motor taken out. Start with the smallest thing that works, then make it bigger. Mine was a square. Then a square the robot drew. Then a shape Claude chose. Then a whole drawing. Nobody starts with the whole drawing. Questions.</p></aside>
+    <footer class="band foot"><span class="strip" data-el="card 14 footer">Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026</span><span class="counter">14 / 14</span></footer>
+  </section>
+```
+
+- [ ] **Step 5: Run the tests to see them pass**
+
+Run (from `code/hackathon`): `node --test pagetests/class.test.mjs` → `# pass 20`, `# fail 0`; then `node --test 'pagetests/*.test.mjs'` → 157.
+
+- [ ] **Step 6: Browser check the six cards, talk mode then notes mode**
+
+`#4` + Right ×4: four panels appear one per advance with their captions; the strip fits (measure with the descendants check); the captions are ink on white. `#9`, `#10`, `#11`, `#12`: picture(s) on top, words under, nothing crossing the frame; on 10 the three lines read as one paragraph with the small Go button at the end; on 11 the code panel sits beside the picture with the red error line inside it, `pre` unclipped; on 12 the four pills in a row. `#14` + Right ×2: two panels with their headline captions; "enough" in green on white. Step the tokens in the story blocks if anything spills (report every value). Then `?cut=10` still ten cards with reveals on the diner and advice panels. Then `?notes=1` for `#4` (revealed), `#9`–`#12`, `#14` (revealed) at the pane size and at 1920×1080: strips shrink and nothing crosses the notes bubble; tune the `.stage.shownotes .strip.*` widths and caption tokens if needed (captions never below 1.7cqw). Reset the viewport. Console: only the `medal.jpg` 404.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add docs/duet/class/index.html docs/duet/class/class.css code/hackathon/pagetests/class.test.mjs
+git commit -m "feat(class): the text-only cards tell their story in pictures, words under the panels
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+```
