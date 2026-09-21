@@ -9,7 +9,7 @@ export function fraction(elapsed, total) {
   return Math.min(1, Math.max(0, elapsed / total));
 }
 
-const LABEL = { visitor: 'Visitor', robot: 'Robot', paused: 'Paused' };
+const LABEL = { visitor: 'Human', robot: 'Robot', paused: 'Paused' };
 const realTimers = { set: (fn, ms) => setInterval(fn, ms), clear: (id) => clearInterval(id) };
 
 export class Clock {

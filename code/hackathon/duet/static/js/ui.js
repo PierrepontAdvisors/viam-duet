@@ -9,12 +9,13 @@ const store = {
   set(k, v) { try { localStorage.setItem(`duet.${k}`, JSON.stringify(v)); } catch { /* private window: fine */ } },
 };
 /** The page's defaults where the visitor's browser has nothing stored. The live page shows every layer over the
- *  camera; the showcase demo opens as Nicholas's second screenshot of 2026-09-20 shows: the full view with the
- *  board outline, the clean mask off, no ink layer (the photos already show the ink), two greens and wide lines,
- *  its own levels, sound on. A stroke colour in the table is locked: a plan's colour does not replace it. */
+ *  camera; the showcase demo opens as Nicholas's third screenshot of 2026-09-20 shows: the full view, every
+ *  overlay layer off but the bubble and the chips (the photos show the ink and the strokes; the hand and the arm
+ *  show who draws), a green and a teal, its own levels, sound on. A stroke colour in the table is locked: a plan's
+ *  colour does not replace it. */
 export const LIVE_DEFAULTS = { layers: { robot: true, ink: true, caption: true, chips: true, board: false, clean: true, vector: false },
                                ink: '#111111', inkWidth: 12, stroke: null, strokeWidth: 14, picture: CLEAN_LEVELS, crop: false, sound: false };
-export const DEMO_DEFAULTS = { layers: { ...LIVE_DEFAULTS.layers, ink: false, board: true, clean: false }, ink: '#37e65b', inkWidth: 38, stroke: '#1fcf4f', strokeWidth: 38,
+export const DEMO_DEFAULTS = { layers: { ...LIVE_DEFAULTS.layers, robot: false, ink: false, clean: false }, ink: '#37e65b', inkWidth: 20, stroke: '#278275', strokeWidth: 6,
                                picture: { brightness: -0.03, contrast: 0.9, exposure: 1.1 }, crop: false, sound: true };
 export const defaultsFor = (replay) => (replay ? DEMO_DEFAULTS : LIVE_DEFAULTS);
 const LAYER_NODES = { ink: 'l-ink', board: 'l-board' };

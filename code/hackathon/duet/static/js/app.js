@@ -91,8 +91,8 @@ async function backfillPlans(session, completedTurns) {
   }
 }
 
-/** The Robot tag rides the robot pen's dot: a board point places it, null hides it. */
-const placeTag = (p) => { const tag = $('pen-tag'), q = p && app.viewer.boardToStage(p); tag.classList.toggle('hidden', !q); if (q) { tag.style.left = `${q[0]}px`; tag.style.top = `${q[1]}px`; } };
+/** The robot arm rides the robot pen's point during its turn: a board point places its tip, null hides it. */
+const placeArm = (p) => { const arm = $('arm'), q = p && app.viewer.boardToStage(p); arm.classList.toggle('hidden', !q); if (q) { arm.style.left = `${q[0]}px`; arm.style.top = `${q[1]}px`; } };
 
 /** Replay: the hand, the two pens, and the clock follow the state. A pause holds them where they are and the
  *  first state after it resumes them; a resumed robot_draw keeps its trace instead of starting it again. */
@@ -102,7 +102,7 @@ function replayState(msg, wasPaused) {
   if (msg.state !== 'human_turn') app.hand.cancel();                                    // the visitor's part is over
   if (['human_turn', 'finished', 'idle'].includes(msg.state)) app.ghost.stop();
   if (['look', 'finish', 'finished', 'idle'].includes(msg.state)) app.clock.stop();
-  if (msg.state === 'robot_draw' && app.plan && app.replay) app.ghost.play(app.plan.polylines, { durationMs: app.replay.drawMs(app.plan.polylines.length), onMove: placeTag });   // the ghost pen is the arm
+  if (msg.state === 'robot_draw' && app.plan && app.replay) app.ghost.play(app.plan.polylines, { durationMs: app.replay.drawMs(app.plan.polylines.length), onMove: placeArm });   // the ghost pen is the arm
 }
 
 function handle(msg) {

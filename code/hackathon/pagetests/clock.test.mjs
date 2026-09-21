@@ -16,12 +16,12 @@ test('Clock: start shows and counts, past the total the bar stays full, pause fr
   const chip = el(), who = el(), time = el();
   const c = new Clock(chip, { who, time, now: () => clock, timers });
   c.start({ who: 'visitor', ms: 2000 });
-  assert.ok(!chip.classList.contains('hidden')); assert.equal(chip.dataset.who, 'visitor'); assert.equal(who.textContent, 'Visitor'); assert.equal(time.textContent, '0.0 s');
+  assert.ok(!chip.classList.contains('hidden')); assert.equal(chip.dataset.who, 'visitor'); assert.equal(who.textContent, 'Human'); assert.equal(time.textContent, '0.0 s');
   clock = 500; c.render(); assert.equal(chip.vars['--fill'], 0.25); assert.equal(time.textContent, '0.5 s');
   clock = 3000; c.render(); assert.equal(chip.vars['--fill'], 1); assert.equal(time.textContent, '3.0 s');
   c.pause(); assert.equal(chip.dataset.who, 'paused'); assert.equal(who.textContent, 'Paused');
   clock = 9000; c.render(); assert.equal(time.textContent, '3.0 s', 'frozen');
-  c.resume(); assert.equal(chip.dataset.who, 'visitor'); assert.equal(who.textContent, 'Visitor');
+  c.resume(); assert.equal(chip.dataset.who, 'visitor'); assert.equal(who.textContent, 'Human');
   clock = 9500; c.render(); assert.equal(time.textContent, '3.5 s');
   c.start({ who: 'robot', ms: 1000 });
   assert.equal(chip.dataset.who, 'robot'); assert.equal(who.textContent, 'Robot'); assert.equal(time.textContent, '0.0 s');

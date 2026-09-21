@@ -75,11 +75,21 @@ button.chip { cursor: pointer; } #sound.on { background: var(--yellow); }
 .hand .cuff { fill: var(--red); stroke: var(--ink); stroke-width: 3.5; }
 .hand.press { transform: translate(-1.17cqw, -.17cqw) scale(.88); }
 .hand .marker { display: none; } .hand.draw .marker { display: block; } .hand.draw .finger { display: none; }   /* only the pen draws */
+.hand.draw { transition: transform .15s ease; }   /* the pen sits on the trace's point every frame; no glide to lag behind it */
+/* the demo's robot arm: a green marker in a gripper on a link, its tip on the robot pen's point during the robot's turn */
+.arm { position: absolute; left: 50%; top: 50%; width: 7cqw; height: 7cqw; z-index: 5; pointer-events: none; transform: translate(-.875cqw, -6.65cqw);
+       filter: drop-shadow(.3cqw .3cqw 0 rgba(0, 0, 0, .35)); }
+.arm svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.arm .link, .arm .jaw { fill: var(--paper); stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+.arm .joint { fill: var(--green); stroke: var(--ink); stroke-width: 3; }
+.arm .barrel { fill: var(--green); stroke: var(--ink); stroke-width: 2.5; }
+.arm .band, .arm .tip { fill: var(--ink); }
+.arm .grip { fill: var(--cream); }
+.arm .tag { left: 4cqw; top: 5.6cqw; }
 /* names: a caption pill on the hand, and one that rides the robot's pen dot */
 .tag { position: absolute; font: 700 1.2cqw/1 var(--story); padding: .35cqw .8cqw; border: .25cqw solid var(--ink); border-radius: 999px;
        background: var(--paper); color: var(--ink); pointer-events: none; white-space: nowrap; }
 .hand .tag { left: 3.4cqw; top: 5.4cqw; }
-#pen-tag { z-index: 4; transform: translate(1cqw, 1cqw); }
 /* the turn clock: who is on and their seconds, over a bar that fills across the chip */
 .clock { position: relative; overflow: hidden; }
 .clock .fill { position: absolute; inset: 0; width: calc(var(--fill, 0) * 100%); background: var(--human); opacity: .25; transition: width .1s linear; }
