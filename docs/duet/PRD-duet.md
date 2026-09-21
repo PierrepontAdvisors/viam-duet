@@ -40,9 +40,7 @@ Non-goals:
 
 ## Physical setup
 
-The rig in the photos is the spec: a UFactory xArm clamped to a white desk, a camera on its wrist, a framed dry erase board lying flat and a putty-filled container holding three markers.
-
-![The rig: xArm clamped to the desk, with the board and marker dock in front of it](images/rig-wide.jpg)
+The rig is the spec: a UFactory xArm clamped to a white desk, a camera on its wrist, a framed dry erase board lying flat and a putty-filled container holding three markers. (The two rig photos this brief was written against are not in the repository; the turn photos in `site/demo/sessions` show the board from the wrist camera.)
 
 | Item | Spec |
 | --- | --- |
@@ -219,7 +217,6 @@ The flat, top-down photo saved after every turn is the same frame vision uses, s
 
 The dock is the clear container of white putty in the photo: each marker's cap is buried in the putty and the marker stands tip-down in it. The tip never dries, the pick pose never changes, and the marker is already pointing the way it draws.
 
-![Close-up: the gripper and wrist camera above the three markers standing in putty](images/rig-dock-closeup.jpg)
 
 Visitors share these same three markers, which is settled: no fourth cap, and no marker of the visitor's own. Pushing a marker back into its cap is how a visitor says "your turn," so each cap must sit firmly enough for a one-handed push. Before each pick, the robot corrects its target to the dot position seen from above, which absorbs small shifts from human handling.
 
