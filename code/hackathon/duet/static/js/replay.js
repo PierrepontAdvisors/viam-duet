@@ -3,7 +3,7 @@
  *  commands. The showcase site loads this module; the live page never does. */
 import { planMs } from './hand.js?v=ds9';
 
-export const PACE = { look: 1000, human: 14000, capture: 1000, thinkInk: 1200, thinkClaude: 3500, plan: 1500,
+export const PACE = { look: 1000, human: 16000, capture: 1000, thinkInk: 1200, thinkClaude: 3500, plan: 1500,
                       strokeMs: 350, drawMin: 3000, drawMax: 12000, settle: 1200, finish: 2000 };
 export const ARTISTS = ['abstract', 'mimic', 'haring', 'mondrian', 'vangogh', 'architect', 'designer', 'shader'];
 /** The picker's setting before the first exchange: the live page's default. */

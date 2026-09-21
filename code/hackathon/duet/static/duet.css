@@ -67,14 +67,14 @@ button.chip { cursor: pointer; } #sound.on { background: var(--yellow); }
 /* the demo's hand: a cartoon pointer over the stage, its fingertip on the point it is sent to; it never
    takes a click, so a real pointer can use the same buttons while it moves */
 .hand { position: absolute; left: 50%; top: 50%; width: 5cqw; height: 6cqw; z-index: 5; pointer-events: none;
-        transform: translate(-1.17cqw, -.17cqw); transform-origin: 1.17cqw .17cqw; transition: left .5s ease, top .5s ease, transform .12s ease;
+        transform: translate(-1.17cqw, -.17cqw); transform-origin: 1.17cqw .17cqw; transition: left .625s ease, top .625s ease, transform .15s ease;
         filter: drop-shadow(.3cqw .3cqw 0 rgba(0, 0, 0, .35)); }
 .hand svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .hand .skin { fill: var(--cream); stroke: var(--ink); stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
 .hand .line { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
 .hand .cuff { fill: var(--red); stroke: var(--ink); stroke-width: 3.5; }
 .hand.press { transform: translate(-1.17cqw, -.17cqw) scale(.88); }
-.hand .marker { display: none; } .hand.draw .marker { display: block; }
+.hand .marker { display: none; } .hand.draw .marker { display: block; } .hand.draw .finger { display: none; }   /* only the pen draws */
 /* names: a caption pill on the hand, and one that rides the robot's pen dot */
 .tag { position: absolute; font: 700 1.2cqw/1 var(--story); padding: .35cqw .8cqw; border: .25cqw solid var(--ink); border-radius: 999px;
        background: var(--paper); color: var(--ink); pointer-events: none; white-space: nowrap; }

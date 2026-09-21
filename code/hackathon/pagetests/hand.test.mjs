@@ -28,15 +28,16 @@ function scheduler() {
 const SQ = [[40, 40], [80, 40], [80, 80], [40, 80], [40, 40]];        // 160 mm
 const LINE = [[100, 100], [140, 100]];                                 // 40 mm
 
-test('traceMs: 70 mm a second between 1.2 and 4 s, divided by speed, 0 for nothing', () => {
-  assert.equal(traceMs([]), 0); assert.equal(traceMs([LINE]), 1200); assert.equal(traceMs([SQ], 1), 2286);
-  assert.equal(traceMs([SQ, SQ, SQ], 1), 4000); assert.equal(traceMs([SQ], 2), 1143);
+test('traceMs: 56 mm a second between 1.5 and 5 s, divided by speed, 0 for nothing; every hand timing is a quarter slower than first built', () => {
+  assert.equal(traceMs([]), 0); assert.equal(traceMs([LINE]), 1500); assert.equal(traceMs([SQ], 1), 2857);
+  assert.equal(traceMs([SQ, SQ, SQ], 1), 5000); assert.equal(traceMs([SQ], 2), 1429);
+  assert.deepEqual(HAND, { glide: 625, hover: 438, press: 250, hold: 625, rollGlide: 150, rollHover: 125, mmPerSec: 56, traceMin: 1500, traceMax: 5000 });
 });
 
 test('plan: a pick draws, lifts and presses the picker, rolls down the rows to the target, presses it, holds, then lifts and presses Go', () => {
   const p = plan({ hand: 'pick', artist: 'haring', row: 2, draw: [LINE] });
   assert.deepEqual(p, [
-    { draw: [LINE], ms: 1200 },
+    { draw: [LINE], ms: 1500 },
     { glide: 'picker', ms: HAND.glide }, { hover: 'picker', ms: HAND.hover }, { press: 'picker', ms: HAND.press },
     { glide: 'row:0', ms: HAND.rollGlide }, { hover: 'row:0', ms: HAND.rollHover },
     { glide: 'row:1', ms: HAND.rollGlide }, { hover: 'row:1', ms: HAND.rollHover },
@@ -46,9 +47,9 @@ test('plan: a pick draws, lifts and presses the picker, rolls down the rows to t
   assert.deepEqual(plan({ hand: 'go', draw: [] }), [{ glide: 'go', ms: HAND.glide }, { hover: 'go', ms: HAND.hover }, { press: 'go', ms: HAND.press }]);
   const off = plan({ hand: 'pick', artist: 'nobody', row: -1, draw: [] });
   assert.deepEqual(off.slice(3, 5), [{ glide: 'row', ms: HAND.glide }, { hover: 'row', ms: HAND.hover }]);   // no roll: straight to the row by name
-  assert.equal(plan({ hand: 'go', draw: [LINE] }, 2)[0].ms, 600);
-  assert.equal(planMs({ hand: 'go', draw: [LINE] }), 1200 + HAND.glide + HAND.hover + HAND.press);
-  assert.equal(planMs({ hand: 'go', draw: [LINE] }, 2), 600 + Math.round(HAND.glide / 2) + Math.round(HAND.hover / 2) + Math.round(HAND.press / 2));
+  assert.equal(plan({ hand: 'go', draw: [LINE] }, 2)[0].ms, 750);
+  assert.equal(planMs({ hand: 'go', draw: [LINE] }), 1500 + HAND.glide + HAND.hover + HAND.press);
+  assert.equal(planMs({ hand: 'go', draw: [LINE] }, 2), 750 + Math.round(HAND.glide / 2) + Math.round(HAND.hover / 2) + Math.round(HAND.press / 2));
 });
 
 function rig({ menuOpen = false, pickerHidden = false } = {}) {
@@ -71,7 +72,7 @@ function rig({ menuOpen = false, pickerHidden = false } = {}) {
 test('Hand: the draw step plays the tracer and the hand follows its tip with the marker out; then it lifts, squashes, and clicks on the release', () => {
   const { hand, el, picker, rows, go, tracer, s, cue } = rig();
   hand.run(cue);
-  assert.deepEqual(tracer.calls.at(-1), ['play', [LINE], 1200]);                                   // after the stop that every run begins with
+  assert.deepEqual(tracer.calls.at(-1), ['play', [LINE], 1500]);                                   // after the stop that every run begins with
   assert.ok(el.classList.contains('draw'), 'the marker shows while drawing');
   assert.equal(el.style.left, '176px'); assert.equal(el.style.top, '240px');                           // toStage([88, 120])
   s.next();                                                                                            // draw done → glide picker

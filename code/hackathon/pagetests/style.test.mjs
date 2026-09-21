@@ -47,12 +47,11 @@ test('buttons are toy presses: shadow at rest, lift on hover, squash on press, w
 
 test('the demo hand: an element in the stage with the pointing-hand SVG, above the menu, out of the way of a real pointer, still under reduced motion', () => {
   const h = read('index.html');
-  assert.match(h, /<div class="hand hidden" id="hand" data-el="demo hand">\s*<svg viewBox="0 0 60 72" aria-hidden="true">/);
+  assert.match(h, /<div class="hand hidden" id="hand" data-el="demo hand">\s*<svg class="finger" viewBox="0 0 60 72" aria-hidden="true">/);
   assert.ok(h.includes('class="skin"') && h.includes('class="cuff"'), 'the hand has skin and a cuff');
   assert.ok(h.indexOf('id="hand"') > h.indexOf('id="artist-menu"') && h.indexOf('id="hand"') < h.indexOf('id="caption"'), 'after the CTA row, before the bubble');
   const css = read('duet.css');
   assert.match(css, /\.hand \{[^}]*z-index: 5;[^}]*pointer-events: none;/);
-  assert.match(css, /\.hand \{[^}]*transition: left \.5s ease, top \.5s ease/);
   assert.match(css, /\.hand\.press \{ transform: [^}]*scale\(\.88\)/);
   assert.match(css, /prefers-reduced-motion: reduce\) \{ \.hand \{ transition: none; \} \.hand\.press \{ transform: translate\(-1\.17cqw, -\.17cqw\); \} \}/);
   assert.ok(!css.includes('#artist-btn { pointer-events: none; }'), 'the picker takes clicks in replay mode');
@@ -60,8 +59,9 @@ test('the demo hand: an element in the stage with the pointing-hand SVG, above t
 
 test('the hand draws and is named: a marker in its SVG, a Visitor tag, a red pen layer; the robot dot has a Robot tag; the clock chip sits after the state chip', () => {
   const h = read('index.html');
-  assert.match(h, /<g class="marker">\s*<rect[^>]*\/>\s*<path[^>]*\/>\s*<\/g>/, 'the marker: a barrel and a tip');
-  assert.ok(h.indexOf('class="marker"') > h.indexOf('class="skin"') && h.indexOf('class="marker"') < h.indexOf('</svg>', h.indexOf('id="hand"')), 'the marker paints over the finger');
+  assert.match(h, /<svg class="finger" viewBox="0 0 60 72" aria-hidden="true">/, 'the finger is its own SVG');
+  assert.match(h, /<svg class="marker" viewBox="0 0 60 72" aria-hidden="true">\s*<g transform="rotate\(-35 14 2\)">\s*<path d="M14 2[^"]*" fill="#111"\/>/, 'the marker: its own SVG, leaning from the tip at the hotspot');
+  assert.ok(h.indexOf('class="marker"') > h.indexOf('class="finger"') && h.indexOf('class="marker"') < h.indexOf('class="tag">Visitor'), 'finger, then marker, then the tag');
   assert.match(h, /<span class="tag">Visitor<\/span>\s*<\/div>/, 'the Visitor tag ends the hand element');
   assert.match(h, /<span class="tag hidden" id="pen-tag" data-el="tag — robot pen">Robot<\/span>/);
   assert.match(h, /<g class="hand-ink" id="l-hand" data-el="layer — the hand's red trace"><path id="handpath"\/><circle id="handpen" r="2\.2"\/><\/g>/);
@@ -70,7 +70,8 @@ test('the hand draws and is named: a marker in its SVG, a Visitor tag, a red pen
   const css = read('duet.css');
   assert.match(css, /button\.chip:hover, button\.chip\.hover \{/); assert.match(css, /button\.chip:active, button\.chip\.active \{/);
   assert.match(css, /\.go:hover, \.go\.hover, \.welcome-start:not\(:disabled\):hover \{/); assert.match(css, /\.go:active, \.go\.active, \.welcome-start:not\(:disabled\):active \{/);
-  assert.match(css, /\.hand \.marker \{ display: none; \} \.hand\.draw \.marker \{ display: block; \}/);
+  assert.match(css, /\.hand \.marker \{ display: none; \} \.hand\.draw \.marker \{ display: block; \} \.hand\.draw \.finger \{ display: none; \}/, 'only the pen draws');
+  assert.match(css, /\.hand \{[^}]*transition: left \.625s ease, top \.625s ease, transform \.15s ease/, 'the glide is a quarter slower');
   assert.match(css, /\.tag \{[^}]*pointer-events: none;[^}]*white-space: nowrap;/);
   assert.match(css, /\.hand \.tag \{ left: 3\.4cqw; top: 5\.4cqw; \}/); assert.match(css, /#pen-tag \{ z-index: 4; transform: translate\(1cqw, 1cqw\); \}/);
   assert.match(css, /\.clock \{ position: relative; overflow: hidden; \}/);

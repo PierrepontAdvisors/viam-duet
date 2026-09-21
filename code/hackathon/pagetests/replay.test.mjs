@@ -69,7 +69,7 @@ test('schedule: the picker setting is Abstract, then each exchange\'s artist; a 
   const i = steps.findIndex(s => s.emit && s.emit.state === 'human_turn');
   assert.ok(steps[i + 1].cue, 'the cue follows the human_turn state');
   assert.deepEqual(steps[i + 3], { wait: PACE.human, on: 'pass' });                       // after the hand cue and the clock cue
-  assert.equal(PACE.human, 14000);
+  assert.equal(PACE.human, 16000);
 });
 
 test('schedule: the hand cue carries the roster row and the drawable strokes; a clock cue follows it and each capture with the half\'s time', () => {
