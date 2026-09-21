@@ -43,25 +43,30 @@ Words in quotes are on the slide. Everything else is spoken, and the spoken word
 
 5. ★ **What Duet is.** Kicker "05 · What Duet is". Headline "You draw. It looks. It thinks. It draws back." `img/setup.jpg` large with four numbered callouts placed over the photo (dot plus label, positions in percent of the photo, set in `class.css`), revealed one per advance: "1 · a camera on the wrist" · "2 · a gripper holding a green marker" · "3 · the board: red is a person, green is the robot" · "4 · the laptop running the code". Reveals: 4.
 
-6. ★ **One turn.** Kicker "06 · One turn". The pitch's triptych layout; each advance reveals one module together with the verb over it, left to right: **"LOOK"** over `../pitch/img/turn-07-human.jpg` (caption "the camera takes a photo"); **"THINK"** over a speech bubble with Claude's real sentence, "A crowded world of creatures, flowers and dancing figures." / "A small green dancing figure in the open lower-right space to balance the crowd." and the pill "8 seconds to look and decide"; **"DRAW"** over `../pitch/img/turn-07-robot.jpg` (caption "the sentence becomes a list of points, and the arm follows them"). Reveals: 3. Spoken: Claude is "an AI that can look at a photo and tell you what's in it" (the only time the word needs explaining).
+6. ★ **One turn.** Kicker "06 · One turn". The pitch's triptych layout; each advance reveals one module together with the verb over it, left to right: **"LOOK"** over `../pitch/img/turn-07-human.jpg` (caption "the camera takes a photo"); **"THINK"** over a speech bubble with Claude's real sentence, "A crowded world of creatures, flowers and dancing figures." / "A small green dancing figure in the open lower-right space to balance the crowd." and the pill "8 seconds to look and decide"; **"DRAW"** over `../pitch/img/turn-07-robot.jpg` (caption "the arm follows the points"). Reveals: 3. Spoken: Claude is "an AI that can look at a photo and tell you what's in it" (the only time the word needs explaining).
 
 7. ★ **It's just points.** Kicker "07 · It's just points". Headline "Your turtle and my robot follow the same thing: a list of points." Two code panels side by side, monospace, one label each.
    Left, "Your turtle":
    ```python
    import turtle
    t = turtle.Turtle()
+   points = [(40, 0), (40, 40),
+             (0, 40), (0, 0)]
    t.penup()
    t.goto(0, 0)
    t.pendown()
-   for x, y in [(40, 0), (40, 40), (0, 40), (0, 0)]:
+   for x, y in points:
        t.goto(x, y)
    t.penup()
    ```
    Right, "My robot (simplified)":
    ```python
-   stroke = points_from_claude()   # e.g. [(0, 0), (40, 0), (40, 40), ...]
-   pen_up(stroke[0])
-   pen_down(stroke[0])
+   stroke = points_from_claude()
+   # e.g. [(0, 0), (40, 0), (40, 40)]
+   x, y = stroke[0]
+   pen_up()
+   move_to(x, y)
+   pen_down()
    for x, y in stroke[1:]:
        move_to(x, y)
    pen_up()
@@ -80,8 +85,8 @@ Words in quotes are on the slide. Everything else is spoken, and the spoken word
     ```
     class Palletizer:
         def obstacles(self):
-            obs = [self.cuboid(b) for b in self.placed]
-        return WorldState(obstacles=obs)
+            boxes = self.placed_boxes()
+        return WorldState(boxes)
     ```
     and under it, in red, `SyntaxError: 'return' outside function`. One line: "Four spaces instead of eight. The day before the hackathon." Takeaway: "The error message is the clue, not the insult." Source: stuck-log 2026-09-17, first entry. (The four-line excerpt is an illustration of that entry's bug, not a verbatim copy of `palletizer.py`.)
 
