@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { schedule, words, clip, drawMs, Player, PACE, WORDS, DEFAULT_ARTIST } from '../duet/static/js/replay.js';
+import { planMs } from '../duet/static/js/hand.js';
 
 const SQ = [[40, 40], [80, 40], [80, 80], [40, 80], [40, 40]];
 const LINE = [[100, 100], [140, 100]];
@@ -58,17 +59,38 @@ test('schedule: look and the start shot, then per turn the states and messages t
 test('schedule: the picker setting is Abstract, then each exchange\'s artist; a cue per human turn picks on a switch, else Go', () => {
   assert.equal(DEFAULT_ARTIST, 'abstract');
   const steps = schedule(REPLAY);
-  const cues = steps.filter(s => s.cue).map(s => s.cue);
+  const cues = steps.filter(s => s.cue && s.cue.hand).map(({ cue }) => ({ hand: cue.hand, artist: cue.artist }));
   assert.deepEqual(cues, [{ hand: 'pick', artist: 'mimic' }, { hand: 'pick', artist: 'haring' }]);
   const same = schedule({ ...REPLAY, turns: [REPLAY.turns[0], { ...REPLAY.turns[1], artist: 'mimic' }] });
-  assert.deepEqual(same.filter(s => s.cue).map(s => s.cue), [{ hand: 'pick', artist: 'mimic' }, { hand: 'go' }]);
+  assert.deepEqual(same.filter(s => s.cue && s.cue.hand).map(s => s.cue.hand), ['pick', 'go']);
   const states = emits(steps).filter(x => x.type === 'state').map(x => `${x.state}:${x.artist}`);
   assert.deepEqual(states.slice(0, 8), ['look:abstract', 'human_turn:abstract', 'capture:mimic', 'interpret:mimic', 'plan:mimic', 'robot_draw:mimic', 'look:mimic', 'human_turn:mimic']);
   assert.equal(states[8], 'capture:haring');
   const i = steps.findIndex(s => s.emit && s.emit.state === 'human_turn');
   assert.ok(steps[i + 1].cue, 'the cue follows the human_turn state');
-  assert.deepEqual(steps[i + 2], { wait: PACE.human, on: 'pass' });
-  assert.equal(PACE.human, 6000);
+  assert.deepEqual(steps[i + 3], { wait: PACE.human, on: 'pass' });                       // after the hand cue and the clock cue
+  assert.equal(PACE.human, 14000);
+});
+
+test('schedule: the hand cue carries the roster row and the drawable strokes; a clock cue follows it and each capture with the half\'s time', () => {
+  const speck = [[10, 10], [12, 11]];                                  // 2.2 mm: a trace fragment, not a mark
+  const r = { ...REPLAY, turns: [{ ...REPLAY.turns[0], new: [SQ, speck] }, REPLAY.turns[1]] };
+  const cues = schedule(r).filter(s => s.cue).map(s => s.cue);
+  assert.deepEqual(cues[0], { hand: 'pick', artist: 'mimic', row: 1, draw: [SQ] });
+  assert.deepEqual(cues[1], { clock: 'visitor', ms: planMs(cues[0]) });
+  assert.deepEqual(cues[2], { clock: 'robot', ms: PACE.capture + PACE.thinkInk + PACE.plan + PACE.settle + drawMs(2) });
+  assert.deepEqual(cues[3], { hand: 'pick', artist: 'haring', row: 2, draw: [LINE] });
+  assert.equal(cues[5].ms, PACE.capture + PACE.thinkClaude + PACE.plan + PACE.settle + drawMs(1));
+  const fast = schedule(r, 2).filter(s => s.cue).map(s => s.cue);
+  assert.equal(fast[1].ms, planMs(fast[0], 2));
+  assert.equal(fast[2].ms, Math.round((PACE.capture + PACE.thinkInk + PACE.plan + PACE.settle) / 2) + drawMs(2, 2));
+  const steps = schedule(r);
+  const h = steps.findIndex(s => s.emit && s.emit.state === 'human_turn');
+  assert.ok(steps[h + 1].cue.hand && steps[h + 2].cue.clock === 'visitor' && steps[h + 3].on === 'pass', 'hand cue, clock cue, then the wait');
+  const c = steps.findIndex(s => s.emit && s.emit.state === 'capture');
+  assert.equal(steps[c + 1].cue.clock, 'robot');
+  const off = schedule({ ...r, artists: ['haring'] }).filter(s => s.cue && s.cue.hand)[0].cue;
+  assert.equal(off.row, -1, 'an artist off the roster has no row');
 });
 
 test('drawMs: 350 ms a stroke, never under 3 s or over 12 s, divided by the speed; the player carries its speed', () => {
@@ -144,7 +166,7 @@ test('Player: cues reach the callback, boot starts on Abstract, a pick relabels 
   const p = player.start();
   for (let i = 0; i < 12; i++) await tick();                           // into the first human turn
   assert.equal(player.lastState.state, 'human_turn'); assert.equal(player.lastState.artist, 'abstract');
-  assert.deepEqual(cues, [{ hand: 'pick', artist: 'mimic' }]);
+  assert.equal(cues.length, 2); assert.equal(cues[0].hand, 'pick'); assert.equal(cues[0].artist, 'mimic'); assert.equal(cues[1].clock, 'visitor');
   player.command({ type: 'set', artist: 'shader' });                   // a visitor's pick, or the hand's
   assert.equal(seen[seen.length - 1].state, 'human_turn'); assert.equal(seen[seen.length - 1].artist, 'shader');
   player.command({ type: 'set', artist: 'nobody' });                   // not on the roster: ignored

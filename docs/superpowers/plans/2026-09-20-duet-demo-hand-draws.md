@@ -367,7 +367,7 @@ In the test `schedule: the picker setting is Abstract, …` replace the two cue 
   assert.deepEqual(same.filter(s => s.cue && s.cue.hand).map(s => s.cue.hand), ['pick', 'go']);
 ```
 
-and its last line `assert.equal(PACE.human, 6000);` to `assert.equal(PACE.human, 14000);`.
+and its last line `assert.equal(PACE.human, 6000);` to `assert.equal(PACE.human, 14000);`, and its `assert.deepEqual(steps[i + 2], { wait: PACE.human, on: 'pass' });` to `steps[i + 3]`, since the clock cue now sits between the hand cue and the wait.
 
 Add after that test:
 
@@ -389,7 +389,7 @@ test('schedule: the hand cue carries the roster row and the drawable strokes; a 
   assert.ok(steps[h + 1].cue.hand && steps[h + 2].cue.clock === 'visitor' && steps[h + 3].on === 'pass', 'hand cue, clock cue, then the wait');
   const c = steps.findIndex(s => s.emit && s.emit.state === 'capture');
   assert.equal(steps[c + 1].cue.clock, 'robot');
-  const off = schedule({ ...r, artists: ['haring'] }).filter(s => s.cue && s.cue.hand)[0];
+  const off = schedule({ ...r, artists: ['haring'] }).filter(s => s.cue && s.cue.hand)[0].cue;
   assert.equal(off.row, -1, 'an artist off the roster has no row');
 });
 ```
