@@ -204,9 +204,10 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   const css = read('class.css');
   assert.match(css, /\.reveal \{ opacity: 0;/);
   assert.match(css, /\.reveal\.shown \{ opacity: 1; transform: none; \}/);
-  assert.match(css, /\.stage \.card\.active \.triptych \.module\.reveal \{ animation: none; \}/);
+  assert.match(css, /\.stage \.card\.active\.triptych \.module\.reveal \{ animation: none; \}/);
   assert.match(css, /\.split\.half \.words \{ grid-column: 1 \/ 7; \}/);
   assert.match(css, /\.split\.half\.photo-left \.figure \{ grid-column: 1 \/ 6; grid-row: 1; \}/);
+  assert.ok(!/\.card\.active \.(modules|triptych|split)\b/.test(css), 'a card\'s template class compounds with .card.active; it is never a descendant');
   const sizes = [...css.matchAll(/font-size:\s*([^;}]+)/g)].map((m) => m[1].trim());
   for (const v of sizes) assert.match(v, /^var\(--(display|headline|body|caption)\)$/, `font-size "${v}" is not a token`);
   assert.ok(!/^:root \{[^}]*--(display|headline|body|caption):/m.test(css), 'the type scale stays in deck.css');
