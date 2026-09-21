@@ -19,7 +19,7 @@ test('the live page keeps its defaults; the demo opens as the 2026-09-20 screens
 
 test('ui.js applies the table it is given: layers, colours, widths, levels, and crop come from it, stored values still win', () => {
   const js = read('js/ui.js');
-  assert.match(js, /export function initUI\(app, \{ sendSet, sendCommand, on, replay = false \}\)/);
+  assert.match(js, /export function initUI\(app, \{ sendSet, sendCommand, seek, on, replay = false \}\)/);
   assert.match(js, /const D = defaultsFor\(replay\);/);
   assert.match(js, /store\.get\(`layer\.\$\{name\}`, D\.layers\[name\]\)/);
   assert.match(js, /store\.get\('color\.ink', D\.ink\)/);
@@ -28,7 +28,7 @@ test('ui.js applies the table it is given: layers, colours, widths, levels, and 
   assert.match(js, /applyPicture\(\{ \.\.\.D\.picture, \.\.\.store\.get\('picture', \{\}\) \}\)/);
   assert.match(js, /if \(D\.crop\) viewer\.setCrop\(true\);/);
   const app = read('js/app.js');
-  assert.match(app, /initUI\(app, \{ sendSet, sendCommand, on, replay: !!REPLAY_URL \}\)/);
+  assert.match(app, /initUI\(app, \{ sendSet, sendCommand, seek, on, replay: !!REPLAY_URL \}\)/);
 });
 
 test('app.js wires the hand in replay mode: built at boot, fed cues, cancelled off the human turn and on restart; sound turns on at Start in the demo when nothing is stored or it is remembered on', () => {
@@ -63,4 +63,12 @@ test('app.js in replay mode: a red pen for the hand, the Robot tag on the robot 
   assert.match(fn, /app\.ghost\.play\(app\.plan\.polylines, \{ durationMs: app\.replay\.drawMs\(app\.plan\.polylines\.length\), onMove: placeTag \}\)/);
   assert.match(app, /const placeTag = \(p\) => \{[^\n]*boardToStage\(p\)[^\n]*classList\.toggle\('hidden', !q\)/);
   assert.ok(!/\?v=ds8/.test(app), 'assets at v=ds9');
+});
+
+test('arrow keys seek the replay by half-exchanges: ui.js routes them to seek in replay mode, app.js clears the hand, the pens, and the clock first', () => {
+  const ui = read('js/ui.js');
+  assert.match(ui, /else if \(e\.key === 'ArrowLeft'\) \{ if \(replay\) seek\(-1\); else \{ stopLoop\(\); showShot\(/);
+  assert.match(ui, /else if \(e\.key === 'ArrowRight'\) \{ if \(replay\) seek\(1\); else \{ stopLoop\(\); showShot\(/);
+  const app = read('js/app.js');
+  assert.match(app, /function seek\(delta\) \{\n\s*if \(!app\.replay\) return;\n\s*app\.hand\.cancel\(\); app\.ghost\.stop\(\); app\.clock\.stop\(\);\n\s*send\(\{ type: 'seek', delta \}\);/);
 });

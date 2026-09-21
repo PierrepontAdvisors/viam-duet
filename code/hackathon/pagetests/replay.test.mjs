@@ -186,3 +186,51 @@ test('Player: cues reach the callback, boot starts on Abstract, a pick relabels 
   player.stop();
   await p;
 });
+
+test('schedule: a mark opens each half of an exchange and the finish, so the Player can seek to it', () => {
+  const steps = schedule(REPLAY);
+  const marks = steps.map((s, i) => (s.mark ? { ...s.mark, i } : null)).filter(Boolean);
+  assert.deepEqual(marks.map(m => `${m.turn}:${m.who}`), ['1:human', '1:robot', '2:human', '2:robot', '2:finish']);
+  for (const m of marks) {
+    const next = steps[m.i + 1].emit;
+    assert.equal(next && next.state, m.who === 'human' ? 'human_turn' : m.who === 'robot' ? 'capture' : 'finish', `${m.turn}:${m.who} sits right before its state`);
+  }
+});
+
+test('Player: seek moves the run by half-exchanges under a new session, feeding what came before at once; clamped at both ends; ignored before Start', async () => {
+  let clock = 0;
+  const seen = [], cues = [];
+  const player = new Player(REPLAY, (m) => seen.push(m), { now: () => clock, sleep: tickSleep(() => { clock += 100; }), cue: (c) => cues.push(c) });
+  player.boot();
+  player.command({ type: 'seek', delta: 1 });
+  assert.ok(!player.running, 'a seek before Start does nothing');
+  const p = player.start();
+  for (let i = 0; i < 12; i++) await tick();                           // into the first human turn
+  assert.equal(player.half, 0); assert.equal(player.lastState.state, 'human_turn');
+  seen.length = 0; cues.length = 0;
+  player.command({ type: 'seek', delta: 1 });                          // → 1:robot
+  assert.equal(player.half, 1);
+  assert.equal(seen[0].state, 'look'); assert.equal(seen[0].session, 'sess-r2', 'a new session so the page rebuilds');
+  const states = seen.filter(m => m.type === 'state').map(m => m.state);
+  assert.deepEqual(states, ['look', 'human_turn', 'capture'], 'everything before the mark at once, then the half begins');
+  assert.equal(seen.filter(m => m.type === 'shot').length, 2, 'the start and the human shot were fed');
+  assert.deepEqual(cues.map(c => c.clock || c.hand), ['robot'], 'no cues for the skipped stretch, the robot clock cue for this half');
+  await tick();
+  seen.length = 0; cues.length = 0;
+  player.command({ type: 'seek', delta: 1 });                          // → 2:human
+  assert.equal(player.half, 2);
+  const s2 = seen.filter(m => m.type === 'state').map(m => `${m.state}:${m.turn}`);
+  assert.equal(s2[s2.length - 1], 'human_turn:1'); assert.ok(s2.includes('robot_draw:0') && s2.includes('look:1'));
+  assert.equal(seen.filter(m => m.type === 'plan').length, 1, 'turn 1\'s plan was fed so its strokes are back');
+  assert.deepEqual(cues.map(c => c.clock || c.hand), ['pick', 'visitor']);
+  player.command({ type: 'seek', delta: -10 });                        // clamps at the first half
+  assert.equal(player.half, 0); assert.equal(player.lastState.state, 'human_turn'); assert.equal(player.lastState.turn, 0);
+  player.command({ type: 'seek', delta: 10 });                         // clamps at the finish
+  assert.equal(player.half, 4); assert.equal(player.lastState.state, 'finish');
+  while (player.running) await tick();
+  assert.equal(player.lastState.state, 'finished');
+  player.command({ type: 'seek', delta: -1 });                         // after the end: the recording starts again at the chosen half
+  assert.equal(player.half, 3); assert.ok(player.running); assert.equal(player.lastState.state, 'capture'); assert.equal(player.lastState.turn, 1);
+  player.stop();
+  await p;
+});

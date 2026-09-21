@@ -51,6 +51,12 @@ export function send(msg) {
 }
 export const sendSet = (changes) => send(setCommand(changes));
 export const sendCommand = (kind) => send(command(kind));
+/** Arrow keys in the demo: the recording moves by a half-exchange, after what animates on its own has stopped. */
+function seek(delta) {
+  if (!app.replay) return;
+  app.hand.cancel(); app.ghost.stop(); app.clock.stop();
+  send({ type: 'seek', delta });
+}
 
 /** The current plan's strokes are done once the next plan arrives or the piece finishes; keep them. */
 function archivePlan() {
@@ -175,7 +181,7 @@ export function boot() {
   }
   if (!REPLAY_URL) app.viewer.setStream('/stream.mjpg?overlay=0');
   app.diagView = initDiagView({ light: $('light'), summary: $('diag-summary'), svg: $('diag-timeline'), tbody: $('diag-rows') });
-  app.ui = initUI(app, { sendSet, sendCommand, on, replay: !!REPLAY_URL });
+  app.ui = initUI(app, { sendSet, sendCommand, seek, on, replay: !!REPLAY_URL });
   app.sound = new Sound();
   const soundBtn = $('sound');
   const setSound = (onOff) => {

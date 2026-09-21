@@ -53,7 +53,8 @@ export function stateMsg(replay, state, turn, artist, session, coverage = 0) {
  *  holds until Go or the time is up, `{ cue }` tells the page what the recorded visitor did and how long each
  *  half takes: `{ hand: 'pick', artist, row, draw }` when they switched artist, `{ hand: 'go', draw }` otherwise,
  *  with `draw` their strokes (specks under 6 mm dropped) and `row` the artist's roster index; `{ clock: 'visitor' | 'robot', ms }`
- *  at each human turn and each capture with that half's scripted time. The picker's
+ *  at each human turn and each capture with that half's scripted time. `{ mark: { turn, who } }` opens each half
+ *  (`human`, `robot`) and the `finish`, for seeking. The picker's
  *  setting is Abstract before the first exchange and each exchange's artist after it; the states before
  *  a capture carry the setting, the rest the exchange's artist. `speed` divides every wait. */
 export function schedule(replay, speed = 1, session = replay.session) {
@@ -74,10 +75,10 @@ export function schedule(replay, speed = 1, session = replay.session) {
     const st = (state, turn, who = artist) => e(stateMsg(replay, state, turn, who, session, coverage));
     const draw = (t.new || []).filter(pl => strokeLength(pl) >= MIN_FRAGMENT_MM);
     const handCue = artist === setting ? { hand: 'go', draw } : { hand: 'pick', artist, row: roster.indexOf(artist), draw };
-    steps.push(st('human_turn', n - 1, setting), { cue: handCue }, { cue: { clock: 'visitor', ms: planMs(handCue, div) } }, w(PACE.human, 'pass'));
+    steps.push({ mark: { turn: n, who: 'human' } }, st('human_turn', n - 1, setting), { cue: handCue }, { cue: { clock: 'visitor', ms: planMs(handCue, div) } }, w(PACE.human, 'pass'));
     ink = [...ink, ...(t.new || [])];
     const plan = t.plan || [], think = t.source === 'ink' ? PACE.thinkInk : PACE.thinkClaude;
-    steps.push(st('capture', n - 1), { cue: { clock: 'robot', ms: Math.round((PACE.capture + think + PACE.plan + PACE.settle) / div) + drawMs(plan.length, div) } },
+    steps.push({ mark: { turn: n, who: 'robot' } }, st('capture', n - 1), { cue: { clock: 'robot', ms: Math.round((PACE.capture + think + PACE.plan + PACE.settle) / div) + drawMs(plan.length, div) } },
                shot(n, 'human', artist, (t.frames || {}).human !== false),
                e({ type: 'human', polylines: ink, new: t.new || [], found: true, turn: n }), w(PACE.capture));
     const { thought, quip } = words(t);
@@ -94,7 +95,7 @@ export function schedule(replay, speed = 1, session = replay.session) {
     setting = artist;
   }
   const done = turns.length;
-  steps.push(e(stateMsg(replay, 'finish', done, setting, session, coverage)), e({ type: 'feed', source: 'held' }), w(PACE.finish));
+  steps.push({ mark: { turn: done, who: 'finish' } }, e(stateMsg(replay, 'finish', done, setting, session, coverage)), e({ type: 'feed', source: 'held' }), w(PACE.finish));
   if (done && frames.final) steps.push(shot(done, 'final', setting, true));
   steps.push(e(stateMsg(replay, 'finished', done, setting, session, coverage)), e({ type: 'feed', source: 'live' }));
   if (replay.video) steps.push(e({ type: 'video', url: replay.video }));
@@ -108,12 +109,13 @@ const TICK_MS = 100;
 const PICKABLE = ['look', 'human_turn'];
 
 /** Runs the schedule and answers the page's commands. `feed(msg)` is the page's message handler; `cue(c)`
- *  gets each cue step for the page's hand. */
+ *  gets each cue step for the page's hand and clock. `half` is the half-exchange the run is in (an index into
+ *  the schedule's marks); `seek(delta)` moves by that many halves. */
 export class Player {
   constructor(replay, feed, { speed = 1, sleep = realSleep, now = () => Date.now(), cue = () => {} } = {}) {
     this.replay = replay; this.rawFeed = feed; this.speed = speed; this.sleep = sleep; this.now = now; this.cue = cue;
     this.run = 1; this.token = 0; this.running = false; this.paused = false; this.passed = false; this.ended = false;
-    this.lastState = null; this.pick = null;
+    this.lastState = null; this.pick = null; this.half = 0; this.marks = [];
   }
   sessionId() { return this.run <= 1 ? this.replay.session : `${this.replay.session}-r${this.run}`; }
   /** The page paces its ghost pen to this so the simulated arm finishes as the last progress lands. */
@@ -132,13 +134,20 @@ export class Player {
     this.feed(stateMsg(this.replay, 'human_turn', 0, DEFAULT_ARTIST, this.sessionId()));
     this.feed({ type: 'feed', source: 'live' });
   }
-  async start() {
+  /** Runs from the schedule's start, or from step `from` after a seek: everything before it is fed at once, with
+   *  no waits and no cues, so the page rebuilds the strokes, the photos, and the counter before the half begins. */
+  async start(from = 0) {
     if (this.running) return;
     this.running = true; this.paused = false; this.ended = false;
     const token = ++this.token;
+    const steps = schedule(this.replay, this.speed, this.sessionId());
+    this.marks = steps.map((s, i) => (s.mark ? i : -1)).filter(i => i >= 0);
     let jumped = false;                                   // End: skip ahead to the finish once, then play it out
-    for (const step of schedule(this.replay, this.speed, this.sessionId())) {
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
       if (token !== this.token) return;
+      if (step.mark) { this.half = this.marks.indexOf(i); continue; }
+      if (i < from) { if (step.emit) this.feed(step.emit); continue; }
       if (this.ended && !jumped) { if (step.emit && step.emit.state === 'finish') jumped = true; else continue; }
       if (step.emit) { this.feed(step.emit); continue; }
       if (step.cue) { this.cue(step.cue); continue; }
@@ -160,6 +169,15 @@ export class Player {
   }
   stop() { this.token += 1; this.running = false; }
   restart() { this.stop(); this.pick = null; this.run += 1; this.start(); }
+  /** Forward or back by `delta` halves, clamped to the first half and the finish, under a new session id.
+   *  Nothing happens before Start; after the end the recording starts again at the chosen half. */
+  seek(delta) {
+    if (!this.running && !(this.lastState && this.lastState.state === 'finished')) return;
+    if (!this.marks.length) return;
+    const target = Math.max(0, Math.min(this.marks.length - 1, this.half + delta));
+    this.stop(); this.pick = null; this.run += 1;
+    this.start(this.marks[target]);
+  }
   command(msg) {
     switch (msg && msg.type) {
       case 'pass': this.passed = true; break;
@@ -167,6 +185,7 @@ export class Player {
       case 'resume': if (this.paused) { this.paused = false; if (this.lastState) this.rawFeed(this.lastState); } break;
       case 'restart': this.restart(); break;
       case 'end': if (this.running) this.ended = true; break;
+      case 'seek': this.seek(Math.trunc(Number(msg.delta) || 0)); break;
       case 'set': {                          // an artist pick shows on the label until the capture; other settings mean nothing to a recording
         const roster = this.replay.artists || ARTISTS;
         if (typeof msg.artist === 'string' && roster.includes(msg.artist)) { this.pick = msg.artist; if (this.lastState) this.feed({ ...this.lastState }); }

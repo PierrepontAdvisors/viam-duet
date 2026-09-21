@@ -20,7 +20,7 @@ export const defaultsFor = (replay) => (replay ? DEMO_DEFAULTS : LIVE_DEFAULTS);
 const LAYER_NODES = { ink: 'l-ink', board: 'l-board' };
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
-export function initUI(app, { sendSet, sendCommand, on, replay = false }) {
+export function initUI(app, { sendSet, sendCommand, seek, on, replay = false }) {
   const D = defaultsFor(replay);
   const view = { source: 'live', index: -1, playing: false, timer: null, thinkingSince: 0, strokeLocked: false, lastError: null, autoplayed: null, relaunching: false };
   const stage = $('stage'), viewer = app.viewer;
@@ -298,8 +298,8 @@ export function initUI(app, { sendSet, sendCommand, on, replay = false }) {
   document.addEventListener('keydown', (e) => {
     if (e.target instanceof Element && e.target.matches('input, textarea, select')) return;
     if (e.key === 'Escape') openMenu(false);
-    else if (e.key === 'ArrowLeft') { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); }
-    else if (e.key === 'ArrowRight') { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); }
+    else if (e.key === 'ArrowLeft') { if (replay) seek(-1); else { stopLoop(); showShot(view.source === 'live' ? app.book.shots.length - 1 : view.index - 1); } }   // the demo seeks the recording; the live page pages the photos
+    else if (e.key === 'ArrowRight') { if (replay) seek(1); else { stopLoop(); showShot(view.source === 'live' ? 0 : view.index + 1); } }
     else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
     else if (e.key === 'l' || e.key === 'L') showLive();
     else if (e.key === 'c' || e.key === 'C') toggleControls();
