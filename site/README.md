@@ -37,6 +37,8 @@ watch it faster; Go skips the visitor's turn; Start on a finished piece plays it
 
 ## Deploy
 
+The Vercel project `viam-duet` is linked to the GitHub repository with Root Directory `site` and no build step, so every push to `main` deploys production at https://viam-duet.vercel.app. A manual deploy from a checkout:
+
 ```
 cd site && vercel --prod
 ```
