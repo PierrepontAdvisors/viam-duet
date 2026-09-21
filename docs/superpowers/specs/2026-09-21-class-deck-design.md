@@ -23,6 +23,7 @@ The deck must open from disk with no network, screen-share cleanly, and look lik
 - **Honorable mention, said exactly that way.** "I didn't win. I'd do it again tomorrow."
 - **Advice line:** "You already know enough to start. Start with the smallest thing that works, then make it bigger."
 - **The four clips of other teams and the two photos with identifiable people stay out of git.** The repo is public.
+- **The text-only cards tell their story in pictures** (added 2026-09-21 afternoon, Nicholas's goal): cards 4, 9, 10, 11, 12 and 14 carry cartoon pictures generated in the pitch's grammar (thick marker outline, flat fills, no text, Nano Banana 2 via `gen_images.py`), on paper panels across the top of the card, with the words under them. Cards with reveals (4, 14) reveal one panel and its caption per advance, like a comic strip.
 - **Notes for rehearsal only.** Over a screen-share the pitch's in-card notes would be visible to the class, so the talk is read from `talk.md` on a phone or second window.
 
 ## 3. The cards
@@ -37,9 +38,7 @@ Words in quotes are on the slide. Everything else is spoken, and the spoken word
 
 3. **What other teams built.** Kicker "03 · What other teams built". Four portrait clips in a single row, each about three quarters of the card height, `video/team-1.mp4` to `team-4.mp4`, each `muted loop playsinline preload="auto"` (no `autoplay`: `class.js` plays them when card 3 is shown and pauses them when it is not). A one-line caption under each (an input Nicholas supplies, section 6). Spoken: one line per team.
 
-4. ★ **Why I built this.** Black card, white type, no photo, like the pitch's card 7. Kicker "04 · Why I built this". Four lines, revealed one per advance: "My dad was an architect. He always had a pen." · "At the diner, while we waited for the food, we'd draw together." · "He'd draw. I'd draw on top. He'd draw again. Until the food came." · "I didn't figure out that's where this came from until halfway through building it." Reveals: 4.
-
-**Act 2 · The machine**
+4. ★ **Why I built this.** Black card (`plate-black`, plate-7). Kicker "04 · Why I built this". A strip of four square cartoon panels, each a paper card with its line as the caption under the picture, revealed one per advance: `story-4-1` (the architect in a diner booth, a marker behind his ear, a rolled drawing under his arm) "My dad was an architect. He always had a pen." · `story-4-2` (the two of them across a diner table, markers over a placemat) "At the diner, while we waited for the food, we'd draw together." · `story-4-3` (a big hand and a small hand drawing one loopy line on the placemat as the fries arrive) "He'd draw. I'd draw on top. He'd draw again. Until the food came." · `story-4-4` (the kid across the table from a green robot arm, both drawing) "I didn't figure out that's where this came from until halfway through building it." Reveals: 4.
 
 5. ★ **What Duet is.** Kicker "05 · What Duet is". Headline "You draw. It looks. It thinks. It draws back." `img/setup.jpg` large with four numbered callouts placed over the photo (dot plus label, positions in percent of the photo, set in `class.css`), revealed one per advance: "1 · a camera on the wrist" · "2 · a gripper holding a green marker" · "3 · the board: red is a person, green is the robot" · "4 · the laptop running the code". Reveals: 4.
 
@@ -77,24 +76,24 @@ Words in quotes are on the slide. Everything else is spoken, and the spoken word
 
 **Act 3 · What broke**
 
-9. **The robot crushed the pen.** Kicker "09 · What broke". Typographic card: a very large "27 mm" and the headline "The robot crushed the pen." One line: "I measured the board with the marker in my hand. The robot holds it 27 mm differently." Takeaway line, set apart: "Measure with the robot's hand, not yours." Source: stuck-log 2026-09-18, "pen crushed the felt on the first square."
+9. **The robot crushed the pen.** Kicker "09 · What broke". One 16:9 cartoon panel on top, `story-9` (a green robot arm pressing a red marker into a whiteboard so hard the tip squashes flat). Under it: headline "The robot crushed the pen.", the line "I measured the board with the marker in my hand. The robot holds it 27 mm differently.", and the takeaway, set apart: "Measure with the robot's hand, not yours." Source: stuck-log 2026-09-18, "pen crushed the felt on the first square."
 
-10. ★ **The smart trigger that wasn't.** Kicker "10 · What broke". Headline "The smart trigger that wasn't." Left: three lines, "I wrote clever code so the robot would notice when you'd stepped back." · "It fired every few seconds on an empty board." · "Saturday morning I deleted it and added a button." Right: a large button drawn in the page's style reading "Go, robot!". Takeaway: "The simple thing is allowed to win." Source: 04-plan "Trigger, day 2 at the table."
+10. ★ **The smart trigger that wasn't.** Kicker "10 · What broke". Two square cartoon panels on top: `story-10-1` (the robot arm with its wrist camera hovering over an empty board, question marks around it) and `story-10-2` (a kid pressing a big green button while the arm happily draws). Under them: headline "The smart trigger that wasn't.", three lines run together as one paragraph, "I wrote clever code so the robot would notice when you'd stepped back." · "It fired every few seconds on an empty board." · "Saturday morning I deleted it and added a button." followed inline by a small green button in the page's style reading "Go, robot!", then the takeaway: "The simple thing is allowed to win." Source: 04-plan "Trigger, day 2 at the table."
 
-11. **The error you'll get too.** Kicker "11 · What broke". Headline "The error you'll get too." A monospace block, the wrongly indented method exactly as it was:
+11. **The error you'll get too.** Kicker "11 · What broke". Two panels on top: `story-11` (a kid squinting at a laptop where one line of code sticks out and a red burst pops from the screen) and, beside it as the second panel, the code excerpt on paper with the error line under it in red:
     ```
     class Palletizer:
         def obstacles(self):
             boxes = self.placed_boxes()
         return WorldState(boxes)
     ```
-    and under it, in red, `SyntaxError: 'return' outside function`. One line: "Four spaces instead of eight. The day before the hackathon." Takeaway: "The error message is the clue, not the insult." Source: stuck-log 2026-09-17, first entry. (The four-line excerpt is an illustration of that entry's bug, not a verbatim copy of `palletizer.py`.)
+    `SyntaxError: 'return' outside function`. Under the panels: headline "The error you'll get too.", the line "Four spaces instead of eight. The day before the hackathon.", the takeaway "The error message is the clue, not the insult." Source: stuck-log 2026-09-17, first entry. (The excerpt is an illustration of that entry's bug, not a verbatim copy of `palletizer.py`.)
 
-12. **The log.** Kicker "12 · The log". Headline "I wrote down every problem." The stuck-log template fields, large, as a list: "Symptom" · "What I tried" · "Fix" · "Why it worked". One line: "Nine entries in two days." Takeaway: "This is what debugging actually is." Spoken: the class can start one tomorrow.
+12. **The log.** Kicker "12 · The log". One 16:9 cartoon panel on top, `story-12` (a hand filling four boxes in a notebook with a marker, the robot arm in the background). Under it: headline "I wrote down every problem.", the four fields as a row of pills, "1 Symptom" · "2 What I tried" · "3 Fix" · "4 Why it worked", the line "Nine entries in two days.", the takeaway "This is what debugging actually is." Spoken: the class can start one tomorrow.
 
 13. ★ **What it felt like.** Kicker "13 · What it felt like". `img/medal.jpg` large (Nicholas with the medal at the Viam podium). Three lines: "One person." · "Two days." · "Honorable mention." Spoken: tired; the venue WiFi kept dropping during the demo; it drew anyway; "I didn't win. I'd do it again tomorrow."
 
-14. ★ **One piece of advice.** Kicker "14 · One piece of advice". Two lines, revealed one per advance: "You already know enough to start." · "Start with the smallest thing that works, then make it bigger." Reveals: 2. Spoken close: "Questions."
+14. ★ **One piece of advice.** Kicker "14 · One piece of advice". Black card. Two 16:9 cartoon panels, each with its line as a headline-sized caption under the picture, revealed one per advance: `story-14-1` (a kid at a laptop where a turtle draws a square, and a tiny robot arm drawing the same square) "You already know enough to start." · `story-14-2` (four whiteboards growing from one small square to a crowded drawing, the kid climbing them like stairs) "Start with the smallest thing that works, then make it bigger." Reveals: 2. Spoken close: "Questions."
 
 **Master page.** Every card carries the pitch's chrome: frame, kicker, the Duet wordmark, the footer strip "Nicholas Fjellberg Swerdlowe · Viam Fine Motor Skills Hackathon · 2026" and a counter "n / 14" (or "n / 10" in the cut, section 5).
 
@@ -115,7 +114,7 @@ One Markdown file Nicholas reads from a phone or a second window while the deck 
 **Files**, all under `docs/duet/class/`:
 
 - `index.html`: the fourteen cards, one `<section class="card" data-card="n" data-el="card n — name">` each, in order, following the pitch's markup (kicker, wordmark, content, footer with counter, an `<aside class="notes">` per card for rehearsal). Links `../pitch/fredoka.css`, `../pitch/deck.css`, `class.css`, `class.js`, `../pitch/dev.js`. Opens over `file://`.
-- `class.css`: only what the pitch's CSS lacks: the two-photo card (2), the row of four portrait videos (3), the four-line text layout for card 4 (the black background itself is the pitch's `plate-black` class, reused), photo callouts (5), the verb labels over the triptych (6), the two code panels (7), the typographic "27 mm" card (9), the Go button (10), the monospace error block (11), the template list (12), the three-line photo card (13). Every font size is a bare token from `deck.css` (redefine `--caption`/`--body` on the element rather than writing a size), the pitch's rule.
+- `class.css`: only what the pitch's CSS lacks: the two-photo card (2), the row of four portrait videos (3), photo callouts (5), the verb labels over the triptych (6), the two code panels (7), the three-line photo card (13), and the `story` template for the text-only cards (4, 9, 10, 11, 12, 14): a `.strip` of one, two or four `.panel` paper cards (picture, optional caption) across the top, and an `.under` column for the words; the strips step down under `.stage.shownotes`. Every font size is a bare token from `deck.css` (redefine `--caption`/`--body` on the element rather than writing a size), the pitch's rule.
 - `class.js`: navigation for this deck. It is decided in the plan, after reading `deck.js`, whether this is a trimmed copy of `deck.js` with the class constants or `deck.js` made to read its card count, reveals and flipbook from the page. Either way `docs/duet/pitch/` behaves exactly as before (its tests guard that). Behaviour: Right, space, click on the right two thirds advance (through reveals first); Left, click on the left third go back; 1–9 jump to cards 1–9 and 0 to card 10; Home, End; F fullscreen; D developer mode; `#n` in the hash. Pure state functions (`advance`, `back`, `jump`, `parseHash`, `flipLabel`, `flipDelay`, `nextFlip`) hang off `window.ClassDeck` so the Node tests load the file without a DOM. No autoplay Play pill or Speed dropdown; this deck is only ever talked through. The flipbook runs while card 8 is shown and stops when it is not. `class.js` calls `play()` on the four card-3 videos when card 3 becomes the shown card and `pause()` when it stops being, so four decoders are not running behind card 1.
 - **`?cut=10`:** before init, `class.js` removes every card with `data-cut="20"` from the DOM, renumbers `data-card` and the counters 1..10, and reads reveals from the surviving cards, so the cut deck is a real ten-card deck with a "n / 10" counter. The pure functions take the card count as an argument.
 - `talk.md`: section 4.
@@ -145,6 +144,8 @@ Sources are in `hackathon-videos/` at the repo root (untracked; Nicholas's drop 
 
 Clip order is by filename (chronological). `build_assets.py` holds this table.
 
+**Story pictures** (committed, about 2 MB): `img/story-4-1.jpg` … `story-4-4.jpg`, `story-9.jpg`, `story-10-1.jpg`, `story-10-2.jpg`, `story-11.jpg`, `story-12.jpg`, `story-14-1.jpg`, `story-14-2.jpg`, generated by `docs/duet/class/gen_images.py` with Nano Banana 2 (`gemini-3.1-flash-image`, 1K) in the pitch's cartoon grammar: it imports the pitch's generator for the endpoint, key lookup and JPEG conversion, and holds only the jobs. `GEMINI_API_KEY` from the environment wins over `code/hackathon/.env` (a worktree has no `.env`). Prompts describe the scene and the stroke grammar and never name an artist, the pitch's rule. Regenerate one with `python3 docs/duet/class/gen_images.py --force story-9`.
+
 **`.gitignore` additions:** `hackathon-videos/`, `docs/duet/class/video/`, `docs/duet/class/img/crowd.jpg`, `docs/duet/class/img/medal.jpg`. Reason, stated in the class README: the repo is public; the clips are other teams' work and the two photos show identifiable people who were not asked. The arm and door-sign photos commit.
 
 **Inputs Nicholas supplies before the build is complete:** `hackathon-videos/photo-medal.jpg`; four one-line captions for card 3 (what each team built). Until the captions arrive the card ships with the captions empty and the talk-track marks the gap; the copy test does not cover them.
@@ -158,6 +159,7 @@ Clip order is by filename (chronological). `build_assets.py` holds this table.
 - Reveals: card 4 has 4, card 5 has 4, card 6 has 3, card 14 has 2; `advance`/`back`/`jump` behave at 14 cards and at 10, never mutate their input.
 - `parseHash`; the flipbook lists the 21 photos in turn order, labels them, holds on the last.
 - Every `<video>` on card 3 is `muted`, `loop`, `playsinline`, has no `autoplay`, and there are four.
+- The story cards: card 4 has four `panel paper reveal` figures with steps 1–4 and the four lines as captions; card 14 two; cards 9, 10, 11, 12 reference their pictures; the eleven `story-*.jpg` exist; `gen_images.py` exists, holds every job name, keeps the key out of the repo, and never names an artist.
 - Every local file the deck references exists, except the six gitignored assets, which are instead asserted to be covered by `.gitignore` (so a fresh clone of the public repo passes).
 - Developer mode wired: badge, label, toast, unique `data-el` names across all cards.
 - Every card carries the master page: frame, kicker, wordmark, footer with a counter.
