@@ -277,7 +277,7 @@ test('Act 3: three failures, the log, what it felt like, the advice', () => {
     'The smart trigger that wasn\'t.', 'I wrote clever code so the robot would notice when you\'d stepped back.', 'It fired every few seconds on an empty board.',
     'Saturday morning I deleted it and added a button.', 'Go, robot!', 'The simple thing is allowed to win.',
     'The error you\'ll get too.', 'SyntaxError: \'return\' outside function', 'Four spaces instead of eight. The day before the hackathon.', 'The error message is the clue, not the insult.',
-    'I wrote down every problem.', '>Symptom<', '>What I tried<', '>Fix<', '>Why it worked<', 'Nine entries in two days.', 'This is what debugging actually is.',
+    'I wrote down every problem.', '>Symptom<', '>What I tried<', '>Fix<', '>Why it worked<', 'Eight entries by Friday night.', 'This is what debugging actually is.',
     'One person.', 'Two days.', '<span class="key">Honorable mention.</span>',
     'You already know <span class="key">enough</span> to start.', 'Start with the smallest thing that works, then make it bigger.',
   ];
@@ -386,5 +386,5 @@ test('talk.md: pre-flight, fourteen cards with times adding to about 17 minutes,
   for (const n of [3, 9, 11, 12]) assert.match(t, new RegExp(`^### ${n} · .*\\(cut in 10\\)`, 'm'), `card ${n} is marked cut`);
   for (const line of ['an AI that can look at a photo and tell you what\'s in it', 'Honorable mention', 'I didn\'t win', 'simplified',
     'You already know enough to start', 'Did you write all the code?', 'Could I build this?']) assert.ok(t.includes(line), `talk missing: ${line}`);
-  assert.ok(!/motion service|inverse kinematics|WebRTC|polyline|inference/.test(t), 'no jargon');
+  assert.ok(!/motion service|inverse kinematics|WebRTC|polyline|inference/i.test(t), 'no jargon');
 });

@@ -89,7 +89,7 @@ Words in quotes are on the slide. Everything else is spoken, and the spoken word
     ```
     `SyntaxError: 'return' outside function`. Under the panels: headline "The error you'll get too.", the line "Four spaces instead of eight. The day before the hackathon.", the takeaway "The error message is the clue, not the insult." Source: stuck-log 2026-09-17, first entry. (The excerpt is an illustration of that entry's bug, not a verbatim copy of `palletizer.py`.)
 
-12. **The log.** Kicker "12 · The log". One 16:9 cartoon panel on top, `story-12` (a hand filling four boxes in a notebook with a marker, the robot arm in the background). Under it: headline "I wrote down every problem.", the four fields as a row of pills, "1 Symptom" · "2 What I tried" · "3 Fix" · "4 Why it worked", the line "Nine entries in two days.", the takeaway "This is what debugging actually is." Spoken: the class can start one tomorrow.
+12. **The log.** Kicker "12 · The log". One 16:9 cartoon panel on top, `story-12` (a hand filling four boxes in a notebook with a marker, the robot arm in the background). Under it: headline "I wrote down every problem.", the four fields as a row of pills, "1 Symptom" · "2 What I tried" · "3 Fix" · "4 Why it worked", the line "Eight entries by Friday night." (the stuck log holds three entries from the practice day and five from the Friday), the takeaway "This is what debugging actually is." Spoken: the class can start one tomorrow.
 
 13. ★ **What it felt like.** Kicker "13 · What it felt like". `img/medal.jpg` large (Nicholas with the medal at the Viam podium). Three lines: "One person." · "Two days." · "Honorable mention." Spoken: tired; the venue WiFi kept dropping during the demo; it drew anyway; "I didn't win. I'd do it again tomorrow."
 
