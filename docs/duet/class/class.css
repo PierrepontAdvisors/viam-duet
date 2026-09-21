@@ -55,7 +55,7 @@
 .under .headline { --headline: 4.4cqw; }
 .under .body { --body: 2.4cqw; }
 .under .lines { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .4cqw 1cqw; }
-.under .takeaway { align-self: center; }
+.under .takeaway { align-self: center; padding-top: 1cqw; padding-bottom: 1cqw; }   /* a shorter pill under a picture */
 
 /* card 4: the diner strip, four panels with their lines as captions */
 .diner .panel .cap { --body: 2cqw; }
@@ -96,7 +96,7 @@
 /* card 10: the Go button rides inline after the three lines */
 .gobtn { display: inline-block; padding: .5cqw 1.6cqw; background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
          border-radius: 999px; font-size: var(--body); font-weight: 700; line-height: 1; box-shadow: .35cqw .35cqw 0 var(--ink); }
-.trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 21cqw)); }
+.trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 20cqw)); }
 .trigger .under { gap: .4cqw; }
 .trigger .under .headline { --headline: 3.5cqw; }
 .trigger .under .lines { --body: 2cqw; gap: .2cqw .8cqw; }
@@ -143,7 +143,7 @@
 .stage.shownotes .under .headline { --headline: 3.4cqw; }
 .stage.shownotes .under .body { --body: 2.1cqw; }
 
-.stage.shownotes .trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 16cqw)); }
+.stage.shownotes .trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 14cqw)); }
 .stage.shownotes .trigger .under { gap: .2cqw; }
 .stage.shownotes .trigger .under .headline { --headline: 2.4cqw; }
 .stage.shownotes .trigger .under .lines { --body: 1.7cqw; }
