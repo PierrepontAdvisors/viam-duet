@@ -1,6 +1,6 @@
 # Duet class deck
 
-Fourteen cards, about twenty minutes, for Carolina Uribe's 9th to 12th grade Python class. The talk is in `talk.md`.
+Fourteen cards, about twenty minutes, for Carolina's 9th to 12th grade Python class. The talk is in `talk.md`.
 Spec: `docs/superpowers/specs/2026-09-21-class-deck-design.md`.
 
 Open it (offline is fine; the font, the plates and the flipbook photos come from `../pitch/`):

@@ -2,6 +2,7 @@
    pills, bubble, flipbook, pop entrance and developer mode all come from ../pitch/deck.css. Every font-size here is a
    token; a size steps by redefining the token on the element, the pitch's rule. */
 :root { --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.card { --pad-y: 2.6cqw; }   /* one chrome for every card: the story cards need the room, the others centre their content */
 
 /* reveals: elements with data-step appear one advance at a time; class.js sets .shown */
 .reveal { opacity: 0; transform: translateY(1cqw); transition: opacity .4s ease, transform .4s ease; }
@@ -41,7 +42,6 @@
 .clip .cap { --body: 2.2cqw; min-height: 1.3em; color: var(--ink); }
 
 /* template: story (cards 4, 9, 10, 11, 12, 14): a row of cartoon panels across the top, the words under them */
-.card { --pad-y: 2.6cqw; }
 .story .content { gap: var(--s1); }
 .panels { display: grid; column-gap: var(--gutter); align-items: start; justify-content: center; }
 .panels.one { grid-template-columns: minmax(0, 32cqw); }
@@ -139,10 +139,11 @@
 .stage.shownotes .panels.one { grid-template-columns: minmax(0, 22cqw); }
 .stage.shownotes .panels.two { grid-template-columns: repeat(2, minmax(0, 26cqw)); }
 .stage.shownotes .panels.four { grid-template-columns: repeat(4, minmax(0, 16cqw)); }
-.stage.shownotes .diner .panel .cap { --body: 1.7cqw; }
-.stage.shownotes .advice .panel .cap { --headline: 2.6cqw; }
 .stage.shownotes .under .headline { --headline: 3.4cqw; }
 .stage.shownotes .under .body { --body: 2.1cqw; }
+
+/* per card, in card order */
+.stage.shownotes .diner .panel .cap { --body: 1.7cqw; }
 
 .stage.shownotes .trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 16cqw)); }
 .stage.shownotes .trigger .under { gap: .2cqw; }
@@ -160,3 +161,5 @@
 
 .stage.shownotes .log .under { gap: .2cqw; }
 .stage.shownotes .log .under .headline { --headline: 2.8cqw; }
+
+.stage.shownotes .advice .panel .cap { --headline: 2.6cqw; }

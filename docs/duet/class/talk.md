@@ -1,6 +1,6 @@
 # A robot that draws back — the talk
 
-For Carolina Uribe's class, grades 9 to 12, over Zoom or Meet. About twenty minutes of talk, then a Q&A rotation at the teacher's computer. Read this from a phone or a second window; the shared tab shows only the deck.
+For Carolina's class, grades 9 to 12, over Zoom or Meet. About twenty minutes of talk, then a Q&A rotation at the teacher's computer. Read this from a phone or a second window; the shared tab shows only the deck.
 
 ## Pre-flight
 
@@ -11,6 +11,7 @@ For Carolina Uribe's class, grades 9 to 12, over Zoom or Meet. About twenty minu
 - [ ] Zoom: Share Screen → the whole screen, not the Chrome window (a fullscreen window can hand Zoom a black frame). Leave "Optimize for video clip" unticked: it softens the code cards, and the only video is fifteen seconds of muted clips. Meet: share the screen.
 - [ ] Chat: fullscreen Chrome hides it. Either a second screen with the Zoom window, or Carolina reads chat questions aloud. Say which at the start.
 - [ ] Card 3: the four clip lines are written below, and the four captions in `index.html`.
+- [ ] Card 13: `hackathon-videos/photo-medal.jpg` dropped in, `build_assets.py` rerun, the medal shows on the card.
 - [ ] Likely questions edited (bottom of this file). The AI cost figure read off the Anthropic console.
 - [ ] Do Not Disturb on; Slack, Mail and Messages closed.
 - [ ] Before class, step through cards 3 and 8 and confirm the four clips and the flipbook are playing on the shared screen.
@@ -28,7 +29,7 @@ Words in **bold** are on the card. Everything else is spoken. Times are targets,
 
 **A robot that draws back. Two days at a robot hackathon.**
 
-Hi, I'm Nicholas. I'm a friend of Ms. Uribe. Last weekend I spent two days at a robot hackathon in New York and built this: a robot arm that draws with you. You draw something, it looks at it, and it draws back. I'm going to show you what it is, how it works, and everything that went wrong on the way. Ask anything in the chat whenever you want; Ms. Uribe and I are watching it.
+Hi, I'm Nicholas. I'm a friend of your teacher. Last weekend I spent two days at a robot hackathon in New York and built this: a robot arm that draws with you. You draw something, it looks at it, and it draws back. I'm going to show you what it is, how it works, and everything that went wrong on the way. Ask anything in the chat whenever you want; your teacher and I are watching it.
 
 _(If the talk slips past this week, "last weekend" becomes "a couple of weeks ago.")_
 
@@ -104,7 +105,7 @@ _(advance)_ DRAW. Claude doesn't just say it. It also sends the shape it wants t
 
 **Your turtle and my robot follow the same thing: a list of points.** Two code panels.
 
-Now here's the part I really want you to see, because Ms. Uribe told me you're drawing in Python right now.
+Now here's the part I really want you to see, because your teacher told me you're drawing in Python right now.
 
 On the left is turtle. You've written something like this. Pen up. Go to the start. Pen down. Then go through a list of points. Pen up.
 
