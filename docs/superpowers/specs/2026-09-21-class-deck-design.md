@@ -48,16 +48,15 @@ Words in quotes are on the slide. Everything else is spoken, and the spoken word
 7. ★ **It's just points.** Kicker "07 · It's just points". Headline "Your turtle and my robot follow the same thing: a list of points." Two code panels side by side, monospace, one label each.
    Left, "Your turtle":
    ```python
-   import turtle
-   t = turtle.Turtle()
+   from turtle import *
    points = [(40, 0), (40, 40),
              (0, 40), (0, 0)]
-   t.penup()
-   t.goto(0, 0)
-   t.pendown()
+   penup()
+   goto(0, 0)
+   pendown()
    for x, y in points:
-       t.goto(x, y)
-   t.penup()
+       goto(x, y)
+   penup()
    ```
    Right, "My robot (simplified)":
    ```python

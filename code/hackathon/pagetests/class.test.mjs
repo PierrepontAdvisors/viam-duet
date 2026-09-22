@@ -247,8 +247,8 @@ test('Act 2: the setup with callouts, one turn with three verbs, the two code pa
   assert.match(s[5], /<div class="paper bubble body"[^>]*>\s*<span class="caption says"/, 'card 6 names the speaker at the top of its bubble');
   // card 7: two <pre> panels, verbatim
   const turtle = [
-    'import turtle', 't = turtle.Turtle()', 'points = [(40, 0), (40, 40),', '          (0, 40), (0, 0)]',
-    't.penup()', 't.goto(0, 0)', 't.pendown()', 'for x, y in points:', '    t.goto(x, y)', 't.penup()',
+    'from turtle import *', 'points = [(40, 0), (40, 40),', '          (0, 40), (0, 0)]',
+    'penup()', 'goto(0, 0)', 'pendown()', 'for x, y in points:', '    goto(x, y)', 'penup()',
   ].join('\n');
   const robot = [
     'stroke = points_from_claude()', '# e.g. [(0, 0), (40, 0), (40, 40)]', 'x, y = stroke[0]',

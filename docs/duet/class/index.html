@@ -181,16 +181,15 @@
     <div class="content">
       <div class="lead"><h2 class="headline" data-el="card 7 headline">Your turtle and my robot follow the same thing: a list of points.</h2></div>
       <div class="codes">
-        <div class="paper codepanel" data-el="card 7 code — your turtle"><span class="caption" data-el="card 7 code label — your turtle">Your turtle</span><pre>import turtle
-t = turtle.Turtle()
+        <div class="paper codepanel" data-el="card 7 code — your turtle"><span class="caption" data-el="card 7 code label — your turtle">Your turtle</span><pre>from turtle import *
 points = [(40, 0), (40, 40),
           (0, 40), (0, 0)]
-t.penup()
-t.goto(0, 0)
-t.pendown()
+penup()
+goto(0, 0)
+pendown()
 for x, y in points:
-    t.goto(x, y)
-t.penup()</pre></div>
+    goto(x, y)
+penup()</pre></div>
         <div class="paper codepanel" data-el="card 7 code — my robot"><span class="caption" data-el="card 7 code label — my robot">My robot (simplified)</span><pre>stroke = points_from_claude()
 # e.g. [(0, 0), (40, 0), (40, 40)]
 x, y = stroke[0]
