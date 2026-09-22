@@ -1,0 +1,123 @@
+/* Duet class deck: only what deck.css lacks. The type scale, plates, master page, split/triptych/modules templates, paper,
+   pills, bubble, flipbook, pop entrance and developer mode all come from ../pitch/deck.css. Every font-size here is a
+   token; a size steps by redefining the token on the element, the pitch's rule. */
+:root { --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.card { --pad-y: 2.6cqw; }   /* one chrome for every card: the story cards need the room, the others centre their content */
+
+/* reveals: elements with data-step appear one advance at a time; class.js sets .shown */
+.reveal { opacity: 0; transform: translateY(1cqw); transition: opacity .4s ease, transform .4s ease; }
+.reveal.shown { opacity: 1; transform: none; }
+.stage .card.active.triptych .module.reveal { animation: none; }   /* the pop's fill mode would override the reveal */
+
+/* template: half (words in cols 1-7, figure in cols 7-13); photo-left puts the figure first */
+.split.half .words { grid-column: 1 / 7; }
+.split.half .figure { grid-column: 7 / 13; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--s1); justify-self: center; }
+.split.half.photo-left .figure { grid-column: 1 / 6; grid-row: 1; }
+.split.half.photo-left .words { grid-column: 6 / 13; grid-row: 1; }
+.half .photo img { height: 33cqw; width: auto; max-width: 100%; }
+
+/* the modules template's own children pop in deck.css; these are the class deck's */
+.card.active.modules .content > :is(.duo, .facts, .clips, .codes, .flipwrap, .panels, .under) {
+  animation: pop calc(.45s / var(--speed, 1)) cubic-bezier(.2, .7, .3, 1) both;
+  animation-delay: calc(var(--i, 3) * var(--stagger, 80ms) / var(--speed, 1)); }
+.card.active.modules .content > .panels { --i: 2; }
+.card.active.modules .content > .under { --i: 4; }
+
+/* takeaways: the lesson of a card, a yellow paper line set apart */
+.takeaway { background: var(--yellow); }
+
+/* card 1: title */
+.title .display { --display: 7cqw; }
+
+/* card 2: two photos and three facts */
+.duo { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--gutter); }
+.duo .photo img { height: 20cqw; width: 100%; object-fit: cover; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--gutter); }
+.facts .paper { --body: 2.3cqw; text-align: center; }
+
+/* card 3: four portrait clips in a row */
+.clips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: var(--gutter); }
+.clip { display: flex; flex-direction: column; align-items: center; gap: .6cqw; min-width: 0; }
+.clip video { display: block; height: 30cqw; width: 100%; object-fit: cover; border-radius: calc(var(--paper-radius) - .4cqw); background: #000; }
+.clip .cap { --body: 2.2cqw; min-height: 1.3em; color: var(--ink); }
+
+/* template: story (cards 4, 9, 10, 11, 12, 14): a row of cartoon panels across the top, the words under them */
+.story .content { justify-content: flex-start; gap: .8cqw; }   /* the panels start on the same line on every story card */
+/* the panel row is the content's own 12-column grid, so every box lands on a column line and a row's boxes share one height */
+.panels { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); align-items: stretch; }
+.panels.one > * { grid-column: 4 / span 6; }
+.panels.two > * { grid-column: span 3; }
+.panels.two > :first-child { grid-column: 4 / span 3; }
+.panels.four > * { grid-column: span 3; }
+.panel { display: flex; flex-direction: column; gap: .6cqw; min-width: 0; padding: .8cqw; }
+.panel img { display: block; width: 100%; height: auto; border-radius: calc(var(--paper-radius) - .6cqw); }
+.panel .cap { color: var(--ink); }
+.panel .key { color: var(--robot); -webkit-text-stroke: 0; }   /* a keyed word on white paper, not on the plate */
+.under { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .6cqw; }
+.under .headline { --headline: 4cqw; }
+.under .body { --body: 2.2cqw; }
+.under .lines { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .4cqw 1cqw; }
+.under .takeaway { align-self: center; padding-top: 1cqw; padding-bottom: 1cqw; }   /* a shorter pill under a picture */
+
+/* card 4: the diner strip, four panels with their lines as captions */
+.diner .panel .cap { --body: 2cqw; }
+
+/* card 5: the setup with numbered callouts on the photo */
+.callouts .words { gap: var(--s1); }
+.callouts .headline { --headline: 4.4cqw; }
+.callouts .list { display: flex; flex-direction: column; gap: var(--s1); }
+.callouts .list .paper { --body: 2.5cqw; padding: .8cqw var(--paper-pad); }
+.shot { position: relative; width: fit-content; }
+.dot { position: absolute; left: var(--x); top: var(--y); width: 3.4cqw; height: 3.4cqw; border-radius: 50%; background: var(--yellow); color: var(--ink);
+       border: var(--paper-border) solid var(--ink); display: flex; align-items: center; justify-content: center;
+       --body: 2.2cqw; font-size: var(--body); font-weight: 700; box-shadow: .3cqw .3cqw 0 var(--ink); }
+.dot.reveal { transform: translate(-50%, -50%) scale(.6); }
+.dot.reveal.shown { transform: translate(-50%, -50%) scale(1); }
+
+/* card 6: a verb over each module of the triptych */
+.oneturn .content { align-items: start; }
+.oneturn .verb { --display: 6cqw; letter-spacing: .08em; color: #fff; -webkit-text-stroke: .04em var(--ink); paint-order: stroke fill; }
+.oneturn .photo img { height: 22cqw; }
+.oneturn .m2 .bubble { --body: 2.4cqw; }
+.oneturn .cap { --body: 2.2cqw; color: var(--ink); }
+
+/* card 7: two code panels */
+.code .headline { --headline: 3.8cqw; }
+.codes { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s2); }
+.codepanel { display: flex; flex-direction: column; gap: .6cqw; }
+.codepanel pre { margin: 0; font-family: var(--mono); --body: 1.6cqw; font-size: var(--body); font-weight: 500; line-height: 1.35; white-space: pre; overflow: hidden; }
+
+/* card 8: the flipbook, a line under it */
+.watch .flip img { height: 25cqw; }
+.watch .closing { --body: 2.5cqw; text-align: center; color: var(--ink); }
+
+/* card 9: one panel, the words under it; nothing beyond the template */
+
+/* card 10: the Go button rides inline after the three lines */
+.gobtn { display: inline-block; padding: .5cqw 1.6cqw; background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
+         border-radius: 999px; font-size: var(--body); font-weight: 700; line-height: 1; box-shadow: .35cqw .35cqw 0 var(--ink); }
+.trigger .under .headline { --headline: 3.6cqw; }
+.trigger .under .lines { gap: .2cqw .8cqw; }
+.trigger .under .lines > * { --body: 2cqw; }   /* on the children: each p carries its own --body from .under .body */
+.trigger .under .takeaway { --body: 2cqw; }
+
+/* card 11: the code panel is the row's second panel, the error line inside it */
+.error .panels.two > :first-child { grid-column: 1 / span 6; }
+.error .panels.two > :last-child { grid-column: 7 / span 6; }
+.error .codepanel pre { --body: 1.8cqw; }
+.errline { color: var(--human); font-family: var(--mono); --body: 2.2cqw; }
+
+/* card 12: the four fields as a row of pills */
+.fields { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); align-self: stretch; }   /* four boxes on the same columns as the panels */
+.fields .pill { grid-column: span 3; display: inline-flex; justify-content: center; align-items: baseline; gap: .5cqw; }
+.fields .num { color: var(--blue); font-weight: 700; }
+.fields .body { --body: 2.1cqw; }
+
+/* card 13: three lines beside the medal */
+.felt .words { gap: var(--s1); }
+.felt .key { color: var(--robot); -webkit-text-stroke: 0; }   /* the keyed line in the robot's green, legible on cream */
+
+/* card 14: two wide panels, six columns each, their line as a headline-sized caption */
+.advice .panels.two > :first-child { grid-column: 1 / span 6; }
+.advice .panels.two > :last-child { grid-column: 7 / span 6; }
+.advice .panel .cap { --headline: 3.2cqw; }
