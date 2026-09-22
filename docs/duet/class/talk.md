@@ -6,7 +6,6 @@ For Carolina's class, grades 9 to 12, over Zoom or Meet. About twenty minutes of
 
 - [ ] Open `docs/duet/class/index.html` from disk in Chrome. If Carolina says ten minutes, open it as `index.html?cut=10` instead.
 - [ ] Press **F** for fullscreen. Right arrow, space or a click on the right two thirds advances; left arrow or a click on the left third goes back; **1**–**9** and **0** jump; **Home**/**End**.
-- [ ] Notes are off. (`?notes=1` shows them: rehearsal only, never on a share.)
 - [ ] Second tab, already loaded: https://viam-duet.vercel.app (the replay, for the Q&A).
 - [ ] Zoom: Share Screen → the whole screen, not the Chrome window (a fullscreen window can hand Zoom a black frame). Leave "Optimize for video clip" unticked: it softens the code cards, and the only video is fifteen seconds of muted clips. Meet: share the screen.
 - [ ] Chat: fullscreen Chrome hides it. Either a second screen with the Zoom window, or Carolina reads chat questions aloud. Say which at the start.

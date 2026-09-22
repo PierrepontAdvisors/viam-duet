@@ -12,7 +12,7 @@ left third goes back; 1 to 9 and 0 jump to cards 1 to 10; Home and End; F fullsc
 element's name, click copies it).
 
 `index.html?cut=10` is the ten-minute version: the cards marked `data-cut="20"` (3, 9, 11, 12) are dropped and the rest
-renumbered. `?notes=1` shows each card's spoken part under it, for rehearsal only; never on a screen-share.
+renumbered. There is no notes mode: the words live in `script.md`.
 
 ## Assets
 

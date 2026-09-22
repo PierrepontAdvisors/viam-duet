@@ -105,14 +105,6 @@ test('jump clamps to the deck and starts that card unrevealed; parseHash reads #
   assert.equal(D.parseHash(undefined, full), 1);
 });
 
-test('notes are off unless ?notes=1 (a screen-share must not show them)', () => {
-  const D = loadDeck();
-  assert.equal(D.parseNotes(''), false);
-  assert.equal(D.parseNotes('?cut=10'), false);
-  assert.equal(D.parseNotes('?notes=1'), true);
-  assert.equal(D.parseNotes('?cut=10&notes=1'), true);
-  assert.equal(D.parseNotes('?notes=0'), false);
-});
 
 test('the flipbook lists the 21 pitch photos in turn order, labels them, and holds on the last', () => {
   const D = loadDeck();
@@ -144,7 +136,7 @@ test('the wiring: cut prunes and renumbers cards, reveals follow data-step, medi
   assert.match(js, /case '0': set\(jump\(10, deck\)\); return;/);
   assert.match(js, /\/\^\[1-9\]\$\//);
   assert.match(js, /case 'f': case 'F': toggleFullscreen\(\); return;/);
-  assert.match(js, /stage\.classList\.toggle\('shownotes', parseNotes\(location\.search\)\)/);
+  assert.ok(!/notes/i.test(js), 'no notes mode: the deck is only ever screen-shared');
   assert.ok(!/case 'p':/.test(js) && !/case 'n':/.test(js), 'no autoplay or notes keys: the class deck is only ever talked through');
   assert.ok(!/id="play"|getElementById\('play'\)/.test(js), 'no play button');
   assert.ok(!/data-build(?!s)/.test(js), 'no data-build attribute: .shown is the single source of truth for reveals');
@@ -211,7 +203,7 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   assert.match(css, /\.split\.half\.photo-left \.figure \{ grid-column: 1 \/ 6; grid-row: 1; \}/);
   assert.match(css, /\.panels \{ display: grid; grid-template-columns: repeat\(12, minmax\(0, 1fr\)\); column-gap: var\(--gutter\); align-items: stretch; \}/, 'panel rows are the 12-column grid with one height per row');
   assert.match(css, /\.panels\.four > \* \{ grid-column: span 3; \}/);
-  assert.ok(!/\.stage\.shownotes [^{]*\.panels[^{]*\{ grid-template-columns/.test(css), 'rehearsal mode keeps the boxes on their columns');
+  assert.ok(!/shownotes|\.notes\b/.test(css), 'no notes mode');
   assert.ok(!/(^|\n)\.strip\b/.test(css), 'the footer span is also .strip');
   assert.match(css, /\.panel \.cap \{[^}]*color: var\(--ink\)/);
   assert.ok(!/\.lines \.line|\.big \.display|\.advice \.words|\.logfields/.test(css), 'the text-only layouts are gone with their cards');
@@ -302,7 +294,7 @@ test('the page declares the cut and the reveals exactly as the tests model them,
   assert.deepEqual(numbers, Array.from({ length: 14 }, (_, i) => i + 1));
 });
 
-test('every card carries the master page: frame, wash, kicker, wordmark, footer with a counter, one notes aside', () => {
+test('every card carries the master page: frame, wash, kicker, wordmark, footer with a counter, and no notes aside', () => {
   const h = read('index.html');
   const kickers = ['01 · Duet', '02 · What a hackathon is', '03 · What other teams built', '04 · Why I built this', '05 · What Duet is', '06 · One turn',
     '07 · It\'s just points', '08 · Watch it', '09 · What broke', '10 · What broke', '11 · What broke', '12 · The log', '13 · What it felt like', '14 · One piece of advice'];
@@ -317,9 +309,7 @@ test('every card carries the master page: frame, wash, kicker, wordmark, footer 
     assert.ok(c.includes('Nicholas Fjellberg Swerdlowe &middot; Viam Fine Motor Skills Hackathon &middot; 2026'), `card ${n} footer strip`);
     assert.ok(/class="frame"/.test(c) && c.includes('class="wash"') && c.includes('class="pattern"') && c.includes('class="plate-img"'), `card ${n} plate layers`);
     assert.ok(/^(split|triptych|modules) /.test(c), `card ${n} uses a pitch template class`);
-    assert.equal((c.match(/<aside class="notes"/g) || []).length, 1, `card ${n} has one notes aside`);
-    assert.ok(c.includes(`data-el="card ${n} notes — the spoken part"`), `card ${n} notes are named`);
-    assert.ok(c.indexOf('<aside class="notes"') < c.indexOf('<footer class="band foot"'), `card ${n} notes sit above the footer`);
+    assert.ok(!c.includes('<aside'), `card ${n} carries no notes aside: the words live in script.md`);
   });
   // plates cycle 1..7 with card 4 on black
   const plates = s.map((c) => /plate-(\d)\.jpg/.exec(c)[1]);
@@ -402,9 +392,9 @@ test('script.md: fourteen slides with times adding to 17:15, the cut marked, the
   assert.deepEqual(long, [], 'no sentence over thirty words');
 });
 
-test('README: how to open it, the keys, the cut, the notes, the assets, and what stays out of git', () => {
+test('README: how to open it, the keys, the cut, the assets, and what stays out of git', () => {
   const r = read('README.md');
-  for (const line of ['open docs/duet/class/index.html', '?cut=10', '?notes=1', 'build_assets.py', 'hackathon-videos/', 'crowd.jpg', 'medal.jpg', 'video/', 'node --test']) {
+  for (const line of ['open docs/duet/class/index.html', '?cut=10', 'build_assets.py', 'hackathon-videos/', 'crowd.jpg', 'medal.jpg', 'video/', 'node --test']) {
     assert.ok(r.includes(line), `README missing: ${line}`);
   }
 });

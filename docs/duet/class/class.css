@@ -115,47 +115,9 @@
 
 /* card 13: three lines beside the medal */
 .felt .words { gap: var(--s1); }
+.felt .key { color: var(--robot); -webkit-text-stroke: 0; }   /* the keyed line in the robot's green, legible on cream */
 
 /* card 14: two wide panels, six columns each, their line as a headline-sized caption */
 .advice .panels.two > :first-child { grid-column: 1 / span 6; }
 .advice .panels.two > :last-child { grid-column: 7 / span 6; }
 .advice .panel .cap { --headline: 3.2cqw; }
-
-/* with the notes row on (rehearsal), the pictures and lines take a step, as deck.css does for the pitch.
-   Generic rules first; per-card rules after, in card order, each needing the .stage.shownotes .<card> prefix
-   to outrank the generic rule above it (more classes = higher specificity). */
-.stage.shownotes .duo .photo img { height: 14cqw; }
-.stage.shownotes .clip video { height: 24cqw; }
-.stage.shownotes .callouts .photo img { height: 24cqw; }
-.stage.shownotes .callouts .headline { --headline: 3.6cqw; }
-.stage.shownotes .callouts .list .paper { --body: 2cqw; }
-.stage.shownotes .oneturn .photo img { height: 16cqw; }
-.stage.shownotes .oneturn .cap { --body: 1.8cqw; }
-.stage.shownotes .oneturn .verb { --display: 4.5cqw; }
-.stage.shownotes .oneturn .m2 .bubble { --body: 2.2cqw; }
-.stage.shownotes .codepanel pre { --body: 1.2cqw; }
-.stage.shownotes .watch .flip img { height: 18cqw; }
-.stage.shownotes .watch .closing { --body: 2.2cqw; }
-.stage.shownotes .panel img { height: 13cqw; object-fit: contain; }   /* the boxes keep their columns; the pictures get shorter inside them */
-.stage.shownotes .under .headline { --headline: 3.4cqw; }
-.stage.shownotes .under .body { --body: 2.1cqw; }
-
-/* per card, in card order */
-.stage.shownotes .diner .panel .cap { --body: 1.7cqw; }
-
-.stage.shownotes .trigger .under { gap: .2cqw; }
-.stage.shownotes .trigger .under .headline { --headline: 2.4cqw; }
-.stage.shownotes .trigger .under .lines > * { --body: 1.7cqw; }
-.stage.shownotes .trigger .under .takeaway { --body: 1.7cqw; }
-
-.stage.shownotes .error .codepanel pre { --body: 1.3cqw; }
-.stage.shownotes .error .under { gap: 0; }
-.stage.shownotes .error .under .headline { --headline: 2.4cqw; }
-.stage.shownotes .error .under .body { --body: 1.7cqw; }
-.stage.shownotes .error .codepanel { gap: .2cqw; }
-.stage.shownotes .error .errline { --body: 1.4cqw; }
-
-.stage.shownotes .log .under { gap: .2cqw; }
-.stage.shownotes .log .under .headline { --headline: 2.8cqw; }
-
-.stage.shownotes .advice .panel .cap { --headline: 2.6cqw; }

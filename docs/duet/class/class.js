@@ -20,10 +20,6 @@
     var m = /[?&]cut=(\d+)/.exec(search || '');
     return m && m[1] === '10' ? 10 : 0;
   }
-  function parseNotes(search) {        // rehearsal only: ?notes=1 shows the asides, nothing else does
-    var m = /[?&]notes=([^&]*)/.exec(search || '');
-    return !!(m && m[1] === '1');
-  }
   function keep(specs, cut) {          // specs: [{cut: '20' | '', builds: k}] in page order
     return specs.filter(function (c) { return !(cut === 10 && c.cut === '20'); });
   }
@@ -63,7 +59,7 @@
 
   window.ClassDeck = {
     PITCH_IMG: PITCH_IMG, FLIPBOOK: FLIPBOOK,
-    parseCut: parseCut, parseNotes: parseNotes, keep: keep, deckOf: deckOf, renumber: renumber,
+    parseCut: parseCut, keep: keep, deckOf: deckOf, renumber: renumber,
     advance: advance, back: back, jump: jump, parseHash: parseHash,
     flipLabel: flipLabel, flipDelay: flipDelay, nextFlip: nextFlip
   };
@@ -169,7 +165,6 @@
     flipLabelEl = document.getElementById('flipLabel');
     flipCard = flipImg ? flipImg.closest('.card') : null;
     videos = Array.prototype.slice.call(document.querySelectorAll('.card video'));
-    stage.classList.toggle('shownotes', parseNotes(location.search));
     state = { card: parseHash(location.hash, deck), build: 0 };
     document.addEventListener('keydown', onKey);
     stage.addEventListener('click', onClick);
