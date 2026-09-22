@@ -54,9 +54,10 @@
 .panel .cap { color: var(--ink); }
 .panel .key { color: var(--robot); -webkit-text-stroke: 0; }   /* a keyed word on white paper, not on the plate */
 .under { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .6cqw; }
+.under .body { max-width: 42.4cqw; }   /* six of the twelve columns: a line of words never outruns the picture; a headline is one line anyway */
 .under .headline { --headline: 4cqw; }
 .under .body { --body: 2.2cqw; }
-.under .lines { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .4cqw 1cqw; }
+.under .lines { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .6cqw 1cqw; }
 .under .takeaway { align-self: center; padding-top: 1cqw; padding-bottom: 1cqw; }   /* a shorter pill under a picture */
 
 /* card 4: the diner strip, four panels with their lines as captions */
@@ -96,10 +97,11 @@
 /* card 10: the Go button rides inline after the three lines */
 .gobtn { display: inline-block; padding: .5cqw 1.6cqw; background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
          border-radius: 999px; font-size: var(--body); font-weight: 700; line-height: 1; box-shadow: .35cqw .35cqw 0 var(--ink); }
-.trigger .under .headline { --headline: 3.6cqw; }
-.trigger .under .lines { gap: .2cqw .8cqw; }
-.trigger .under .lines > * { --body: 2cqw; }   /* on the children: each p carries its own --body from .under .body */
-.trigger .under .takeaway { --body: 2cqw; }
+.trigger .panels.two > * { grid-column: span 4; }
+.trigger .panels.two > :first-child { grid-column: 3 / span 4; }
+.trigger .panel .cap.headline { --headline: 3.2cqw; }
+.trigger .panel .cap.body { --body: 2.2cqw; }
+.trigger .gobtn { --body: 2.2cqw; margin-right: .6cqw; }
 
 /* card 11: the code panel is the row's second panel, the error line inside it */
 .error .panels.two > :first-child { grid-column: 1 / span 6; }

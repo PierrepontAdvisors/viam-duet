@@ -18,7 +18,7 @@ For Carolina's class, grades 9 to 12, over Zoom or Meet. About twenty minutes of
 
 ## The 10-minute version
 
-Cards 1, 2, 4, 5, 6, 7, 8, 10, 13, 14, with these targets: 1 (0:30), 2 (1:15), 4 (1:00), 5 (1:15), 6 (1:15), 7 (1:15), 8 (1:00), 10 (1:00), 13 (0:45), 14 (0:45) = 10:00. Open the deck with `?cut=10` and the cards below marked "(cut in 10)" are simply not there. The cut renumbers: the kickers read 01 to 10 and the number keys jump by that numbering (in the cut, `8` is the trigger card and `0` is the advice).
+Cards 1, 2, 4, 5, 6, 7, 8, 10, 13, 14, with these targets: 1 (1:00), 2 (1:00), 4 (1:15), 5 (1:00), 6 (1:15), 7 (1:15), 8 (1:00), 10 (1:00), 13 (0:45), 14 (0:30) = 10:00. Open the deck with `?cut=10` and the cards below marked "(cut in 10)" are simply not there. The cut renumbers: the kickers read 01 to 10 and the number keys jump by that numbering (in the cut, `8` is the trigger card and `0` is the advice).
 
 ## The words
 
