@@ -171,11 +171,11 @@ test('Act 1: the title, the hackathon, the other teams, the diner', () => {
   assert.ok(s.length >= 4);
   const copy = [
     'A robot that draws <span class="key">back</span>.', 'Two days at a robot hackathon.',
-    'Friday 9 am to Saturday 6 pm. Doors lock at night.', 'Teams of 2 or 3. A real robot arm each.', 'Demo at 3:30. Awards at 5.',
+    'Friday 9 am to Saturday 6 pm.', 'Teams of 2 or 3. A real arm each.', 'Demo at 3:30. Awards at 5.',
     'My dad was an architect. He always had a pen.',
-    'At the diner, while we waited for the food, we\'d draw together.',
-    'He\'d draw. I\'d draw on top. He\'d draw again. Until the food came.',
-    'I didn\'t figure out that\'s where this came from until halfway through building it.',
+    'At the diner, waiting for the food, we drew on the placemat.',
+    'He\'d draw. I\'d draw on top. Until the food came.',
+    'Halfway through building it, I saw where the idea came from.',
   ];
   for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
   assert.ok(s[0].includes('src="img/setup.jpg"'), 'card 1 hero is the arm photo');
@@ -267,11 +267,10 @@ test('Act 3: three failures, the log, what it felt like, the advice', () => {
   const s = sectionsOf(h);
   assert.equal(s.length, 14);
   const copy = [
-    'The robot crushed the pen.', 'I measured the board with the marker in my hand. The robot holds it 27 mm differently.', 'Measure with the robot\'s hand, not yours.',
-    'The smart trigger that wasn\'t.', 'I wrote clever code so the robot would notice when you\'d stepped back.', 'It fired every few seconds on an empty board.',
-    'Saturday morning I deleted it and added a button.', 'Go, robot!', 'The simple thing is allowed to win.',
-    'The error you\'ll get too.', 'SyntaxError: \'return\' outside function', 'Four spaces instead of eight. The day before the hackathon.', 'The error message is the clue, not the insult.',
-    'I wrote down every problem.', '>Symptom<', '>What I tried<', '>Fix<', '>Why it worked<', 'Eight entries by Friday night.', 'This is what debugging actually is.',
+    'The robot crushed the pen.', 'Measure with the robot\'s hand, not yours.',
+    'The smart trigger that wasn\'t.', 'Go, robot!', 'The simple thing is allowed to win.',
+    'The error you\'ll get too.', 'SyntaxError: \'return\' outside function', 'The error message is the clue, not the insult.',
+    'I wrote down every problem.', '>Symptom<', '>What I tried<', '>Fix<', '>Why it worked<', 'This is what debugging actually is.',
     'One person.', 'Two days.', '<span class="key">Honorable mention.</span>',
     'You already know <span class="key">enough</span> to start.', 'Start with the smallest thing that works, then make it bigger.',
   ];
@@ -285,6 +284,12 @@ test('Act 3: three failures, the log, what it felt like, the advice', () => {
     for (const p of pics) assert.ok(s[card].includes(`src="img/${p}.jpg"`), `card ${card + 1} shows ${p}`);
   }
   assert.ok(s[10].includes('</pre><p class="errline body"'), 'card 11 keeps the error line inside the code panel');
+  for (const [i, allowed] of [[8, 2], [10, 2], [11, 6]]) {   // cards 9, 11, 12: a headline and a takeaway under the pictures (12 adds its four fields)
+    const under = s[i].slice(s[i].indexOf('<div class="under">'), s[i].indexOf('</div>', s[i].indexOf('<div class="under">')));
+    const blocks = (under.match(/<(h2|p|li)\b/g) || []).length;
+    assert.ok(blocks <= allowed, `card ${i + 1} carries ${blocks} text blocks under its pictures (max ${allowed}): the pictures carry the card`);
+  }
+  assert.ok(!s[9].includes('<div class="under">') && (s[9].match(/<figcaption/g) || []).length === 2, 'card 10 is two captioned panels, nothing under them');
 });
 
 test('the page declares the cut and the reveals exactly as the tests model them, in order', () => {
@@ -380,10 +385,10 @@ test('script.md: fourteen slides with times adding to 17:15, the cut marked, the
   assert.equal(heads.length, 14, 'one heading per slide with a time');
   assert.deepEqual(heads.map((m) => Number(m[1])), Array.from({ length: 14 }, (_, i) => i + 1));
   const total = heads.reduce((s, m) => s + Number(m[2]) * 60 + Number(m[3]), 0);
-  assert.equal(total, 17 * 60 + 15, 'targets add to 17:15');
+  assert.equal(total, 16 * 60 + 45, 'targets add to 16:45');
   for (const n of [3, 9, 11, 12]) assert.match(t, new RegExp(`^## ${n} · .*not in the ten-minute version`, 'm'), `slide ${n} is marked cut`);
   for (const line of ['an AI that can look at a photo and tell you what\'s in it', 'honorable mention', 'I didn\'t win', 'simplified',
-    'You already know enough to start', 'Eight entries by Friday night', '[click]']) assert.ok(t.includes(line), `script missing: ${line}`);
+    'You already know enough to start', 'Eight entries by Friday night', '[click]', 'product manager']) assert.ok(t.includes(line), `script missing: ${line}`);
   assert.ok(!/motion service|inverse kinematics|WebRTC|polyline|inference/i.test(t), 'no jargon');
   const spoken = t.split('\n').filter((l) => l && !l.startsWith('#') && !l.startsWith('*') && !l.startsWith('_') && !l.startsWith('---'));
   const words = spoken.join(' ').split(/\s+/).length;
