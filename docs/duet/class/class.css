@@ -42,18 +42,20 @@
 .clip .cap { --body: 2.2cqw; min-height: 1.3em; color: var(--ink); }
 
 /* template: story (cards 4, 9, 10, 11, 12, 14): a row of cartoon panels across the top, the words under them */
-.story .content { gap: var(--s1); }
-.panels { display: grid; column-gap: var(--gutter); align-items: start; justify-content: center; }
-.panels.one { grid-template-columns: minmax(0, 32cqw); }
-.panels.two { grid-template-columns: repeat(2, minmax(0, 36cqw)); }
-.panels.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.story .content { justify-content: flex-start; gap: .8cqw; }   /* the panels start on the same line on every story card */
+/* the panel row is the content's own 12-column grid, so every box lands on a column line and a row's boxes share one height */
+.panels { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); align-items: stretch; }
+.panels.one > * { grid-column: 4 / span 6; }
+.panels.two > * { grid-column: span 3; }
+.panels.two > :first-child { grid-column: 4 / span 3; }
+.panels.four > * { grid-column: span 3; }
 .panel { display: flex; flex-direction: column; gap: .6cqw; min-width: 0; padding: .8cqw; }
 .panel img { display: block; width: 100%; height: auto; border-radius: calc(var(--paper-radius) - .6cqw); }
 .panel .cap { color: var(--ink); }
 .panel .key { color: var(--robot); -webkit-text-stroke: 0; }   /* a keyed word on white paper, not on the plate */
-.under { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s1); }
-.under .headline { --headline: 4.4cqw; }
-.under .body { --body: 2.4cqw; }
+.under { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .6cqw; }
+.under .headline { --headline: 4cqw; }
+.under .body { --body: 2.2cqw; }
 .under .lines { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .4cqw 1cqw; }
 .under .takeaway { align-self: center; padding-top: 1cqw; padding-bottom: 1cqw; }   /* a shorter pill under a picture */
 
@@ -90,35 +92,33 @@
 .watch .closing { --body: 2.5cqw; text-align: center; color: var(--ink); }
 
 /* card 9: one panel, the words under it; nothing beyond the template */
-.pen .panels.one { grid-template-columns: minmax(0, 36cqw); }
-.pen .under { gap: .4cqw; }
 
 /* card 10: the Go button rides inline after the three lines */
 .gobtn { display: inline-block; padding: .5cqw 1.6cqw; background: var(--green); color: #fff; border: var(--paper-border) solid var(--ink);
          border-radius: 999px; font-size: var(--body); font-weight: 700; line-height: 1; box-shadow: .35cqw .35cqw 0 var(--ink); }
-.trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 21cqw)); }
-.trigger .under { gap: .4cqw; }
-.trigger .under .headline { --headline: 3.5cqw; }
+.trigger .under .headline { --headline: 3.6cqw; }
 .trigger .under .lines { gap: .2cqw .8cqw; }
 .trigger .under .lines > * { --body: 2cqw; }   /* on the children: each p carries its own --body from .under .body */
 .trigger .under .takeaway { --body: 2cqw; }
 
 /* card 11: the code panel is the row's second panel, the error line inside it */
-.error .panels.two { grid-template-columns: minmax(0, 30cqw) minmax(0, 44cqw); }
+.error .panels.two > :first-child { grid-column: 1 / span 6; }
+.error .panels.two > :last-child { grid-column: 7 / span 6; }
 .error .codepanel pre { --body: 1.8cqw; }
 .errline { color: var(--human); font-family: var(--mono); --body: 2.2cqw; }
 
 /* card 12: the four fields as a row of pills */
-.fields { display: flex; justify-content: center; gap: var(--gutter); }
-.fields .pill { display: inline-flex; align-items: baseline; gap: .5cqw; }
+.fields { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); align-self: stretch; }   /* four boxes on the same columns as the panels */
+.fields .pill { grid-column: span 3; display: inline-flex; justify-content: center; align-items: baseline; gap: .5cqw; }
 .fields .num { color: var(--blue); font-weight: 700; }
 .fields .body { --body: 2.1cqw; }
-.log .under { gap: .5cqw; }
 
 /* card 13: three lines beside the medal */
 .felt .words { gap: var(--s1); }
 
-/* card 14: the advice panels carry their line as a headline-sized caption */
+/* card 14: two wide panels, six columns each, their line as a headline-sized caption */
+.advice .panels.two > :first-child { grid-column: 1 / span 6; }
+.advice .panels.two > :last-child { grid-column: 7 / span 6; }
 .advice .panel .cap { --headline: 3.2cqw; }
 
 /* with the notes row on (rehearsal), the pictures and lines take a step, as deck.css does for the pitch.
@@ -136,22 +136,18 @@
 .stage.shownotes .codepanel pre { --body: 1.2cqw; }
 .stage.shownotes .watch .flip img { height: 18cqw; }
 .stage.shownotes .watch .closing { --body: 2.2cqw; }
-.stage.shownotes .panels.one { grid-template-columns: minmax(0, 22cqw); }
-.stage.shownotes .panels.two { grid-template-columns: repeat(2, minmax(0, 26cqw)); }
-.stage.shownotes .panels.four { grid-template-columns: repeat(4, minmax(0, 16cqw)); }
+.stage.shownotes .panel img { height: 13cqw; object-fit: contain; }   /* the boxes keep their columns; the pictures get shorter inside them */
 .stage.shownotes .under .headline { --headline: 3.4cqw; }
 .stage.shownotes .under .body { --body: 2.1cqw; }
 
 /* per card, in card order */
 .stage.shownotes .diner .panel .cap { --body: 1.7cqw; }
 
-.stage.shownotes .trigger .panels.two { grid-template-columns: repeat(2, minmax(0, 16cqw)); }
 .stage.shownotes .trigger .under { gap: .2cqw; }
 .stage.shownotes .trigger .under .headline { --headline: 2.4cqw; }
 .stage.shownotes .trigger .under .lines > * { --body: 1.7cqw; }
 .stage.shownotes .trigger .under .takeaway { --body: 1.7cqw; }
 
-.stage.shownotes .error .panels.two { grid-template-columns: minmax(0, 20cqw) minmax(0, 32cqw); }
 .stage.shownotes .error .codepanel pre { --body: 1.3cqw; }
 .stage.shownotes .error .under { gap: 0; }
 .stage.shownotes .error .under .headline { --headline: 2.4cqw; }
