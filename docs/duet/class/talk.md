@@ -24,6 +24,20 @@ Cards 1, 2, 4, 5, 6, 7, 8, 10, 13, 14, with these targets: 1 (1:00), 2 (1:00), 4
 
 What to say on each slide is `script.md`, one section per slide with a time at a slow pace and `[click]` cues. Read that from the phone; this file is the run-of-show.
 
+## Carolina's question: why communication matters when people build together
+
+She asked for this one, so it's written out to be read aloud like the script. About two and a half minutes.
+
+Most of the work in software isn't typing. It's making sure the next person understands what you did, and that person is usually you, three weeks later, with no memory of why you wrote any of it.
+
+So you write for them. A name is the shortest explanation you can give. On this project I called one piece of the page "strip," and that word was already being used for something else in the same file. Two things, one name, and the layout broke in a way that took me a while to see. Renaming it fixed it. That wasn't a coding problem. It was a naming problem.
+
+You also say what something should do before you build it. I wrote a plan for these slides before I made a single one, so when I disagreed with myself later, the plan was there to argue with. And my tests are really just sentences: this card shows four pictures, this button says Go. If somebody breaks one of those sentences, the computer says so immediately.
+
+Debugging together is mostly describing. Half the bugs I fixed that weekend, I fixed by writing down exactly what I saw before I tried anything. When you ask someone for help, the help you get is only as good as your description.
+
+One last thing. I build with AI every day now, and an AI is a collaborator you have to be precise with. If I can't say clearly what I want, I don't get it. So explaining your code to the person sitting beside you is the same skill. Being understood is the job.
+
 ## Likely questions
 
 For the rotation at the teacher's computer. One-line answers; edit them before the talk.
@@ -35,6 +49,7 @@ For the rotation at the teacher's computer. One-line answers; edit them before t
 - **Could I build this?** The drawing part, yes, this month, in turtle. The robot part is the same code with a motor.
 - **Why a robot and not just a screen?** Because it makes a real mark you keep.
 - **What was the hardest part?** Getting the pen to touch the board at exactly the right height.
+- **Why does communication matter when you build together?** See the written answer above; the short version is that most of the work is making sure the next person understands what you did, and that person is usually you in three weeks.
 - **What would you do next?** Let you teach it your own drawing style from a stack of your sketches.
 - **Can it draw me?** No. It doesn't copy what it sees; it adds one thing to what you drew, with one green marker, in simple shapes.
 - **Is it going to take artists' jobs?** It can't start a drawing. It can only answer one. Every piece needs a person's first mark.
