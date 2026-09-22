@@ -204,6 +204,8 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   assert.match(css, /\.panels \{ display: grid; grid-template-columns: repeat\(12, minmax\(0, 1fr\)\); column-gap: var\(--gutter\); align-items: stretch; \}/, 'panel rows are the 12-column grid with one height per row');
   assert.match(css, /\.panels\.four > \* \{ grid-column: span 3; \}/);
   assert.ok(!/shownotes|\.notes\b/.test(css), 'no notes mode');
+  assert.ok(!/--pad-y/.test(css), 'the master page keeps deck.css\'s --pad-y (4cqw) against its 3cqw frame inset, so the header and footer sit 1cqw INSIDE the frame; overriding it puts the bands on top of the frame line');
+  assert.match(css, /\.panel img \{[^}]*max-height: 21cqw; object-fit: contain;/, 'a panel picture is capped and never squashed');
   assert.ok(!/(^|\n)\.strip\b/.test(css), 'the footer span is also .strip');
   assert.match(css, /\.panel \.cap \{[^}]*color: var\(--ink\)/);
   assert.ok(!/\.lines \.line|\.big \.display|\.advice \.words|\.logfields/.test(css), 'the text-only layouts are gone with their cards');
