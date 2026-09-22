@@ -377,18 +377,29 @@ test('the story pictures: eleven panels in img/, each on its card, generated in 
   assert.match(py, /pitch\.GRAMMAR|GRAMMAR = pitch\.GRAMMAR/);
 });
 
-test('talk.md: pre-flight, fourteen cards with times adding to about 17 minutes, the ten-minute list, the likely questions', () => {
+test('talk.md is the run-of-show (pre-flight, the ten-minute list, likely questions) and points at the script', () => {
   const t = read('talk.md');
-  for (const line of ['## Pre-flight', '?cut=10', 'https://viam-duet.vercel.app', 'Optimize for video clip', '## The 10-minute version', '## Likely questions']) assert.ok(t.includes(line), line);
-  const heads = [...t.matchAll(/^### (\d+) · .* \((\d+):(\d\d)\)/gm)];
-  assert.equal(heads.length, 14, 'one heading per card with a time');
+  for (const line of ['## Pre-flight', '?cut=10', 'https://viam-duet.vercel.app', 'Optimize for video clip', '## The 10-minute version', '## Likely questions', 'script.md']) assert.ok(t.includes(line), line);
+  for (const line of ['Did you write all the code?', 'Could I build this?', 'Did it ever hit anything?']) assert.ok(t.includes(line), `Q&A missing: ${line}`);
+  assert.equal((t.match(/^### \d+ · /gm) || []).length, 0, 'the per-slide words live in script.md, not here');
+});
+
+test('script.md: fourteen slides with times adding to 17:15, the cut marked, the truth beats, no jargon, short sentences', () => {
+  const t = read('script.md');
+  const heads = [...t.matchAll(/^## (\d+) · .* \((\d+):(\d\d)\)/gm)];
+  assert.equal(heads.length, 14, 'one heading per slide with a time');
   assert.deepEqual(heads.map((m) => Number(m[1])), Array.from({ length: 14 }, (_, i) => i + 1));
   const total = heads.reduce((s, m) => s + Number(m[2]) * 60 + Number(m[3]), 0);
   assert.equal(total, 17 * 60 + 15, 'targets add to 17:15');
-  for (const n of [3, 9, 11, 12]) assert.match(t, new RegExp(`^### ${n} · .*\\(cut in 10\\)`, 'm'), `card ${n} is marked cut`);
-  for (const line of ['an AI that can look at a photo and tell you what\'s in it', 'Honorable mention', 'I didn\'t win', 'simplified',
-    'You already know enough to start', 'Did you write all the code?', 'Could I build this?']) assert.ok(t.includes(line), `talk missing: ${line}`);
+  for (const n of [3, 9, 11, 12]) assert.match(t, new RegExp(`^## ${n} · .*not in the ten-minute version`, 'm'), `slide ${n} is marked cut`);
+  for (const line of ['an AI that can look at a photo and tell you what\'s in it', 'honorable mention', 'I didn\'t win', 'simplified',
+    'You already know enough to start', 'Eight entries by Friday night', '[click]']) assert.ok(t.includes(line), `script missing: ${line}`);
   assert.ok(!/motion service|inverse kinematics|WebRTC|polyline|inference/i.test(t), 'no jargon');
+  const spoken = t.split('\n').filter((l) => l && !l.startsWith('#') && !l.startsWith('*') && !l.startsWith('_') && !l.startsWith('---'));
+  const words = spoken.join(' ').split(/\s+/).length;
+  assert.ok(words < 1700, `spoken words ${words}: at a slow pace this must stay well inside twenty minutes`);
+  const long = spoken.flatMap((l) => l.split(/(?<=[.!?])\s+/)).filter((sen) => sen.split(/\s+/).length > 30);
+  assert.deepEqual(long, [], 'no sentence over thirty words');
 });
 
 test('README: how to open it, the keys, the cut, the notes, the assets, and what stays out of git', () => {
