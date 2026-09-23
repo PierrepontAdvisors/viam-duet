@@ -43,13 +43,13 @@ The theme was fine motor skills, which means making an arm do delicate things. P
 
 Here's some of what the other teams built over the same two days, with the same arm.
 
-_(your line about clip 1)_
+One team taught theirs to play Jenga, pulling a block out without bringing the tower down.
 
-_(your line about clip 2)_
+One built an arm that throws a ball.
 
-_(your line about clip 3)_
+Another one caught a ball in a basket.
 
-_(your line about clip 4)_
+And one team bolted a sabre to the arm and taught it to fence.
 
 *(skip if you're running long)*
 

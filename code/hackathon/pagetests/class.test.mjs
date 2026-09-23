@@ -182,6 +182,9 @@ test('Act 1: the title, the hackathon, the other teams, the diner', () => {
   assert.ok(s[1].includes('src="img/door.jpg"') && s[1].includes('src="img/crowd.jpg"'), 'card 2 shows the door and the room');
   const videos = [...s[2].matchAll(/<video ([^>]*)>/g)].map((m) => m[1]);
   assert.equal(videos.length, 4, 'card 3 has four clips');
+  for (const [i, cap] of ['Stacking Jenga', 'Throwing a ball', 'Catching a ball', 'Fencing'].entries()) {
+    assert.ok(s[2].includes(`data-el="card 3 caption — team ${i + 1}">${cap}</p>`), `clip ${i + 1} caption "${cap}"`);
+  }
   videos.forEach((attrs, i) => {
     for (const a of ['muted', 'loop', 'playsinline', 'preload="auto"']) assert.ok(attrs.includes(a), `clip ${i + 1} ${a}`);
     assert.ok(!/\bautoplay\b/.test(attrs), `clip ${i + 1} has no autoplay: class.js plays it on its card`);
