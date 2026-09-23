@@ -108,12 +108,17 @@
 .error .codepanel pre { --body: 1.8cqw; }
 .errline { color: var(--human); font-family: var(--mono); --body: 2.2cqw; }
 
-/* card 12: the picture takes four columns, because the four field boxes below it are the content */
-.log .panels.one > * { grid-column: 5 / span 4; }
-.fields { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); align-self: stretch; }   /* four boxes on the same columns as the panels */
-.fields .pill { grid-column: span 3; display: inline-flex; justify-content: center; align-items: baseline; gap: .5cqw; }
+/* card 12: the loop across the top, then the picture in the big column and the words in the narrow one */
+.log .twocol { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--s2); align-items: center; width: 100%; }
+.log .twocol > .panel { grid-column: 1 / span 7; }
+.log .twocol > .under { grid-column: 8 / span 5; gap: .6cqw; }
+.log .twocol .headline { --headline: 3.4cqw; }
+.log .twocol .takeaway { --body: 2cqw; padding-top: .7cqw; padding-bottom: .7cqw; }
+.log .panel img { max-height: 26cqw; }   /* the big column earns a taller picture than the 21cqw default */
+.fields { display: flex; flex-direction: column; gap: .45cqw; align-self: stretch; }   /* the four fields in order, one per line */
+.fields .pill { display: flex; justify-content: flex-start; align-items: baseline; gap: .7cqw; padding: .45cqw 1cqw; }
 .fields .num { color: var(--blue); font-weight: 700; }
-.fields .body { --body: 2.1cqw; }
+.fields .body { --body: 1.9cqw; }
 .loop { display: flex; justify-content: center; align-items: center; gap: 2.2cqw; }
 .loop .pill { position: relative; --body: 1.9cqw; font-size: var(--body); letter-spacing: .08em; padding: .4cqw 1.1cqw; }
 .loop .pill.on { background: var(--yellow); }   /* the step this card is about */
