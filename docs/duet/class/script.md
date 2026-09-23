@@ -127,15 +127,15 @@ Nobody in that room was doing exercises out of a textbook. They were using what 
 
 ## 8 · Watch it (1:15)
 
-*The board, turn by turn, in a loop.*
+*Left: the board, turn by turn, in a loop. Right: video of the arm drawing.*
 
-This is a full session from the hackathon. Ten turns, red drawn by a person, green drawn by the robot.
+On the left is a full session from the hackathon. Ten turns, red drawn by a person, green drawn by the robot. On the right is the arm itself, actually doing it.
 
-*(Let it loop once. About fifteen seconds. Say nothing.)*
+*(Let both run once. About fifteen seconds. Say nothing.)*
 
 Every green line on that board is the robot answering a red one.
 
-There's a version online at viam-duet.vercel.app that replays this exact session, with what Claude said at every turn.
+There's a version online at viam-duet.vercel.app that replays this session with what Claude said each turn.
 
 ## 9 · The robot crushed the pen (1:15) — not in the ten-minute version
 
@@ -145,7 +145,7 @@ Now let me tell you what broke, because plenty did.
 
 The very first line it ever drew, it crushed the marker. I had taught it where the board was by holding the marker in my own hand and touching the corners. But the robot holds a marker about twenty-seven millimeters differently, which is more than an inch. So it was aiming an inch below the surface. The board didn't move. The felt tip did.
 
-The fix was to teach it the corners again, with the marker in the robot's grip. The mistake told me exactly what was wrong, as long as I was willing to look. Measure with the robot's hand, not with yours.
+The fix was to teach it the corners again, with the marker in the robot's grip. The mistake told me exactly what was wrong. Measure with the robot's hand, not with yours.
 
 ## 10 · The smart trigger that wasn't (1:15)
 
@@ -169,7 +169,7 @@ The message had been telling me that the whole time. Error messages are clues, n
 
 ## 12 · The log (0:45) — not in the ten-minute version
 
-*A cartoon of a notebook with four boxes, and the four boxes under it.*
+*The loop across the top, the notebook on the left, the four fields listed on the right.*
 
 You know this loop: plan, code, test, debug, revise. I went round it all weekend, and the step nobody really teaches you is debug.
 
