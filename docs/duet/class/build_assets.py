@@ -21,7 +21,7 @@ SRC = HERE.parents[2] / "hackathon-videos"          # docs/duet/class -> repo ro
 MAX_SIDE = 2000
 JPEG_QUALITY = 85
 CLIP_HEIGHT = 720
-CLIP_SECONDS = 15
+CLIP_SECONDS = 20
 
 PHOTOS = [
     ("photo-setup.webp", "img/setup.jpg"),
@@ -29,11 +29,13 @@ PHOTOS = [
     ("photo-crowd.webp", "img/crowd.jpg"),
     ("photo-medal.jpg", "img/medal.jpg"),
 ]
+CLIP_START = {"IMG_4612.MOV": 3.0}   # seconds to skip: the arm clip opens on a laptop before the camera finds the board
 CLIPS = [                                             # clip order is chronological by filename
     ("IMG_0016.MOV", "video/team-1.mp4"),
     ("IMG_0018.mov", "video/team-2.mp4"),
     ("IMG_0022.mov", "video/team-3.mp4"),
     ("IMG_0024.mov", "video/team-4.mp4"),
+    ("IMG_4612.MOV", "video/arm-drawing.mp4"),   # card 8: the arm drawing on the board, 18 s, portrait
 ]
 
 
@@ -66,9 +68,11 @@ def convert_photo(src: Path, dst: Path) -> None:
 def convert_clip(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     tmp = dst.with_name(dst.name + ".part")
+    start = CLIP_START.get(src.name, 0)
     try:
         subprocess.run(
-            ["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-t", str(CLIP_SECONDS),
+            ["ffmpeg", "-y", "-loglevel", "error"] + (["-ss", str(start)] if start else []) +
+            ["-i", str(src), "-t", str(CLIP_SECONDS),
              "-vf", f"scale=-2:{CLIP_HEIGHT}", "-c:v", "libx264", "-crf", "23", "-preset", "medium",
              "-pix_fmt", "yuv420p", "-an", "-movflags", "+faststart", "-f", "mp4", str(tmp)],
             check=True,

@@ -22,7 +22,7 @@ def test_jobs_skips_existing_outputs_unless_forced():
     assert m.jobs(set(every), force=False) == []
     assert [d for _, _, d in m.jobs(set(every), force=True)] == every
     assert [d for _, _, d in m.jobs(set(every) - {"video/team-2.mp4"}, force=False)] == ["video/team-2.mp4"]
-    assert [k for k, _, _ in m.jobs(set(), force=False)] == ["photo"] * 4 + ["clip"] * 4
+    assert [k for k, _, _ in m.jobs(set(), force=False)] == ["photo"] * 4 + ["clip"] * 5
 
 
 def test_table_is_the_spec_table():
@@ -33,9 +33,9 @@ def test_table_is_the_spec_table():
         ("photo-crowd.webp", "img/crowd.jpg"),
         ("photo-medal.jpg", "img/medal.jpg"),
     ]
-    assert [s for s, _ in m.CLIPS] == ["IMG_0016.MOV", "IMG_0018.mov", "IMG_0022.mov", "IMG_0024.mov"]
-    assert [d for _, d in m.CLIPS] == [f"video/team-{n}.mp4" for n in (1, 2, 3, 4)]
-    assert (m.MAX_SIDE, m.JPEG_QUALITY, m.CLIP_HEIGHT, m.CLIP_SECONDS) == (2000, 85, 720, 15)
+    assert [s for s, _ in m.CLIPS] == ["IMG_0016.MOV", "IMG_0018.mov", "IMG_0022.mov", "IMG_0024.mov", "IMG_4612.MOV"]
+    assert [d for _, d in m.CLIPS] == [f"video/team-{n}.mp4" for n in (1, 2, 3, 4)] + ["video/arm-drawing.mp4"]
+    assert (m.MAX_SIDE, m.JPEG_QUALITY, m.CLIP_HEIGHT, m.CLIP_SECONDS) == (2000, 85, 720, 20)
 
 
 def test_local_only_outputs_and_the_source_folder_are_gitignored():
@@ -53,7 +53,7 @@ def test_missing_source_is_reported_and_not_fatal(tmp_path, monkeypatch, capsys)
     monkeypatch.setattr(m, "SRC", tmp_path / "src")
     assert m.main([]) == 0
     err_lines = [line for line in capsys.readouterr().err.splitlines() if line.startswith("skipped, source not found:")]
-    assert len(err_lines) == 8
+    assert len(err_lines) == len(m.PHOTOS) + len(m.CLIPS)
     assert not any(p.is_file() for p in here.rglob("*"))
 
 

@@ -131,6 +131,7 @@ test('the wiring: cut prunes and renumbers cards, reveals follow data-step, medi
   assert.match(js, /querySelectorAll\('\[data-step\]'\)/);
   assert.match(js, /classList\.toggle\('shown'/);
   assert.match(js, /v\.play\(\)/);
+  assert.match(js, /visibilitychange/, 'a hidden pane refuses to start a video, so playback retries when it comes back');
   assert.match(js, /v\.pause\(\)/);
   assert.match(js, /clearTimeout\(flipTimer\)/);
   assert.match(js, /case '0': set\(jump\(10, deck\)\); return;/);
@@ -182,6 +183,9 @@ test('Act 1: the title, the hackathon, the other teams, the diner', () => {
   assert.ok(s[1].includes('src="img/door.jpg"') && s[1].includes('src="img/crowd.jpg"'), 'card 2 shows the door and the room');
   const videos = [...s[2].matchAll(/<video ([^>]*)>/g)].map((m) => m[1]);
   assert.equal(videos.length, 4, 'card 3 has four clips');
+  for (const [i, cap] of ['Stacking Jenga', 'Throwing a ball', 'Catching a ball', 'Fencing'].entries()) {
+    assert.ok(s[2].includes(`data-el="card 3 caption — team ${i + 1}">${cap}</p>`), `clip ${i + 1} caption "${cap}"`);
+  }
   videos.forEach((attrs, i) => {
     for (const a of ['muted', 'loop', 'playsinline', 'preload="auto"']) assert.ok(attrs.includes(a), `clip ${i + 1} ${a}`);
     assert.ok(!/\bautoplay\b/.test(attrs), `clip ${i + 1} has no autoplay: class.js plays it on its card`);
@@ -204,6 +208,8 @@ test('class.css: reveals, the half template, no stray font sizes, no redefinitio
   assert.match(css, /\.panels \{ display: grid; grid-template-columns: repeat\(12, minmax\(0, 1fr\)\); column-gap: var\(--gutter\); align-items: stretch; \}/, 'panel rows are the 12-column grid with one height per row');
   assert.match(css, /\.panels\.four > \* \{ grid-column: span 3; \}/);
   assert.ok(!/shownotes|\.notes\b/.test(css), 'no notes mode');
+  assert.ok(!/--pad-y/.test(css), 'the master page keeps deck.css\'s --pad-y (4cqw) against its 3cqw frame inset, so the header and footer sit 1cqw INSIDE the frame; overriding it puts the bands on top of the frame line');
+  assert.match(css, /\.panel img \{[^}]*max-height: 21cqw; object-fit: contain;/, 'a panel picture is capped and never squashed');
   assert.ok(!/(^|\n)\.strip\b/.test(css), 'the footer span is also .strip');
   assert.match(css, /\.panel \.cap \{[^}]*color: var\(--ink\)/);
   assert.ok(!/\.lines \.line|\.big \.display|\.advice \.words|\.logfields/.test(css), 'the text-only layouts are gone with their cards');
@@ -229,7 +235,7 @@ test('Act 2: the setup with callouts, one turn with three verbs, the two code pa
     'A crowded world of creatures, flowers and dancing figures.',
     'A small green dancing figure in the open lower-right space to balance the crowd.',
     '8 seconds to look and decide', 'Claude says',
-    'Your turtle and my robot follow the same thing: a list of points.', 'Your turtle', 'My robot (simplified)',
+    'Tracy and my robot follow the same thing: a list of points.', 'Tracy (your turtle)', 'My robot (simplified)',
     'Play with it after: viam-duet.vercel.app',
   ];
   for (const line of copy) assert.ok(h.includes(line), `copy missing: ${line}`);
@@ -247,11 +253,11 @@ test('Act 2: the setup with callouts, one turn with three verbs, the two code pa
   assert.match(s[5], /<div class="paper bubble body"[^>]*>\s*<span class="caption says"/, 'card 6 names the speaker at the top of its bubble');
   // card 7: two <pre> panels, verbatim
   const turtle = [
-    'import turtle', 't = turtle.Turtle()', 'points = [(40, 0), (40, 40),', '          (0, 40), (0, 0)]',
-    't.penup()', 't.goto(0, 0)', 't.pendown()', 'for x, y in points:', '    t.goto(x, y)', 't.penup()',
+    'from turtle import *', 'points = [(40, 0), (40, 40),', '          (0, 40), (0, 0)]',
+    'penup()', 'goto(0, 0)', 'pendown()', 'for x, y in points:', '    goto(x, y)', 'penup()',
   ].join('\n');
   const robot = [
-    'stroke = points_from_claude()', '# e.g. [(0, 0), (40, 0), (40, 40)]', 'x, y = stroke[0]',
+    'stroke = points_from_claude()', '# Claude picks the shape; we just walk it', 'x, y = stroke[0]',
     'pen_up()', 'move_to(x, y)', 'pen_down()', 'for x, y in stroke[1:]:', '    move_to(x, y)', 'pen_up()',
   ].join('\n');
   assert.ok(s[6].includes(`<pre>${turtle}</pre>`), 'turtle panel verbatim');
@@ -259,6 +265,11 @@ test('Act 2: the setup with callouts, one turn with three verbs, the two code pa
   assert.equal((s[6].match(/<pre>/g) || []).length, 2);
   // card 8: the flipbook elements the wiring looks for
   assert.ok(s[7].includes('id="flip"') && s[7].includes('id="flipLabel"'), 'card 8 flipbook');
+  const live = /<video ([^>]*)>/.exec(s[7]);
+  assert.ok(live, 'card 8 shows the arm drawing beside the flipbook');
+  for (const a of ['src="video/arm-drawing.mp4"', 'muted', 'loop', 'playsinline']) assert.ok(live[1].includes(a), `card 8 video ${a}`);
+  assert.ok(!/\bautoplay\b/.test(live[1]), 'card 8 video has no autoplay attribute: class.js starts it when the card is shown');
+  assert.match(s[7], /<div class="twocol">/, 'card 8 is two columns');
   assert.ok(s[7].includes('src="../pitch/img/turn-00-start.jpg"'), 'the flipbook starts on the blank board');
 });
 
@@ -270,7 +281,8 @@ test('Act 3: three failures, the log, what it felt like, the advice', () => {
     'The robot crushed the pen.', 'Measure with the robot\'s hand, not yours.',
     'The smart trigger that wasn\'t.', 'Go, robot!', 'The simple thing is allowed to win.',
     'The error you\'ll get too.', 'SyntaxError: \'return\' outside function', 'The error message is the clue, not the insult.',
-    'I wrote down every problem.', '>Symptom<', '>What I tried<', '>Fix<', '>Why it worked<', 'This is what debugging actually is.',
+    'I wrote down every problem.', '>PLAN<', '>CODE<', '>TEST<', '>DEBUG<', '>REVISE<',
+    '>What I saw<', '>What I tried<', '>What fixed it<', '>Why it worked<', 'This is what debugging actually is.',
     'One person.', 'Two days.', '<span class="key">Honorable mention.</span>',
     'You already know <span class="key">enough</span> to start.', 'Start with the smallest thing that works, then make it bigger.',
   ];
@@ -284,7 +296,7 @@ test('Act 3: three failures, the log, what it felt like, the advice', () => {
     for (const p of pics) assert.ok(s[card].includes(`src="img/${p}.jpg"`), `card ${card + 1} shows ${p}`);
   }
   assert.ok(s[10].includes('</pre><p class="errline body"'), 'card 11 keeps the error line inside the code panel');
-  for (const [i, allowed] of [[8, 2], [10, 2], [11, 6]]) {   // cards 9, 11, 12: a headline and a takeaway under the pictures (12 adds its four fields)
+  for (const [i, allowed] of [[8, 2], [10, 2], [11, 12]]) {   // cards 9, 11, 12: a headline and a takeaway under the pictures (12 adds the loop and the four log fields)
     const under = s[i].slice(s[i].indexOf('<div class="under">'), s[i].indexOf('</div>', s[i].indexOf('<div class="under">')));
     const blocks = (under.match(/<(h2|p|li)\b/g) || []).length;
     assert.ok(blocks <= allowed, `card ${i + 1} carries ${blocks} text blocks under its pictures (max ${allowed}): the pictures carry the card`);
@@ -334,7 +346,7 @@ test('developer mode is wired: badge, label, toast, and unique data-el names on 
 test('every local file the deck references exists, except the local-only assets, which are gitignored instead', () => {
   const h = read('index.html');
   const refs = [...h.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
-  const localOnly = ['video/team-1.mp4', 'video/team-2.mp4', 'video/team-3.mp4', 'video/team-4.mp4', 'img/crowd.jpg', 'img/medal.jpg'];
+  const localOnly = ['video/team-1.mp4', 'video/team-2.mp4', 'video/team-3.mp4', 'video/team-4.mp4', 'video/arm-drawing.mp4', 'img/crowd.jpg', 'img/medal.jpg'];
   const ignore = readFileSync(ROOT + '.gitignore', 'utf8').split('\n');
   for (const r of new Set(refs)) {
     if (localOnly.includes(r)) {
@@ -375,7 +387,11 @@ test('the story pictures: eleven panels in img/, each on its card, generated in 
 test('talk.md is the run-of-show (pre-flight, the ten-minute list, likely questions) and points at the script', () => {
   const t = read('talk.md');
   for (const line of ['## Pre-flight', '?cut=10', 'https://viam-duet.vercel.app', 'Optimize for video clip', '## The 10-minute version', '## Likely questions', 'script.md']) assert.ok(t.includes(line), line);
-  for (const line of ['Did you write all the code?', 'Could I build this?', 'Did it ever hit anything?']) assert.ok(t.includes(line), `Q&A missing: ${line}`);
+  for (const line of ['Did you write all the code?', 'How did Claude and the robot communicate?',
+    'Did you use an AI agent, APIs, or something else?', 'How do you manage your time and stay organized?',
+    'What is different about working alone versus with a team?', 'How long have you been coding?']) {
+    assert.ok(t.includes(line), `Q&A missing: ${line}`);
+  }
   assert.equal((t.match(/^### \d+ · /gm) || []).length, 0, 'the per-slide words live in script.md, not here');
 });
 
@@ -388,7 +404,8 @@ test('script.md: fourteen slides with times adding to 17:15, the cut marked, the
   assert.equal(total, 16 * 60 + 45, 'targets add to 16:45');
   for (const n of [3, 9, 11, 12]) assert.match(t, new RegExp(`^## ${n} · .*not in the ten-minute version`, 'm'), `slide ${n} is marked cut`);
   for (const line of ['an AI that can look at a photo and tell you what\'s in it', 'honorable mention', 'I didn\'t win', 'simplified',
-    'You already know enough to start', 'Eight entries by Friday night', '[click]', 'product manager']) assert.ok(t.includes(line), `script missing: ${line}`);
+    'You already know enough to start', 'Eight entries by Friday night', '[click]', 'product manager',
+    'never been a professional programmer']) assert.ok(t.includes(line), `script missing: ${line}`);
   assert.ok(!/motion service|inverse kinematics|WebRTC|polyline|inference/i.test(t), 'no jargon');
   const spoken = t.split('\n').filter((l) => l && !l.startsWith('#') && !l.startsWith('*') && !l.startsWith('_') && !l.startsWith('---'));
   const words = spoken.join(' ').split(/\s+/).length;
