@@ -114,6 +114,11 @@
 .fields .pill { grid-column: span 3; display: inline-flex; justify-content: center; align-items: baseline; gap: .5cqw; }
 .fields .num { color: var(--blue); font-weight: 700; }
 .fields .body { --body: 2.1cqw; }
+.loop { display: flex; justify-content: center; align-items: center; gap: 2.2cqw; }
+.loop .pill { position: relative; --body: 1.9cqw; font-size: var(--body); letter-spacing: .08em; padding: .4cqw 1.1cqw; }
+.loop .pill.on { background: var(--yellow); }   /* the step this card is about */
+.loop .pill + .pill::before { content: "\2192"; position: absolute; left: -1.55cqw; top: 50%; transform: translateY(-50%);
+                              font-size: var(--body); color: var(--ink); }   /* the arrow sits in the gap, not in the pill */
 
 /* card 13: three lines beside the medal */
 .felt .words { gap: var(--s1); }

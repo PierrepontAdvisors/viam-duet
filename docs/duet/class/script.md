@@ -17,7 +17,9 @@ ten slides and about twelve minutes.
 
 Hi everyone. I'm Nicholas Swerdlowe, and I'm a friend of your teacher.
 
-I work as a product manager, which means I figure out what a piece of software should do, and then work with engineers and designers until it does it. For the last twelve years I've done that for fashion companies, the ones behind brands like Louis Vuitton and Uniqlo. I build the systems that produce the pictures you see when you shop online. For a long time that meant 3D, and lately it means AI.
+I work as a product manager, which means I figure out what a piece of software should do, and then work with engineers and designers until it does it. For twelve years I've done that for fashion companies, the ones behind brands like Louis Vuitton and Uniqlo. I build the systems that make the pictures you see when you shop online. For a long time that meant 3D, and lately it means AI.
+
+One thing to say up front, because it matters for the end of this talk. I have never been a professional programmer. I've worked alongside them for twelve years, and I only started writing real code myself recently.
 
 Last weekend I spent two days at a robot hackathon here in New York, and I built a robot arm that draws with you. You make a mark on a whiteboard, and the robot looks at it, thinks about it, and draws something back.
 
@@ -29,19 +31,17 @@ Today I'll show you what it is, how it works, and everything that went wrong on 
 
 Let me start with that word, because it sounds more dramatic than it is. A hackathon has nothing to do with breaking into anything. It's a room with a problem in it, a clock on the wall, and people who would rather build something than talk about it.
 
-This one was run by a company called Viam, which makes software for robots, and they lent every team a real industrial arm for the weekend.
-
-You show up Friday at nine and they hand out the arms. At nine that night they lock the doors and send everybody home. You come back Saturday, and at three-thirty you stand up and show what you made.
+This one was run by Viam, a company that makes software for robots, and they lent every team a real industrial arm. You show up Friday at nine, they hand out the arms, and at nine that night they lock the doors and send everybody home. Saturday at three-thirty you stand up and show what you made.
 
 *(skip if you're running long)*
 
-The theme was fine motor skills, which means making an arm do delicate things. Plugging in a charger, pouring water into a cup, stacking Jenga blocks, moving an egg without breaking it. You could also bring your own problem, and that's what I did.
+The theme was fine motor skills, which means making an arm do delicate things. You could take one of their challenges or bring your own problem, and I brought mine.
 
 ## 3 · What other teams built (1:15) — not in the ten-minute version
 
 *Four short clips, playing. No words on the card.*
 
-Here's some of what the other teams built over the same two days, with the same arm.
+Some of what the other teams built, same two days, same arm.
 
 One team taught theirs to play Jenga, pulling a block out without bringing the tower down.
 
@@ -53,7 +53,7 @@ And one team bolted a sabre to the arm and taught it to fence.
 
 *(skip if you're running long)*
 
-What I like about these is that every single one of them started with somebody saying "what if it could," and then going and finding out.
+Every one of them started with somebody saying "what if it could," and then finding out.
 
 ## 4 · Why I built this (1:30)
 
@@ -67,7 +67,7 @@ So why a robot that draws with you?
 
 [click] He'd draw something, I'd draw on top of it, he'd add to that, and we'd keep going until the food arrived. That's actually how I learned to draw.
 
-[click] Here's the part I didn't expect. I walked into the hackathon thinking it would be fun to sketch with a robot. It wasn't until I was halfway through building it that I understood what I was really making, which was the other side of that table.
+[click] Here's the part I didn't expect. I walked in thinking it would be fun to sketch with a robot. Halfway through building it, I understood what I was really making: the other side of that table.
 
 ## 5 · What Duet is (1:15)
 
@@ -95,7 +95,7 @@ Here's what one turn looks like.
 
 *(Point at the yellow box.)*
 
-This is a real answer from Saturday. It said:
+Here's a real answer from Saturday:
 
 "A crowded world of creatures, flowers and dancing figures."
 
@@ -105,7 +105,7 @@ And then:
 
 That took about eight seconds.
 
-[click] Then it draws. Along with those two sentences, Claude sends back the shape it wants to add, as a list of points. The arm follows the points, the little green figure appears on the board, and then it's your turn again.
+[click] Then it draws. Claude also sends back the shape it wants to add, as a list of points. The arm follows them, the little green figure appears, and it's your turn again.
 
 ## 7 · It's just points (1:30)
 
@@ -113,15 +113,17 @@ That took about eight seconds.
 
 This next part is the one I really want you to take home, because you're working in Python right now.
 
-On the left is turtle, and you've written something like this already. Pen up, go to the starting point, pen down, walk through a list of points, pen up again.
+On the left is Tracy, and you've written something like this already. Pen up, go to the starting point, pen down, walk through a list of points, pen up again.
 
-On the right is my robot, simplified a little. Pen up, move to the starting point, pen down, walk through a list of points, pen up again. It's the same program. Mine has a motor attached to it.
+On the right is my robot, simplified a little. Pen up, move to the starting point, pen down, walk through a list of points, pen up again. It's the same program. Tracy draws on a screen; mine has a motor and a marker. That's the only difference that matters.
+
+And see that line with the hash in front of it? That's a comment. The computer skips it. It's there for a person, and notice it doesn't repeat what the code says; it says why the code is like that.
 
 *(skip if you're running long)*
 
 The genuinely hard part I didn't write. When I say move_to, something has to bend six joints so the pen lands on that spot without hitting the table. Viam's software does that, and I just hand it the points.
 
-Nobody in that room was doing exercises out of a textbook. They were using what you're learning right now to build things that didn't exist on Thursday.
+Nobody in that room was doing exercises out of a textbook. They were using what you're learning to build things that didn't exist on Thursday.
 
 ## 8 · Watch it (1:15)
 
@@ -133,7 +135,7 @@ This is a full session from the hackathon. Ten turns, red drawn by a person, gre
 
 Every green line on that board is the robot answering a red one.
 
-If you want to play with it yourself, there's a version online at viam-duet.vercel.app. It replays this exact session, and it shows you what Claude said at every turn.
+There's a version online at viam-duet.vercel.app that replays this exact session, with what Claude said at every turn.
 
 ## 9 · The robot crushed the pen (1:15) — not in the ten-minute version
 
@@ -141,7 +143,7 @@ If you want to play with it yourself, there's a version online at viam-duet.verc
 
 Now let me tell you what broke, because plenty did.
 
-The very first line the robot ever drew, it crushed the marker. I had taught it where the board was by holding the marker in my own hand and touching the corners. But the robot holds a marker about twenty-seven millimeters differently than I do, which is more than an inch. So it was aiming for a spot an inch below the surface. The board didn't move. The felt tip did.
+The very first line it ever drew, it crushed the marker. I had taught it where the board was by holding the marker in my own hand and touching the corners. But the robot holds a marker about twenty-seven millimeters differently, which is more than an inch. So it was aiming an inch below the surface. The board didn't move. The felt tip did.
 
 The fix was to teach it the corners again, with the marker in the robot's grip. The mistake told me exactly what was wrong, as long as I was willing to look. Measure with the robot's hand, not with yours.
 
@@ -151,9 +153,9 @@ The fix was to teach it the corners again, with the marker in the robot's grip. 
 
 On Friday night I went home and wrote something clever. The camera would notice when you stepped back from the board, and the robot would take its turn on its own, with nobody pressing anything.
 
-Saturday morning I set it up at the table, and it fired every few seconds at a completely empty board. The robot kept taking turns nobody had asked for. I spent an hour trying to make it smarter.
+Saturday morning it fired every few seconds at a completely empty board, taking turns nobody had asked for. I spent an hour trying to make it smarter.
 
-Then I deleted the whole thing and put a button on the screen that says "Go, robot". That version worked all day. It's the one I demonstrated, and nobody watching ever knew they were missing the magic. Sometimes the simple thing is allowed to win.
+Then I deleted the whole thing and put a button on the screen that says "Go, robot". That version worked all day, and nobody watching ever knew they were missing the magic. Sometimes the simple thing is allowed to win.
 
 ## 11 · The error you'll get too (1:00) — not in the ten-minute version
 
@@ -161,7 +163,7 @@ Then I deleted the whole thing and put a button on the screen that says "Go, rob
 
 Here's one you're going to run into yourselves. The day before the hackathon I was working through a practice course, and I got this: SyntaxError, 'return' outside function.
 
-I stared at it, because the return was right there, underneath the function. Except it was indented four spaces instead of eight, and that's enough for Python to decide the function had already ended. In Python, the indentation isn't decoration. It's the structure.
+I stared at it, because the return was right there, underneath the function. Except it was indented four spaces instead of eight, and that's enough for Python to decide the function had already ended. In Python the indentation isn't decoration, it's the structure.
 
 The message had been telling me that the whole time. Error messages are clues, not insults. Read them.
 
@@ -169,7 +171,9 @@ The message had been telling me that the whole time. Error messages are clues, n
 
 *A cartoon of a notebook with four boxes, and the four boxes under it.*
 
-One habit from that weekend is worth stealing. Every time something broke I wrote it down: what I saw, what I tried, what fixed it, and why that worked. Eight entries by Friday night, and that indentation error is one of them.
+You know this loop: plan, code, test, debug, revise. I went round it all weekend, and the step nobody really teaches you is debug.
+
+So here's what I did every time something broke. I wrote down what I saw, what I tried, what fixed it, and why that worked. Eight entries by Friday night, and that indentation error is one of them.
 
 More than once, writing down exactly what I was seeing turned out to be most of the fix, because it forced me to look at it properly. Debugging isn't about being clever. It's about being organized while you're wrong.
 
@@ -179,7 +183,7 @@ More than once, writing down exactly what I was seeing turned out to be most of 
 
 So what was it like? Most teams were two or three people. I was one, with Claude as my teammate.
 
-During the final demo, the connection between my laptop and the robot kept dropping, and when it drops, the arm freezes where it is. So I'm standing in front of everybody, waiting to see whether it comes back. It came back, and it drew.
+During the final demo the connection to the robot kept dropping, and when it drops, the arm freezes. So I'm standing in front of everybody waiting to see whether it comes back. It came back, and it drew.
 
 I didn't win. I got an honorable mention, which is this medal, and it was still the best two days I have spent building anything.
 
@@ -189,7 +193,7 @@ I didn't win. I got an honorable mention, which is this medal, and it was still 
 
 If you take one thing away from today, let it be this.
 
-[click] You already know enough to start. Turtle is a robot with the motor taken out.
+[click] You already know enough to start. Remember, I'm not a professional programmer either. Tracy is a robot with the motor taken out.
 
 [click] Start with the smallest version that works, and then make it bigger. Mine was a square drawn in the air with the pen up. Then a square on the board. Then a shape that Claude picked. Then a whole drawing. By seven o'clock on Friday night, it drew back for the first time.
 
