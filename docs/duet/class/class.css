@@ -88,7 +88,7 @@
 .codepanel pre { margin: 0; font-family: var(--mono); --body: 1.6cqw; font-size: var(--body); font-weight: 500; line-height: 1.35; white-space: pre; overflow: hidden; }
 
 /* card 8: the flipbook, a line under it */
-.watch .flip img { height: 24cqw; }
+.watch .flip img { height: 24cqw; }   /* the video beside it is 26cqw tall, so the pair sits level */
 .watch .closing { --body: 2.5cqw; text-align: center; color: var(--ink); }
 
 /* card 9: one panel, the words under it; nothing beyond the template */
@@ -108,8 +108,15 @@
 .error .codepanel pre { --body: 1.8cqw; }
 .errline { color: var(--human); font-family: var(--mono); --body: 2.2cqw; }
 
+/* two columns on the deck's own 12-column grid; each card says which columns its two halves take */
+.twocol { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--s2); align-items: center; width: 100%; }
+
+/* card 8: the flipbook beside the arm actually drawing */
+.watch .twocol > .flipwrap { grid-column: 1 / span 6; justify-self: end; }   /* the two sit either side of the middle, as a pair */
+.watch .twocol > .live { grid-column: 7 / span 6; justify-self: start; width: fit-content; padding: .8cqw; }
+.watch .live video { display: block; height: 26cqw; width: auto; border-radius: calc(var(--paper-radius) - .6cqw); background: #000; }
+
 /* card 12: the loop across the top, then the picture in the big column and the words in the narrow one */
-.log .twocol { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--s2); align-items: center; width: 100%; }
 .log .twocol > .panel { grid-column: 1 / span 7; }
 .log .twocol > .under { grid-column: 8 / span 5; gap: .6cqw; }
 .log .twocol .headline { --headline: 3.4cqw; }

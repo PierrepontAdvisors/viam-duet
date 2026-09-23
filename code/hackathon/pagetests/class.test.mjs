@@ -131,6 +131,7 @@ test('the wiring: cut prunes and renumbers cards, reveals follow data-step, medi
   assert.match(js, /querySelectorAll\('\[data-step\]'\)/);
   assert.match(js, /classList\.toggle\('shown'/);
   assert.match(js, /v\.play\(\)/);
+  assert.match(js, /visibilitychange/, 'a hidden pane refuses to start a video, so playback retries when it comes back');
   assert.match(js, /v\.pause\(\)/);
   assert.match(js, /clearTimeout\(flipTimer\)/);
   assert.match(js, /case '0': set\(jump\(10, deck\)\); return;/);
@@ -264,6 +265,11 @@ test('Act 2: the setup with callouts, one turn with three verbs, the two code pa
   assert.equal((s[6].match(/<pre>/g) || []).length, 2);
   // card 8: the flipbook elements the wiring looks for
   assert.ok(s[7].includes('id="flip"') && s[7].includes('id="flipLabel"'), 'card 8 flipbook');
+  const live = /<video ([^>]*)>/.exec(s[7]);
+  assert.ok(live, 'card 8 shows the arm drawing beside the flipbook');
+  for (const a of ['src="video/arm-drawing.mp4"', 'muted', 'loop', 'playsinline']) assert.ok(live[1].includes(a), `card 8 video ${a}`);
+  assert.ok(!/\bautoplay\b/.test(live[1]), 'card 8 video has no autoplay attribute: class.js starts it when the card is shown');
+  assert.match(s[7], /<div class="twocol">/, 'card 8 is two columns');
   assert.ok(s[7].includes('src="../pitch/img/turn-00-start.jpg"'), 'the flipbook starts on the blank board');
 });
 
@@ -340,7 +346,7 @@ test('developer mode is wired: badge, label, toast, and unique data-el names on 
 test('every local file the deck references exists, except the local-only assets, which are gitignored instead', () => {
   const h = read('index.html');
   const refs = [...h.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
-  const localOnly = ['video/team-1.mp4', 'video/team-2.mp4', 'video/team-3.mp4', 'video/team-4.mp4', 'img/crowd.jpg', 'img/medal.jpg'];
+  const localOnly = ['video/team-1.mp4', 'video/team-2.mp4', 'video/team-3.mp4', 'video/team-4.mp4', 'video/arm-drawing.mp4', 'img/crowd.jpg', 'img/medal.jpg'];
   const ignore = readFileSync(ROOT + '.gitignore', 'utf8').split('\n');
   for (const r of new Set(refs)) {
     if (localOnly.includes(r)) {

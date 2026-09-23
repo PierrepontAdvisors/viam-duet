@@ -168,6 +168,8 @@
     state = { card: parseHash(location.hash, deck), build: 0 };
     document.addEventListener('keydown', onKey);
     stage.addEventListener('click', onClick);
+    /* a hidden pane or a backgrounded window refuses to start a video; try again when it comes back */
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) media(); });
     window.addEventListener('hashchange', function () {
       var card = parseHash(location.hash, deck);
       if (card !== state.card) set(jump(card, deck));
